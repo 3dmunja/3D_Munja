@@ -16,16 +16,25 @@ workflows:
         script: |
           flutter pub get
 
-      - name: Set up iOS code signing
+      - name: Fetch signing files
+        script: |
+          app-store-connect fetch-signing-files "$BUNDLE_ID" --platform IOS --type IOS_APP_STORE --create
+
+      - name: Set up keychain and profiles
         script: |
           keychain initialize
-          app-store-connect fetch-signing-files "$BUNDLE_ID" --type IOS_APP_STORE --create
           keychain add-certificates
           xcode-project use-profiles
 
-      - name: Build iOS IPA
+      - name: Build unsigned Flutter iOS app
         script: |
-          flutter build ipa --release
+          flutter build ios --release --no-codesign
+
+      - name: Build signed IPA
+        script: |
+          xcode-project build-ipa \
+            --workspace ios/Runner.xcworkspace \
+            --scheme Runner
 
     artifacts:
       - build/ios/ipa/*.ipa
