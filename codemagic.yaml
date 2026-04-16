@@ -1,4 +1,3 @@
-cat > codemagic.yaml <<'YAML'
 workflows:
   ios-testflight:
     name: iOS TestFlight
@@ -24,7 +23,7 @@ workflows:
           keychain add-certificates
           xcode-project use-profiles
 
-      - name: Flutter build ipa
+      - name: Build iOS IPA
         script: |
           flutter build ipa --release
 
@@ -38,4 +37,3 @@ workflows:
         key_identifier: $APP_STORE_CONNECT_KEY_IDENTIFIER
         private_key: $APP_STORE_CONNECT_PRIVATE_KEY
         submit_to_testflight: true
-YAML
