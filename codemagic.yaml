@@ -16,6 +16,10 @@ workflows:
         script: |
           flutter pub get
 
+      - name: Show Flutter version info
+        script: |
+          grep version pubspec.yaml
+
       - name: Fetch signing files
         script: |
           app-store-connect fetch-signing-files "$BUNDLE_ID" --platform IOS --type IOS_APP_STORE --create
@@ -28,7 +32,7 @@ workflows:
 
       - name: Build unsigned Flutter iOS app
         script: |
-          flutter build ios --release --no-codesign
+          flutter build ios --release --no-codesign --build-name=1.0.2 --build-number=5
 
       - name: Build signed IPA
         script: |
