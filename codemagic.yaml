@@ -32,7 +32,7 @@ workflows:
 
       - name: Build unsigned Flutter iOS app
         script: |
-          flutter build ios --release --no-codesign --build-name=1.0.2 --build-number=6
+          flutter build ios --release --no-codesign --build-name=1.0.2 --build-number=7
 
       - name: Build signed IPA
         script: |
