@@ -1,0 +1,41 @@
+cat > codemagic.yaml <<'YAML'
+workflows:
+  ios-testflight:
+    name: iOS TestFlight
+    max_build_duration: 120
+
+    environment:
+      flutter: stable
+      xcode: latest
+      groups:
+        - appstore
+      vars:
+        BUNDLE_ID: "com.munja.app"
+
+    scripts:
+      - name: Get Flutter packages
+        script: |
+          flutter pub get
+
+      - name: Set up iOS code signing
+        script: |
+          keychain initialize
+          app-store-connect fetch-signing-files "$BUNDLE_ID" --type IOS_APP_STORE --create
+          keychain add-certificates
+          xcode-project use-profiles
+
+      - name: Flutter build ipa
+        script: |
+          flutter build ipa --release
+
+    artifacts:
+      - build/ios/ipa/*.ipa
+      - /tmp/xcodebuild_logs/*.log
+
+    publishing:
+      app_store_connect:
+        issuer_id: $APP_STORE_CONNECT_ISSUER_ID
+        key_identifier: $APP_STORE_CONNECT_KEY_IDENTIFIER
+        private_key: $APP_STORE_CONNECT_PRIVATE_KEY
+        submit_to_testflight: true
+YAML
