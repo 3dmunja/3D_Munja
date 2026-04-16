@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Sæt din rigtige Android Maps key her (starter typisk med AIza...) -->
+    <string name="google_maps_key">AIzaSyCAnWc8HAXyTy_h1Cuj-N5dUyjxK0PYyxQ</string>
+</resources>
