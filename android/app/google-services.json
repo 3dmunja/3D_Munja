@@ -1,0 +1,62 @@
+{
+  "project_info": {
+    "project_number": "953344223447",
+    "project_id": "munja-3d36e",
+    "storage_bucket": "munja-3d36e.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:953344223447:android:3ac794c50a4edd27e0a892",
+        "android_client_info": {
+          "package_name": "com.munja.app"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "953344223447-o3rr0gu3dh613lfeamt39mhdrdcbihls.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.munja.app",
+            "certificate_hash": "7389997a3de0c46bfb8f250956dab48f855aef58"
+          }
+        },
+        {
+          "client_id": "953344223447-q3jf2pl98ajpincg1ics4gf9mctubksh.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.munja.app",
+            "certificate_hash": "e12a9b7a8b7bd7ee02e9000ac84126aeb3272a02"
+          }
+        },
+        {
+          "client_id": "953344223447-60bvf1gaqm7tlaee4869ah778vbl04g9.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyC6M7fRdiraseDo-IUQgdDv_NmLUat2FDI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "953344223447-60bvf1gaqm7tlaee4869ah778vbl04g9.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "953344223447-3kjgnjnb3kd3icsjpoloom9bprtbpog9.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.smartProductsApp"
+              }
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

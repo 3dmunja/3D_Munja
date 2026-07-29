@@ -1,28 +1,28 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
 
-    <!-- Internet -->
+    <!-- Internet / Maps -->
     <uses-permission android:name="android.permission.INTERNET" />
 
-    <!-- Notifications (Android 13+) -->
+    <!-- Notifications Android 13+ -->
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
-    <!-- Location -->
+    <!-- GPS / Location -->
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_BACKGROUND_LOCATION" />
 
-    <!-- Foreground service -->
+    <!-- Foreground service for live ride tracking -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
 
-    <!-- Bluetooth / BLE for Android 12+ -->
+    <!-- Bluetooth / BLE Android 12+ -->
     <uses-permission
         android:name="android.permission.BLUETOOTH_SCAN"
         android:usesPermissionFlags="neverForLocation" />
     <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
     <uses-permission android:name="android.permission.BLUETOOTH_ADVERTISE" />
 
-    <!-- Backward compatibility for Android 11 and lower -->
+    <!-- Bluetooth backward compatibility Android 11 and lower -->
     <uses-permission
         android:name="android.permission.BLUETOOTH"
         android:maxSdkVersion="30" />
@@ -33,7 +33,8 @@
     <application
         android:label="Munja"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/ic_launcher"
+        android:usesCleartextTraffic="true">
 
         <!-- Google Maps API key -->
         <meta-data

@@ -2,13 +2,16 @@ name: smart_products_app
 description: "Munja smart cycling app"
 publish_to: "none"
 
-version: 1.0.2+7
+version: 1.0.2+8
 
 environment:
   sdk: ^3.9.2
 
 dependencies:
   flutter:
+    sdk: flutter
+
+  flutter_localizations:
     sdk: flutter
 
   cupertino_icons: ^1.0.8
@@ -19,21 +22,36 @@ dependencies:
   geolocator: ^14.0.2
   google_maps_flutter: ^2.14.0
   url_launcher: ^6.3.0
-  model_viewer_plus: ^1.10.0
+  flutter_3d_controller: ^2.3.0
   flutter_foreground_task: ^9.2.2
+  wakelock_plus: ^1.5.2
+  geocoding: ^4.0.0
+  flutter_tts: ^4.2.5
+  image_picker: ^1.2.2
+  firebase_core: ^4.12.1
+  firebase_auth: ^6.5.6
+  google_sign_in: ^7.2.0
+  cloud_firestore: ^6.7.1
+  provider: ^6.1.5+1
+  firebase_storage: ^13.4.5
+  file_picker: ^11.0.2
+  model_viewer_plus: ^1.10.0
 
 dev_dependencies:
   flutter_test:
     sdk: flutter
+
   flutter_lints: ^5.0.0
   flutter_launcher_icons: ^0.13.1
   flutter_native_splash: ^2.4.1
 
 flutter:
   uses-material-design: true
+
   assets:
     - assets/
     - assets/models/
+    - assets/brake_light.png
 
 flutter_native_splash:
   color: "#111111"
@@ -42,6 +60,7 @@ flutter_native_splash:
   ios: true
   web: false
   fullscreen: true
+
   android_12:
     color: "#111111"
     image: assets/app_icon_1.png

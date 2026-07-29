@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -11,136 +12,52 @@ import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:flutter_localizations/flutter_localizations.dart';
+import 'widgets/live_hud_overlay.dart';
+import 'widgets/home_live_ride_card.dart';
+import 'widgets/ride_recovery_sheet.dart';
+import 'widgets/active_products_strip.dart';
+import 'services/ride_session_service.dart';
+import 'services/ride_controller_service.dart';
+import 'services/live_ride_bus.dart';
+import 'services/background_ride_engine.dart';
+import 'services/home_ai_engine.dart';
+import 'models/live_ride_state.dart';
+import 'providers/bike_provider.dart';
+import 'providers/digital_twin_provider.dart';
+import 'services/bluetooth/digital_twin_ble_service.dart';
+import 'firebase_options.dart';
 
-const String appTitle = 'Munja';
-const String munjaWebsite = 'https://3dmunja.dk';
-const String bicycleWheelAsset = 'assets/Bicycle_Tires_1.png';
-const String brakeLightAsset = 'assets/brake_light.jpeg';
+import 'widgets/wheel_navbar.dart';
+import 'core/theme/munja_colors.dart';
+import 'core/constants/app_constants.dart';
+import 'core/localization/app_text.dart';
+import 'models/munja_device.dart';
+import 'models/trip.dart';
+import 'models/user_profile.dart';
+import 'widgets/munja_card.dart';
+import 'widgets/stat_pill.dart';
+import 'widgets/section_title.dart';
+import 'widgets/menu_tile.dart';
+import 'widgets/hero_badge.dart';
+import 'widgets/avatar_mini_card.dart';
+import 'widgets/product_hero_card.dart';
+import 'services/ble_service.dart';
+import 'services/storage_service.dart';
+import 'services/voice_coach_service.dart';
+import 'screens/auth_gate.dart';
+import 'screens/brake_light_dashboard.dart';
+import 'screens/main_navigation.dart';
+import 'screens/ride_summary_screen.dart';
+import 'screens/ride_analytics_screen.dart';
+import 'screens/smart_route_planner_screen.dart';
+import 'screens/smart_ride_coach_screen.dart';
+import 'screens/ride_history_screen.dart';
 
-const String deviceName = 'MunjaBrakeLight-01';
-const String serviceUuid = '6b6b0001-8e2f-4b3a-9c8a-111111111111';
-const String statusCharUuid = '6b6b0002-8e2f-4b3a-9c8a-222222222222';
-const String configCharUuid = '6b6b0003-8e2f-4b3a-9c8a-333333333333';
-
-const String lastDeviceKey = 'last_ble_device';
-const String savedDevicesKey = 'saved_ble_devices_v1';
-const String tripsKey = 'trips_v4';
-const String challengeAcceptedKey = 'challenge_accepted';
-const String challengePlanKey = 'challenge_plan';
-const String challengeDeadlineKey = 'challenge_deadline_ms';
-const String weeklyGoalKmKey = 'weekly_goal_km_v1';
-const String sensitivityKey = 'sensitivity';
-const String userNameKey = 'profile_name_v1';
-const String userAgeKey = 'profile_age_v1';
-const String userCityKey = 'profile_city_v1';
-const String userAvatarKey = 'profile_avatar_v1';
-const String onboardingDoneKey = 'onboarding_done_v1';
-
-const String bgTrackingEnabledKey = 'bg_tracking_enabled_v1';
-const String bgTripStateKey = 'bg_trip_state_v1';
-
-const LatLng fallbackCenter = LatLng(55.6761, 12.5683);
-const double co2PerKmKg = 0.12;
-
-enum MunjaProductType { brakeLight, unknown }
-enum TripSource { software, hardware }
-
-class MunjaDevice {
-  final String id;
-  final String name;
-  final MunjaProductType type;
-  final int rssi;
-  final bool isNearby;
-  final bool isSaved;
-
-  const MunjaDevice({
-    required this.id,
-    required this.name,
-    required this.type,
-    required this.rssi,
-    required this.isNearby,
-    required this.isSaved,
-  });
-
-  Map<String, dynamic> toJson() => {
-        'id': id,
-        'name': name,
-        'type': type.name,
-      };
-
-  factory MunjaDevice.fromJson(Map<String, dynamic> json) {
-    return MunjaDevice(
-      id: json['id'] as String,
-      name: json['name'] as String,
-      type: json['type'] == 'brakeLight'
-          ? MunjaProductType.brakeLight
-          : MunjaProductType.unknown,
-      rssi: -100,
-      isNearby: false,
-      isSaved: true,
-    );
-  }
-}
-
-class Trip {
-  final int startedAtMs;
-  final int endedAtMs;
-  final double distanceM;
-  final int brakes;
-  final int hardBrakes;
-  final List<List<double>> path;
-  final String source;
-
-  const Trip({
-    required this.startedAtMs,
-    required this.endedAtMs,
-    required this.distanceM,
-    required this.brakes,
-    required this.hardBrakes,
-    required this.path,
-    required this.source,
-  });
-
-  TripSource get tripSource =>
-      source == 'hardware' ? TripSource.hardware : TripSource.software;
-
-  Duration get duration => Duration(
-        milliseconds: endedAtMs - startedAtMs < 0 ? 0 : endedAtMs - startedAtMs,
-      );
-
-  List<LatLng> get latLngPath => path
-      .where((e) => e.length >= 2)
-      .map((e) => LatLng(e[0], e[1]))
-      .toList();
-
-  Map<String, dynamic> toJson() => {
-        'startedAtMs': startedAtMs,
-        'endedAtMs': endedAtMs,
-        'distanceM': distanceM,
-        'brakes': brakes,
-        'hardBrakes': hardBrakes,
-        'path': path,
-        'source': source,
-      };
-
-  factory Trip.fromJson(Map<String, dynamic> json) {
-    return Trip(
-      startedAtMs: json['startedAtMs'] as int,
-      endedAtMs: json['endedAtMs'] as int,
-      distanceM: (json['distanceM'] as num).toDouble(),
-      brakes: (json['brakes'] as int?) ?? 0,
-      hardBrakes: (json['hardBrakes'] as int?) ?? 0,
-      path: (json['path'] as List? ?? const [])
-          .map((e) => (e as List).map((v) => (v as num).toDouble()).toList())
-          .where((e) => e.length >= 2)
-          .map((e) => <double>[e[0], e[1]])
-          .toList(),
-      source: (json['source'] as String?) ?? 'software',
-    );
-  }
-}
+final ValueNotifier<bool> munjaRideActiveNotifier = ValueNotifier<bool>(false);
 
 class MunjaStatus {
   final bool brake;
@@ -163,34 +80,6 @@ class MunjaStatus {
       pwm: int.tryParse(map['PWM'] ?? ''),
       bs: double.tryParse(map['BS'] ?? ''),
     );
-  }
-}
-
-class UserProfile {
-  final String name;
-  final int age;
-  final String city;
-  final int avatarIndex;
-
-  const UserProfile({
-    required this.name,
-    required this.age,
-    required this.city,
-    required this.avatarIndex,
-  });
-
-  String get firstLine {
-    final hasName = name.trim().isNotEmpty;
-    final hasAge = age > 0;
-    if (hasName && hasAge) return '$name · $age yrs';
-    if (hasName) return name;
-    if (hasAge) return '$age yrs';
-    return 'Rider';
-  }
-
-  String get secondLine {
-    if (city.trim().isNotEmpty) return city;
-    return 'Ready for the next ride';
   }
 }
 
@@ -238,14 +127,14 @@ class BgLocationMessage {
   });
 
   Map<String, dynamic> toJson() => {
-        'latitude': latitude,
-        'longitude': longitude,
-        'speedMps': speedMps,
-        'distanceM': distanceM,
-        'tripActive': tripActive,
-        'tripStartMs': tripStartMs,
-        'path': path,
-      };
+    'latitude': latitude,
+    'longitude': longitude,
+    'speedMps': speedMps,
+    'distanceM': distanceM,
+    'tripActive': tripActive,
+    'tripStartMs': tripStartMs,
+    'path': path,
+  };
 
   factory BgLocationMessage.fromJson(Map<String, dynamic> json) {
     return BgLocationMessage(
@@ -340,31 +229,6 @@ Future<bool> requestTrackingPermissions() async {
   return true;
 }
 
-Future<Map<String, dynamic>?> loadBgTripStateShared() async {
-  final sp = await SharedPreferences.getInstance();
-  final raw = sp.getString(bgTripStateKey);
-  if (raw == null) return null;
-
-  try {
-    final decoded = jsonDecode(raw);
-    if (decoded is Map<String, dynamic>) return decoded;
-    if (decoded is Map) return decoded.cast<String, dynamic>();
-    return null;
-  } catch (_) {
-    return null;
-  }
-}
-
-Future<void> saveBgTripStateShared(Map<String, dynamic> data) async {
-  final sp = await SharedPreferences.getInstance();
-  await sp.setString(bgTripStateKey, jsonEncode(data));
-}
-
-Future<void> clearBgTripStateShared() async {
-  final sp = await SharedPreferences.getInstance();
-  await sp.remove(bgTripStateKey);
-}
-
 @pragma('vm:entry-point')
 void startCallback() {
   FlutterForegroundTask.setTaskHandler(MunjaTrackingTaskHandler());
@@ -417,7 +281,7 @@ class MunjaTrackingTaskHandler extends TaskHandler {
   }
 
   Future<void> _restoreState() async {
-    final saved = await loadBgTripStateShared();
+    final saved = await StorageService.loadBgTripState();
     if (saved == null) return;
 
     _tripActive = saved['tripActive'] == true;
@@ -436,7 +300,7 @@ class MunjaTrackingTaskHandler extends TaskHandler {
   }
 
   Future<void> _persistState() async {
-    await saveBgTripStateShared({
+    await StorageService.saveBgTripState({
       'tripActive': _tripActive,
       'tripStartMs': _tripStartMs,
       'tripDistanceM': _tripDistanceM,
@@ -493,7 +357,8 @@ class MunjaTrackingTaskHandler extends TaskHandler {
         _belowStopThresholdSince = null;
       }
 
-      final autoStopByStillness = _belowStopThresholdSince != null &&
+      final autoStopByStillness =
+          _belowStopThresholdSince != null &&
           DateTime.now().difference(_belowStopThresholdSince!).inSeconds >=
               stopAfterStillSeconds;
 
@@ -537,7 +402,7 @@ class MunjaTrackingTaskHandler extends TaskHandler {
   Future<void> _saveCompletedTrip() async {
     if (_tripStartMs == null) return;
 
-    final trips = await loadTripsShared();
+    final trips = await StorageService.loadTrips();
 
     final trip = Trip(
       startedAtMs: _tripStartMs!,
@@ -550,7 +415,7 @@ class MunjaTrackingTaskHandler extends TaskHandler {
     );
 
     trips.insert(0, trip);
-    await saveTripsShared(trips);
+    await StorageService.saveTrips(trips);
   }
 
   @override
@@ -577,22 +442,37 @@ class MunjaTrackingTaskHandler extends TaskHandler {
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await initForegroundTask();
-  runApp(const MunjaApp());
-}
 
-class MunjaColors {
-  static const bg = Color(0xFF04110F);
-  static const panel = Color(0xFF0B1916);
-  static const panelSoft = Color(0xFF10221E);
-  static const line = Color(0x1FFFFFFF);
-  static const mint = Color(0xFF93E0C1);
-  static const mintStrong = Color(0xFF67D7A7);
-  static const textSoft = Color(0xB3FFFFFF);
-  static const danger = Color(0xFFFF6B6B);
-  static const success = Color(0xFF6BE39B);
-  static const warning = Color(0xFFFFC857);
-  static const blueGlow = Color(0xFF7AC7FF);
+  await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+
+  await AppText.loadSavedLocale();
+  await VoiceCoachService.instance.initialize();
+  await initForegroundTask();
+
+  await RideControllerService.instance.initialize();
+  await BackgroundRideEngine.instance.initialize();
+  await BackgroundRideEngine.instance.recoverIfNeeded();
+
+  runApp(
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider<BikeProvider>(create: (_) => BikeProvider()),
+        ChangeNotifierProvider<DigitalTwinProvider>(
+          create: (_) => DigitalTwinProvider(),
+        ),
+        ChangeNotifierProxyProvider<DigitalTwinProvider, DigitalTwinBleService>(
+          create: (context) => DigitalTwinBleService(
+            digitalTwinProvider: context.read<DigitalTwinProvider>(),
+          ),
+          update: (_, digitalTwinProvider, bleService) {
+            return bleService ??
+                DigitalTwinBleService(digitalTwinProvider: digitalTwinProvider);
+          },
+        ),
+      ],
+      child: const MunjaApp(),
+    ),
+  );
 }
 
 class MunjaApp extends StatelessWidget {
@@ -600,49 +480,63 @@ class MunjaApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      debugShowCheckedModeBanner: false,
-      title: appTitle,
-      theme: ThemeData(
-        useMaterial3: true,
-        brightness: Brightness.dark,
-        scaffoldBackgroundColor: MunjaColors.bg,
-        colorScheme: ColorScheme.fromSeed(
-          seedColor: MunjaColors.mint,
-          brightness: Brightness.dark,
-        ),
-        appBarTheme: const AppBarTheme(
-          backgroundColor: Colors.transparent,
-          elevation: 0,
-          surfaceTintColor: Colors.transparent,
-          foregroundColor: Colors.white,
-          titleTextStyle: TextStyle(
-            color: Colors.white,
-            fontSize: 28,
-            fontWeight: FontWeight.w700,
+    return ValueListenableBuilder<Locale>(
+      valueListenable: AppText.localeNotifier,
+      builder: (context, locale, _) {
+        return MaterialApp(
+          key: ValueKey(locale.languageCode),
+          debugShowCheckedModeBanner: false,
+          title: AppText.t('appTitle'),
+          locale: locale,
+          supportedLocales: const [Locale('da'), Locale('en'), Locale('bs')],
+
+          localizationsDelegates: const [
+            GlobalMaterialLocalizations.delegate,
+            GlobalWidgetsLocalizations.delegate,
+            GlobalCupertinoLocalizations.delegate,
+          ],
+          theme: ThemeData(
+            useMaterial3: true,
+            brightness: Brightness.dark,
+            scaffoldBackgroundColor: MunjaColors.bg,
+            colorScheme: ColorScheme.fromSeed(
+              seedColor: MunjaColors.mint,
+              brightness: Brightness.dark,
+            ),
+            appBarTheme: const AppBarTheme(
+              backgroundColor: Colors.transparent,
+              elevation: 0,
+              surfaceTintColor: Colors.transparent,
+              foregroundColor: Colors.white,
+              titleTextStyle: TextStyle(
+                color: Colors.white,
+                fontSize: 28,
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            sliderTheme: const SliderThemeData(
+              showValueIndicator: ShowValueIndicator.always,
+            ),
+            inputDecorationTheme: InputDecorationTheme(
+              filled: true,
+              fillColor: MunjaColors.panelSoft,
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(18),
+                borderSide: const BorderSide(color: MunjaColors.line),
+              ),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(18),
+                borderSide: const BorderSide(color: MunjaColors.line),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(18),
+                borderSide: const BorderSide(color: MunjaColors.mintStrong),
+              ),
+            ),
           ),
-        ),
-        sliderTheme: const SliderThemeData(
-          showValueIndicator: ShowValueIndicator.always,
-        ),
-        inputDecorationTheme: InputDecorationTheme(
-          filled: true,
-          fillColor: MunjaColors.panelSoft,
-          border: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(18),
-            borderSide: const BorderSide(color: MunjaColors.line),
-          ),
-          enabledBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(18),
-            borderSide: const BorderSide(color: MunjaColors.line),
-          ),
-          focusedBorder: OutlineInputBorder(
-            borderRadius: BorderRadius.circular(18),
-            borderSide: const BorderSide(color: MunjaColors.mintStrong),
-          ),
-        ),
-      ),
-      home: const AppEntryScreen(),
+          home: const AuthGate(authenticatedChild: AppEntryScreen()),
+        );
+      },
     );
   }
 }
@@ -657,6 +551,7 @@ class AppEntryScreen extends StatefulWidget {
 class _AppEntryScreenState extends State<AppEntryScreen> {
   bool loading = true;
   bool onboardingDone = false;
+  bool recoverySheetShown = false;
 
   @override
   void initState() {
@@ -665,10 +560,54 @@ class _AppEntryScreenState extends State<AppEntryScreen> {
   }
 
   Future<void> _load() async {
-    final sp = await SharedPreferences.getInstance();
-    onboardingDone = sp.getBool(onboardingDoneKey) ?? false;
+    onboardingDone = await StorageService.isOnboardingDone();
     if (!mounted) return;
+
     setState(() => loading = false);
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _maybeShowRideRecoverySheet();
+    });
+  }
+
+  Future<void> _maybeShowRideRecoverySheet() async {
+    if (!mounted || recoverySheetShown || !onboardingDone) return;
+
+    final state = LiveRideBus.instance.state.value;
+
+    if (!state.isActive) return;
+
+    recoverySheetShown = true;
+
+    await showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      useSafeArea: true,
+      backgroundColor: Colors.transparent,
+      builder: (_) {
+        return RideRecoverySheet(
+          state: state,
+          onContinueRide: () async {
+            munjaRideActiveNotifier.value = true;
+            await BackgroundRideEngine.instance.recoverIfNeeded();
+          },
+          onOpenMap: () async {
+            munjaRideActiveNotifier.value = true;
+            await BackgroundRideEngine.instance.recoverIfNeeded();
+
+            if (!mounted) return;
+
+            Navigator.of(
+              context,
+            ).push(MaterialPageRoute(builder: (_) => const AutoRideScreen()));
+          },
+          onStopRide: () async {
+            munjaRideActiveNotifier.value = false;
+            await BackgroundRideEngine.instance.stop();
+          },
+        );
+      },
+    );
   }
 
   @override
@@ -679,7 +618,7 @@ class _AppEntryScreenState extends State<AppEntryScreen> {
         body: Center(child: CircularProgressIndicator()),
       );
     }
-    return onboardingDone ? const HomeScreen() : const OnboardingScreen();
+    return onboardingDone ? const MainNavigation() : const OnboardingScreen();
   }
 }
 
@@ -714,461 +653,33 @@ class AppShell extends StatelessWidget {
   }
 }
 
-class MunjaCard extends StatelessWidget {
-  final Widget child;
-  final EdgeInsetsGeometry? padding;
-
-  const MunjaCard({super.key, required this.child, this.padding});
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: padding ?? const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        borderRadius: BorderRadius.circular(30),
-        border: Border.all(color: Colors.white.withOpacity(0.08)),
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: [
-            Colors.white.withOpacity(0.045),
-            Colors.white.withOpacity(0.015),
-          ],
-        ),
-        color: MunjaColors.panel,
-        boxShadow: [
-          BoxShadow(
-            color: Colors.black.withOpacity(0.28),
-            blurRadius: 28,
-            offset: const Offset(0, 16),
-          ),
-        ],
-      ),
-      child: child,
-    );
-  }
-}
-
-class SectionTitle extends StatelessWidget {
-  final String title;
-  final String? subtitle;
-  final Widget? trailing;
-
-  const SectionTitle({
-    super.key,
-    required this.title,
-    this.subtitle,
-    this.trailing,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Row(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
-              ),
-              if (subtitle != null) ...[
-                const SizedBox(height: 6),
-                Text(
-                  subtitle!,
-                  style: const TextStyle(color: MunjaColors.textSoft, height: 1.4),
-                ),
-              ],
-            ],
-          ),
-        ),
-        if (trailing != null) trailing!,
-      ],
-    );
-  }
-}
-
-class StatPill extends StatelessWidget {
-  final IconData icon;
-  final String label;
-  final String value;
-  final Color? iconColor;
-
-  const StatPill({
-    super.key,
-    required this.icon,
-    required this.label,
-    required this.value,
-    this.iconColor,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.all(14),
-        decoration: BoxDecoration(
-          color: MunjaColors.panelSoft,
-          borderRadius: BorderRadius.circular(22),
-          border: Border.all(color: Colors.white.withOpacity(0.05)),
-        ),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Icon(icon, color: iconColor ?? MunjaColors.mint),
-            const SizedBox(height: 10),
-            Text(label, style: const TextStyle(color: MunjaColors.textSoft)),
-            const SizedBox(height: 4),
-            Text(
-              value,
-              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w800),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class MenuTile extends StatelessWidget {
-  final IconData icon;
-  final String title;
-  final String subtitle;
-  final VoidCallback onTap;
-  final Widget? trailing;
-
-  const MenuTile({
-    super.key,
-    required this.icon,
-    required this.title,
-    required this.subtitle,
-    required this.onTap,
-    this.trailing,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(24),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: MunjaColors.panelSoft,
-          borderRadius: BorderRadius.circular(24),
-          border: Border.all(color: Colors.white.withOpacity(0.06)),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 50,
-              height: 50,
-              decoration: BoxDecoration(
-                color: MunjaColors.mint.withOpacity(0.14),
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Icon(icon, color: MunjaColors.mint),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(subtitle, style: const TextStyle(color: MunjaColors.textSoft)),
-                ],
-              ),
-            ),
-            trailing ?? const Icon(Icons.chevron_right_rounded),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-class HeroBadge extends StatelessWidget {
-  final IconData icon;
-  final String text;
-  final Color color;
-
-  const HeroBadge({
-    super.key,
-    required this.icon,
-    required this.text,
-    required this.color,
-  });
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-      decoration: BoxDecoration(
-        color: color.withOpacity(0.12),
-        borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: color.withOpacity(0.18)),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(icon, size: 16, color: color),
-          const SizedBox(width: 8),
-          Text(
-            text,
-            style: TextStyle(color: color, fontWeight: FontWeight.w700),
-          ),
-        ],
-      ),
-    );
-  }
-}
-
-class AvatarMiniCard extends StatelessWidget {
-  final UserProfile profile;
-  final VoidCallback onTap;
-
-  const AvatarMiniCard({super.key, required this.profile, required this.onTap});
-
-  @override
-  Widget build(BuildContext context) {
-    final avatar = avatarById(profile.avatarIndex);
-    return InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(26),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: MunjaColors.panelSoft,
-          borderRadius: BorderRadius.circular(26),
-          border: Border.all(color: Colors.white.withOpacity(0.06)),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 62,
-              height: 62,
-              alignment: Alignment.center,
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(20),
-                gradient: const LinearGradient(
-                  colors: [MunjaColors.mintStrong, MunjaColors.blueGlow],
-                ),
-              ),
-              child: Text(
-                avatar.emoji,
-                style: const TextStyle(fontSize: 28),
-              ),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    profile.firstLine,
-                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w800),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    '${profile.secondLine} · ${avatar.label}',
-                    style: const TextStyle(color: MunjaColors.textSoft),
-                  ),
-                ],
-              ),
-            ),
-            const Icon(Icons.tune_rounded),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
 Future<void> openMunjaWebsite() async {
   final uri = Uri.parse(munjaWebsite);
   await launchUrl(uri, mode: LaunchMode.externalApplication);
-}
-
-String proximityLabel(int rssi) {
-  if (rssi >= -55) return 'Very close';
-  if (rssi >= -70) return 'Nearby';
-  return 'Farther away';
-}
-
-bool isMunjaDeviceName(String name) {
-  final lower = name.toLowerCase();
-  return lower.startsWith('munja') ||
-      lower.contains('brakelight') ||
-      lower == deviceName.toLowerCase();
-}
-
-MunjaProductType detectProductType(String name) {
-  final lower = name.toLowerCase();
-  if (lower.contains('brake')) return MunjaProductType.brakeLight;
-  return MunjaProductType.unknown;
-}
-
-Future<List<Trip>> loadTripsShared() async {
-  final sp = await SharedPreferences.getInstance();
-  final raw = sp.getString(tripsKey);
-  if (raw == null) return [];
-
-  try {
-    final decoded = jsonDecode(raw);
-    if (decoded is! List) return [];
-    return decoded
-        .whereType<Map>()
-        .map((e) => Trip.fromJson(e.cast<String, dynamic>()))
-        .toList();
-  } catch (_) {
-    return [];
-  }
-}
-
-Future<void> saveTripsShared(List<Trip> trips) async {
-  final sp = await SharedPreferences.getInstance();
-  await sp.setString(
-    tripsKey,
-    jsonEncode(trips.map((e) => e.toJson()).toList()),
-  );
-}
-
-Future<List<MunjaDevice>> loadSavedDevicesShared() async {
-  final sp = await SharedPreferences.getInstance();
-  final raw = sp.getString(savedDevicesKey);
-  if (raw == null) return [];
-
-  try {
-    final decoded = jsonDecode(raw);
-    if (decoded is! List) return [];
-    return decoded
-        .whereType<Map>()
-        .map((e) => MunjaDevice.fromJson(e.cast<String, dynamic>()))
-        .toList();
-  } catch (_) {
-    return [];
-  }
-}
-
-Future<void> saveDeviceShared(MunjaDevice device) async {
-  final sp = await SharedPreferences.getInstance();
-  final current = await loadSavedDevicesShared();
-  final index = current.indexWhere((d) => d.id == device.id);
-  if (index >= 0) {
-    current[index] = device;
-  } else {
-    current.add(device);
-  }
-
-  await sp.setString(
-    savedDevicesKey,
-    jsonEncode(current.map((e) => e.toJson()).toList()),
-  );
-  await sp.setString(lastDeviceKey, device.id);
-}
-
-Future<UserProfile> loadUserProfileShared() async {
-  final sp = await SharedPreferences.getInstance();
-  return UserProfile(
-    name: sp.getString(userNameKey) ?? 'Rider',
-    age: sp.getInt(userAgeKey) ?? 24,
-    city: sp.getString(userCityKey) ?? 'Copenhagen',
-    avatarIndex: sp.getInt(userAvatarKey) ?? 0,
-  );
-}
-
-Future<void> saveUserProfileShared(UserProfile profile) async {
-  final sp = await SharedPreferences.getInstance();
-  await sp.setString(userNameKey, profile.name.trim());
-  await sp.setInt(userAgeKey, profile.age);
-  await sp.setString(userCityKey, profile.city.trim());
-  await sp.setInt(userAvatarKey, profile.avatarIndex);
-}
-
-Future<bool> ensureBlePermissions() async {
-  final scan = await Permission.bluetoothScan.request();
-  final connect = await Permission.bluetoothConnect.request();
-  final loc = await Permission.locationWhenInUse.request();
-  return scan.isGranted && connect.isGranted && loc.isGranted;
-}
-
-Future<List<MunjaDevice>> scanNearbyMunjaDevices({
-  Duration timeout = const Duration(seconds: 4),
-  List<MunjaDevice> saved = const [],
-}) async {
-  final ok = await ensureBlePermissions();
-  if (!ok) return [];
-
-  try {
-    await FlutterBluePlus.stopScan();
-  } catch (_) {}
-
-  final found = <String, MunjaDevice>{};
-  final completer = Completer<List<MunjaDevice>>();
-  StreamSubscription<List<ScanResult>>? sub;
-
-  try {
-    await FlutterBluePlus.startScan(timeout: timeout);
-  } catch (_) {
-    return [];
-  }
-
-  sub = FlutterBluePlus.scanResults.listen((results) {
-    for (final r in results) {
-      final name = r.device.advName.trim();
-      if (name.isEmpty || !isMunjaDeviceName(name)) continue;
-      final savedMatch = saved.any((d) => d.id == r.device.remoteId.str);
-      found[r.device.remoteId.str] = MunjaDevice(
-        id: r.device.remoteId.str,
-        name: name,
-        type: detectProductType(name),
-        rssi: r.rssi,
-        isNearby: true,
-        isSaved: savedMatch,
-      );
-    }
-  });
-
-  Future.delayed(timeout + const Duration(milliseconds: 700), () async {
-    try {
-      await FlutterBluePlus.stopScan();
-    } catch (_) {}
-    await sub?.cancel();
-    if (!completer.isCompleted) {
-      completer.complete(
-        found.values.toList()..sort((a, b) => b.rssi.compareTo(a.rssi)),
-      );
-    }
-  });
-
-  return completer.future;
 }
 
 double weeklyKmFromTrips(List<Trip> trips) {
   final now = DateTime.now();
   final monday = now.subtract(Duration(days: now.weekday - 1));
   final startOfWeek = DateTime(monday.year, monday.month, monday.day);
-  return trips.where((t) {
-    final d = DateTime.fromMillisecondsSinceEpoch(t.startedAtMs);
-    return !d.isBefore(startOfWeek);
-  }).fold(0.0, (sum, t) => sum + (t.distanceM / 1000));
+  return trips
+      .where((t) {
+        final d = DateTime.fromMillisecondsSinceEpoch(t.startedAtMs);
+        return !d.isBefore(startOfWeek);
+      })
+      .fold(0.0, (sum, t) => sum + (t.distanceM / 1000));
 }
 
 int streakFromTrips(List<Trip> trips) {
   if (trips.isEmpty) return 0;
 
-  final rideDays = trips
-      .map((t) => DateTime.fromMillisecondsSinceEpoch(t.startedAtMs))
-      .map((d) => DateTime(d.year, d.month, d.day))
-      .toSet()
-      .toList()
-    ..sort((a, b) => b.compareTo(a));
+  final rideDays =
+      trips
+          .map((t) => DateTime.fromMillisecondsSinceEpoch(t.startedAtMs))
+          .map((d) => DateTime(d.year, d.month, d.day))
+          .toSet()
+          .toList()
+        ..sort((a, b) => b.compareTo(a));
 
   int streak = 0;
   final today = DateTime.now();
@@ -1224,7 +735,10 @@ List<MonthlyStats> buildMonthlyStats(List<Trip> trips) {
       final d = DateTime.fromMillisecondsSinceEpoch(t.startedAtMs);
       return !d.isBefore(monthStart) && d.isBefore(nextMonth);
     }).toList();
-    final km = monthTrips.fold<double>(0.0, (sum, t) => sum + t.distanceM / 1000);
+    final km = monthTrips.fold<double>(
+      0.0,
+      (sum, t) => sum + t.distanceM / 1000,
+    );
     return MonthlyStats(
       label:
           '${monthStart.month.toString().padLeft(2, '0')}/${monthStart.year.toString().substring(2)}',
@@ -1253,7 +767,10 @@ Widget buildMiniBarChart(List<MonthlyStats> stats) {
               children: [
                 Text(
                   item.km.toStringAsFixed(1),
-                  style: const TextStyle(fontSize: 12, color: MunjaColors.textSoft),
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: MunjaColors.textSoft,
+                  ),
                 ),
                 const SizedBox(height: 8),
                 AnimatedContainer(
@@ -1275,7 +792,10 @@ Widget buildMiniBarChart(List<MonthlyStats> stats) {
                 const SizedBox(height: 10),
                 Text(
                   item.label,
-                  style: const TextStyle(fontSize: 12, color: MunjaColors.textSoft),
+                  style: const TextStyle(
+                    fontSize: 12,
+                    color: MunjaColors.textSoft,
+                  ),
                 ),
               ],
             ),
@@ -1313,26 +833,27 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
   Future<void> _finish() async {
     final age = int.tryParse(ageCtrl.text.trim()) ?? 24;
-    await saveUserProfileShared(
+    await StorageService.saveUserProfile(
       UserProfile(
         name: nameCtrl.text.trim().isEmpty ? 'Rider' : nameCtrl.text.trim(),
         age: age,
-        city: cityCtrl.text.trim().isEmpty ? 'Copenhagen' : cityCtrl.text.trim(),
+        city: cityCtrl.text.trim().isEmpty
+            ? 'Copenhagen'
+            : cityCtrl.text.trim(),
         avatarIndex: selectedAvatar,
       ),
     );
-    final sp = await SharedPreferences.getInstance();
-    await sp.setBool(onboardingDoneKey, true);
+    await StorageService.setOnboardingDone(true);
     if (!mounted) return;
     Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (_) => const HomeScreen()),
+      MaterialPageRoute(builder: (_) => const MainNavigation()),
     );
   }
 
   @override
   Widget build(BuildContext context) {
     return AppShell(
-      title: 'Welcome',
+      title: AppText.t('welcome'),
       child: Column(
         children: [
           Expanded(
@@ -1346,24 +867,27 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                     MunjaCard(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
-                        children: const [
+                        children: [
                           HeroBadge(
                             icon: Icons.waving_hand_rounded,
-                            text: 'Welcome to Munja',
+                            text: AppText.t('welcomeToMunja'),
                             color: MunjaColors.mint,
                           ),
                           SizedBox(height: 18),
                           Text(
-                            'How to use the app',
-                            style: TextStyle(fontSize: 28, fontWeight: FontWeight.w800),
+                            AppText.t('howToUseApp'),
+                            style: TextStyle(
+                              fontSize: 28,
+                              fontWeight: FontWeight.w800,
+                            ),
                           ),
                           SizedBox(height: 12),
                           Text(
-                            '''1. Use Auto Ride for automatic tracking.
-2. Use Challenge for goals and habits.
-3. Use Hardware if you have a Smart Brake Light.
-4. See your green impact and monthly progress on the home screen.''',
-                            style: TextStyle(color: MunjaColors.textSoft, height: 1.55),
+                            AppText.t('howToUseAppBody'),
+                            style: TextStyle(
+                              color: MunjaColors.textSoft,
+                              height: 1.55,
+                            ),
                           ),
                         ],
                       ),
@@ -1377,9 +901,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const SectionTitle(
-                            title: 'Choose your avatar mode',
-                            subtitle: 'Make the app more personal before you start.',
+                          SectionTitle(
+                            title: AppText.t('chooseAvatarMode'),
+                            subtitle: AppText.t('avatarModeSubtitle'),
                           ),
                           const SizedBox(height: 16),
                           Wrap(
@@ -1388,7 +912,8 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                             children: avatarOptions.map((avatar) {
                               final selected = selectedAvatar == avatar.id;
                               return GestureDetector(
-                                onTap: () => setState(() => selectedAvatar = avatar.id),
+                                onTap: () =>
+                                    setState(() => selectedAvatar = avatar.id),
                                 child: AnimatedContainer(
                                   duration: const Duration(milliseconds: 250),
                                   width: 106,
@@ -1406,7 +931,10 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                                   ),
                                   child: Column(
                                     children: [
-                                      Text(avatar.emoji, style: const TextStyle(fontSize: 28)),
+                                      Text(
+                                        avatar.emoji,
+                                        style: const TextStyle(fontSize: 28),
+                                      ),
                                       const SizedBox(height: 8),
                                       Text(
                                         avatar.label,
@@ -1431,15 +959,15 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const SectionTitle(
-                            title: 'Set up before start',
-                            subtitle: 'Add your details before entering the app.',
+                          SectionTitle(
+                            title: AppText.t('setupBeforeStart'),
+                            subtitle: AppText.t('setupBeforeStartSubtitle'),
                           ),
                           const SizedBox(height: 16),
                           TextField(
                             controller: nameCtrl,
-                            decoration: const InputDecoration(
-                              labelText: 'Name',
+                            decoration: InputDecoration(
+                              labelText: AppText.t('name'),
                               prefixIcon: Icon(Icons.person_rounded),
                             ),
                           ),
@@ -1447,17 +975,19 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                           TextField(
                             controller: ageCtrl,
                             keyboardType: TextInputType.number,
-                            inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                            decoration: const InputDecoration(
-                              labelText: 'Age',
+                            inputFormatters: [
+                              FilteringTextInputFormatter.digitsOnly,
+                            ],
+                            decoration: InputDecoration(
+                              labelText: AppText.t('age'),
                               prefixIcon: Icon(Icons.cake_rounded),
                             ),
                           ),
                           const SizedBox(height: 12),
                           TextField(
                             controller: cityCtrl,
-                            decoration: const InputDecoration(
-                              labelText: 'City',
+                            decoration: InputDecoration(
+                              labelText: AppText.t('city'),
                               prefixIcon: Icon(Icons.location_city_rounded),
                             ),
                           ),
@@ -1467,7 +997,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                             child: FilledButton.icon(
                               onPressed: _finish,
                               icon: const Icon(Icons.rocket_launch_rounded),
-                              label: const Text('Start app'),
+                              label: Text(AppText.t('startApp')),
                             ),
                           ),
                         ],
@@ -1502,7 +1032,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       duration: const Duration(milliseconds: 250),
                       curve: Curves.easeOut,
                     ),
-                    child: const Text('Back'),
+                    child: Text(AppText.t('back')),
                   ),
                 const SizedBox(width: 8),
                 if (page < 2)
@@ -1511,7 +1041,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                       duration: const Duration(milliseconds: 250),
                       curve: Curves.easeOut,
                     ),
-                    child: const Text('Next'),
+                    child: Text(AppText.t('next')),
                   ),
               ],
             ),
@@ -1529,18 +1059,20 @@ class HomeScreen extends StatefulWidget {
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _wheelCtrl;
+class _HomeScreenState extends State<HomeScreen> {
+  final RideControllerService _rideController = RideControllerService.instance;
 
   List<MunjaDevice> nearbyDevices = [];
-  List<MunjaDevice> savedDevices = [];
   List<Trip> trips = [];
-  UserProfile profile =
-      const UserProfile(name: 'Rider', age: 24, city: 'Copenhagen', avatarIndex: 0);
 
-  bool loading = true;
-  bool challengeAccepted = false;
+  UserProfile profile = const UserProfile(
+    name: 'Rider',
+    age: 24,
+    city: 'Copenhagen',
+    avatarIndex: 0,
+  );
+
+  bool scanningBle = false;
   double weeklyGoalKm = 20;
 
   bool get hasBrakeLightNearby =>
@@ -1549,398 +1081,566 @@ class _HomeScreenState extends State<HomeScreen>
   @override
   void initState() {
     super.initState();
-    _wheelCtrl = AnimationController(
-      vsync: this,
-      duration: const Duration(milliseconds: 1800),
-    )..repeat();
-    _load();
+
+    _rideController.isRideActive.addListener(_onRideControllerChanged);
+    _rideController.speedKmh.addListener(_onRideControllerChanged);
+    _rideController.distanceKm.addListener(_onRideControllerChanged);
+    _rideController.averageSpeedKmh.addListener(_onRideControllerChanged);
+    _rideController.rideDuration.addListener(_onRideControllerChanged);
+
+    _loadFast();
+    _scanBleLater();
   }
 
   @override
   void dispose() {
-    _wheelCtrl.dispose();
+    _rideController.isRideActive.removeListener(_onRideControllerChanged);
+    _rideController.speedKmh.removeListener(_onRideControllerChanged);
+    _rideController.distanceKm.removeListener(_onRideControllerChanged);
+    _rideController.averageSpeedKmh.removeListener(_onRideControllerChanged);
+    _rideController.rideDuration.removeListener(_onRideControllerChanged);
     super.dispose();
   }
 
-  Future<void> _load() async {
-    final sp = await SharedPreferences.getInstance();
-    final loadedTrips = await loadTripsShared();
-    final loadedSaved = await loadSavedDevicesShared();
-    final loadedProfile = await loadUserProfileShared();
-    final nearby = await scanNearbyMunjaDevices(saved: loadedSaved);
-
+  void _onRideControllerChanged() {
     if (!mounted) return;
-    setState(() {
-      trips = loadedTrips;
-      savedDevices = loadedSaved;
-      nearbyDevices = nearby;
-      profile = loadedProfile;
-      challengeAccepted = sp.getBool(challengeAcceptedKey) ?? false;
-      weeklyGoalKm = sp.getDouble(weeklyGoalKmKey) ?? 20;
-      loading = false;
-    });
+    setState(() {});
+  }
+
+  RideSessionData _homeRideData() {
+    return RideSessionData(
+      isRiding: _rideController.isRideActive.value,
+      currentSpeedKmh: _rideController.speedKmh.value,
+      averageSpeedKmh: _rideController.averageSpeedKmh.value,
+      maxSpeedKmh: _rideController.speedKmh.value,
+      distanceKm: _rideController.distanceKm.value,
+      rideDuration: _rideController.rideDuration.value,
+      calories: 0,
+      altitude: null,
+      gpsAccuracy: 0,
+      lastUpdate: DateTime.now(),
+      path: const [],
+    );
+  }
+
+  Future<void> _loadFast() async {
+    try {
+      final sp = await SharedPreferences.getInstance();
+      final loadedTrips = await StorageService.loadTrips();
+      final loadedProfile = await StorageService.loadUserProfile();
+
+      if (!mounted) return;
+
+      setState(() {
+        trips = loadedTrips;
+        profile = loadedProfile;
+        weeklyGoalKm = sp.getDouble(weeklyGoalKmKey) ?? 20;
+      });
+    } catch (_) {
+      // Keep Home usable even if storage fails.
+    }
+  }
+
+  Future<void> _scanBleLater() async {
+    if (!mounted) return;
+
+    setState(() => scanningBle = true);
+
+    try {
+      final saved = await StorageService.loadSavedDevices();
+      final nearby = await BleService.scanNearbyMunjaDevices(saved: saved);
+
+      if (!mounted) return;
+
+      setState(() {
+        nearbyDevices = nearby;
+        scanningBle = false;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() => scanningBle = false);
+    }
+  }
+
+  Future<void> _refreshHome() async {
+    await _loadFast();
+    await _scanBleLater();
   }
 
   Future<void> _open(Widget screen) async {
     await Navigator.push(context, MaterialPageRoute(builder: (_) => screen));
-    _load();
+
+    await _refreshHome();
+  }
+
+  Future<void> _toggleRideFromHome() async {
+    if (_rideController.isRideActive.value) {
+      munjaRideActiveNotifier.value = false;
+
+      final trip = await BackgroundRideEngine.instance.stop();
+
+      await _loadFast();
+
+      if (!mounted) return;
+
+      if (trip != null) {
+        Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => RideSummaryScreen(trip: trip)),
+        );
+      }
+
+      return;
+    }
+
+    munjaRideActiveNotifier.value = true;
+    await BackgroundRideEngine.instance.start();
   }
 
   @override
   Widget build(BuildContext context) {
-    final weeklyKm = weeklyKmFromTrips(trips);
-    final streak = streakFromTrips(trips);
-    final progress = weeklyGoalKm <= 0
-        ? 0.0
-        : (weeklyKm / weeklyGoalKm).clamp(0.0, 1.0);
-    final co2SavedKg = weeklyKm * co2PerKmKg;
-    final carKmAvoided = weeklyKm;
-    final monthly = buildMonthlyStats(trips);
-    final totalCo2SixMonths = monthly.fold<double>(0, (sum, e) => sum + e.co2Kg);
-    final totalKmSixMonths = monthly.fold<double>(0, (sum, e) => sum + e.km);
-
+    final rideData = _homeRideData();
+    final monitoring = _rideController.isRideActive.value;
     return AppShell(
-      title: appTitle,
+      title: AppText.t('appTitle'),
       actions: [
         IconButton(
           onPressed: openMunjaWebsite,
           icon: const Icon(Icons.public_rounded),
         ),
       ],
-      child: loading
-          ? const Center(child: CircularProgressIndicator())
-          : RefreshIndicator(
-              onRefresh: _load,
-              child: ListView(
-                padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-                children: [
-                  MunjaCard(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Wrap(
-                          spacing: 10,
-                          runSpacing: 10,
-                          children: [
-                            const HeroBadge(
-                              icon: Icons.auto_graph_rounded,
-                              text: 'App mode',
-                              color: MunjaColors.mint,
-                            ),
-                            HeroBadge(
-                              icon: hasBrakeLightNearby
-                                  ? Icons.bluetooth_connected_rounded
-                                  : Icons.bluetooth_disabled_rounded,
-                              text: hasBrakeLightNearby ? 'Hardware found' : 'Software only',
-                              color: hasBrakeLightNearby
-                                  ? MunjaColors.success
-                                  : MunjaColors.warning,
-                            ),
-                            const HeroBadge(
-                              icon: Icons.eco_rounded,
-                              text: 'Greener transport',
-                              color: MunjaColors.success,
-                            ),
-                          ],
+      child: RefreshIndicator(
+        onRefresh: _refreshHome,
+        child: ListView(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 140),
+          children: [
+            HomeLiveRideCard(
+              data: rideData,
+              monitoring: monitoring,
+              bleConnected: hasBrakeLightNearby,
+              batteryPercent: hasBrakeLightNearby ? 82 : 64,
+              onStartStop: _toggleRideFromHome,
+              onOpenMap: () => _open(const AutoRideScreen()),
+            ),
+
+            const SizedBox(height: 14),
+
+            _ProductFocusCard(
+              hasBrakeLight: hasBrakeLightNearby,
+              scanning: scanningBle,
+              batteryPercent: hasBrakeLightNearby ? 82 : 64,
+              onRefresh: _refreshHome,
+              onOpenProducts: () => _open(const DevicesScreen()),
+            ),
+
+            const SizedBox(height: 14),
+
+            _HomeMiniStatsRow(
+              weeklyKm: weeklyKmFromTrips(trips),
+              weeklyGoalKm: weeklyGoalKm,
+            ),
+
+            const SizedBox(height: 190),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ProductFocusCard extends StatelessWidget {
+  final bool hasBrakeLight;
+  final bool scanning;
+  final int batteryPercent;
+  final VoidCallback onRefresh;
+  final VoidCallback onOpenProducts;
+
+  const _ProductFocusCard({
+    required this.hasBrakeLight,
+    required this.scanning,
+    required this.batteryPercent,
+    required this.onRefresh,
+    required this.onOpenProducts,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final battery = batteryPercent.clamp(0, 100);
+
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: MunjaColors.panel.withOpacity(0.82),
+        borderRadius: BorderRadius.circular(32),
+        border: Border.all(
+          color: hasBrakeLight
+              ? MunjaColors.mint.withOpacity(0.30)
+              : Colors.white.withOpacity(0.07),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: hasBrakeLight
+                ? MunjaColors.mint.withOpacity(0.16)
+                : Colors.black.withOpacity(0.28),
+            blurRadius: 34,
+            offset: const Offset(0, 18),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Icon(
+                Icons.auto_awesome_rounded,
+                color: MunjaColors.mint,
+                size: 18,
+              ),
+              const SizedBox(width: 8),
+              Text(
+                hasBrakeLight ? 'Dit produkt' : 'Produkt klar',
+                style: TextStyle(
+                  color: MunjaColors.mint,
+                  fontSize: 13,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const Spacer(),
+              GestureDetector(
+                onTap: scanning ? null : onRefresh,
+                child: SizedBox(
+                  width: 34,
+                  height: 34,
+                  child: scanning
+                      ? const Padding(
+                          padding: EdgeInsets.all(7),
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(
+                          Icons.refresh_rounded,
+                          color: Colors.white54,
+                          size: 22,
                         ),
-                        const SizedBox(height: 16),
-                        Row(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Expanded(
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    '${greetingFromHour()}, ${profile.name.isEmpty ? 'Rider' : profile.name}',
-                                    style: const TextStyle(
-                                      color: MunjaColors.mint,
-                                      fontWeight: FontWeight.w700,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 10),
-                                  const Text(
-                                    'Bike tracking with a cleaner home screen',
-                                    style: TextStyle(
-                                      fontSize: 28,
-                                      height: 1.05,
-                                      fontWeight: FontWeight.w800,
-                                    ),
-                                  ),
-                                  const SizedBox(height: 10),
-                                  Text(
-                                    challengeAccepted
-                                        ? '🔥 $streak day streak · ${weeklyKm.toStringAsFixed(1)}/${weeklyGoalKm.toStringAsFixed(0)} km this week'
-                                        : 'Start Auto Ride, track your rides, and save your route history.',
-                                    style: const TextStyle(
-                                      color: MunjaColors.textSoft,
-                                      height: 1.45,
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(width: 12),
-                            Container(
-                              width: 96,
-                              height: 96,
-                              decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(28),
-                                gradient: LinearGradient(
-                                  begin: Alignment.topLeft,
-                                  end: Alignment.bottomRight,
-                                  colors: [
-                                    MunjaColors.mint.withOpacity(0.18),
-                                    MunjaColors.blueGlow.withOpacity(0.10),
-                                  ],
-                                ),
-                                border: Border.all(color: Colors.white.withOpacity(0.08)),
-                              ),
-                              child: AnimatedBuilder(
-                                animation: _wheelCtrl,
-                                builder: (_, child) => Transform.rotate(
-                                  angle: _wheelCtrl.value * 2 * math.pi,
-                                  child: child,
-                                ),
-                                child: Padding(
-                                  padding: const EdgeInsets.all(10),
-                                  child: Image.asset(
-                                    bicycleWheelAsset,
-                                    fit: BoxFit.contain,
-                                    errorBuilder: (_, __, ___) =>
-                                        const Icon(Icons.tire_repair_rounded),
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 12),
+
+          Row(
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      hasBrakeLight ? 'Smart Brake Light' : 'Smart Brake Light',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 28,
+                        height: 1.05,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: -0.8,
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      hasBrakeLight
+                          ? 'Forbundet • $battery%'
+                          : scanning
+                          ? 'Scanner efter hardware...'
+                          : 'Ingen hardware fundet lige nu',
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        color: hasBrakeLight
+                            ? MunjaColors.mint
+                            : MunjaColors.textSoft,
+                        fontSize: 14,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 18),
+                    GestureDetector(
+                      onTap: onOpenProducts,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 11,
                         ),
-                        const SizedBox(height: 18),
-                        ClipRRect(
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.045),
                           borderRadius: BorderRadius.circular(999),
-                          child: LinearProgressIndicator(
-                            value: progress,
-                            minHeight: 10,
-                            backgroundColor: Colors.white12,
+                          border: Border.all(
+                            color: Colors.white.withOpacity(0.12),
                           ),
                         ),
-                        const SizedBox(height: 10),
-                        Text(
-                          'Weekly goal ${weeklyGoalKm.toStringAsFixed(0)} km',
-                          style: const TextStyle(color: MunjaColors.textSoft),
-                        ),
-                        const SizedBox(height: 16),
-                        AvatarMiniCard(
-                          profile: profile,
-                          onTap: () => _open(const ProfileScreen()),
-                        ),
-                        const SizedBox(height: 16),
-                        Row(
+                        child: const Row(
+                          mainAxisSize: MainAxisSize.min,
                           children: [
-                            Expanded(
-                              child: FilledButton.icon(
-                                onPressed: () => _open(const AutoRideScreen()),
-                                icon: const Icon(Icons.directions_bike_rounded),
-                                label: const Text('Open Auto Ride'),
+                            Text(
+                              'Se detaljer',
+                              style: TextStyle(
+                                color: Colors.white,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w900,
                               ),
                             ),
-                            const SizedBox(width: 10),
-                            Expanded(
-                              child: OutlinedButton.icon(
-                                onPressed: () => _open(const ChallengeScreen()),
-                                icon: const Icon(Icons.flag_rounded),
-                                label: const Text('Challenge'),
-                              ),
+                            SizedBox(width: 8),
+                            Icon(
+                              Icons.chevron_right_rounded,
+                              color: Colors.white70,
+                              size: 20,
                             ),
                           ],
                         ),
-                      ],
+                      ),
                     ),
-                  ),
-                  const SizedBox(height: 16),
-                  Row(
-                    children: [
-                      StatPill(
-                        icon: Icons.local_fire_department_rounded,
-                        iconColor: Colors.orange,
-                        label: 'Streak',
-                        value: '$streak days',
-                      ),
-                      const SizedBox(width: 10),
-                      StatPill(
-                        icon: Icons.route_rounded,
-                        label: 'This week',
-                        value: '${weeklyKm.toStringAsFixed(1)} km',
-                      ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(width: 14),
+
+              Container(
+                width: 112,
+                height: 132,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(28),
+                  gradient: LinearGradient(
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                    colors: [
+                      Colors.white.withOpacity(0.10),
+                      Colors.white.withOpacity(0.02),
                     ],
                   ),
-                  const SizedBox(height: 16),
-                  MunjaCard(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const SectionTitle(
-                          title: 'Your green impact',
-                          subtitle:
-                              'Choosing the bike instead of the car helps reduce CO₂ and unnecessary car trips.',
+                  boxShadow: [
+                    BoxShadow(
+                      color: MunjaColors.mint.withOpacity(0.18),
+                      blurRadius: 30,
+                      offset: const Offset(0, 12),
+                    ),
+                  ],
+                ),
+                child: Stack(
+                  alignment: Alignment.center,
+                  children: [
+                    Container(
+                      width: 84,
+                      height: 104,
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF101816),
+                        borderRadius: BorderRadius.circular(20),
+                        border: Border.all(
+                          color: Colors.white.withOpacity(0.10),
                         ),
-                        const SizedBox(height: 14),
-                        Row(
-                          children: [
-                            StatPill(
-                              icon: Icons.eco_rounded,
-                              iconColor: MunjaColors.success,
-                              label: 'CO₂ saved',
-                              value: '${co2SavedKg.toStringAsFixed(2)} kg',
-                            ),
-                            const SizedBox(width: 10),
-                            StatPill(
-                              icon: Icons.directions_car_filled_rounded,
-                              iconColor: MunjaColors.warning,
-                              label: 'Car km avoided',
-                              value: '${carKmAvoided.toStringAsFixed(1)} km',
+                      ),
+                    ),
+                    Positioned(
+                      top: 32,
+                      child: Container(
+                        width: 70,
+                        height: 16,
+                        decoration: BoxDecoration(
+                          color: hasBrakeLight
+                              ? Colors.redAccent
+                              : Colors.redAccent.withOpacity(0.55),
+                          borderRadius: BorderRadius.circular(999),
+                          boxShadow: [
+                            BoxShadow(
+                              color: Colors.redAccent.withOpacity(0.45),
+                              blurRadius: 18,
+                              spreadRadius: 1,
                             ),
                           ],
                         ),
-                        const SizedBox(height: 14),
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: MunjaColors.panelSoft,
-                            borderRadius: BorderRadius.circular(22),
-                            border: Border.all(color: Colors.white.withOpacity(0.05)),
-                          ),
-                          child: Text(
-                            weeklyKm > 0
-                                ? 'You have already made a difference this week. Every ride helps reduce traffic, fuel use, and CO₂ emissions.'
-                                : 'Start your first ride and see how much CO₂ you can save by choosing the bike instead of the car.',
-                            style: const TextStyle(
-                              color: MunjaColors.textSoft,
-                              height: 1.45,
-                            ),
-                          ),
-                        ),
-                      ],
+                      ),
                     ),
+                    Positioned(
+                      bottom: 28,
+                      child: Container(
+                        width: 22,
+                        height: 22,
+                        decoration: BoxDecoration(
+                          shape: BoxShape.circle,
+                          color: Colors.white.withOpacity(0.84),
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              const SizedBox(width: 12),
+
+              Column(
+                children: [
+                  _ProductInfoPill(
+                    icon: Icons.battery_5_bar_rounded,
+                    label: 'Batteri',
+                    value: '$battery%',
                   ),
-                  const SizedBox(height: 16),
-                  MunjaCard(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const SectionTitle(
-                          title: 'Monthly overview',
-                          subtitle:
-                              'See your progress month by month with distance and greener transport.',
-                        ),
-                        const SizedBox(height: 14),
-                        buildMiniBarChart(monthly),
-                        const SizedBox(height: 14),
-                        Container(
-                          width: double.infinity,
-                          padding: const EdgeInsets.all(16),
-                          decoration: BoxDecoration(
-                            color: MunjaColors.panelSoft,
-                            borderRadius: BorderRadius.circular(22),
-                          ),
-                          child: Row(
-                            children: [
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    const Text(
-                                      'Total 6 months',
-                                      style: TextStyle(color: MunjaColors.textSoft),
-                                    ),
-                                    const SizedBox(height: 6),
-                                    Text(
-                                      '${totalKmSixMonths.toStringAsFixed(1)} km',
-                                      style: const TextStyle(
-                                        fontSize: 22,
-                                        fontWeight: FontWeight.w800,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    const Text(
-                                      'Total CO₂ saved',
-                                      style: TextStyle(color: MunjaColors.textSoft),
-                                    ),
-                                    const SizedBox(height: 6),
-                                    Text(
-                                      '${totalCo2SixMonths.toStringAsFixed(2)} kg',
-                                      style: const TextStyle(
-                                        fontSize: 22,
-                                        fontWeight: FontWeight.w800,
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      ],
-                    ),
+                  const SizedBox(height: 8),
+                  const _ProductInfoPill(
+                    icon: Icons.wb_sunny_rounded,
+                    label: 'Tilstand',
+                    value: 'Smart',
                   ),
-                  const SizedBox(height: 16),
-                  MunjaCard(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        SectionTitle(
-                          title: 'Hardware',
-                          subtitle: hasBrakeLightNearby
-                              ? 'Your Smart Brake Light is nearby.'
-                              : 'No hardware found right now. The app can still run on its own.',
-                          trailing: TextButton(
-                            onPressed: () => _open(const DevicesScreen()),
-                            child: const Text('All products'),
-                          ),
-                        ),
-                        const SizedBox(height: 14),
-                        MenuTile(
-                          icon: hasBrakeLightNearby
-                              ? Icons.light_mode_rounded
-                              : Icons.bluetooth_searching_rounded,
-                          title: hasBrakeLightNearby ? 'Smart Brake Light' : 'My products',
-                          subtitle: hasBrakeLightNearby
-                              ? 'Open status, sensitivity, and connection info'
-                              : 'Scan, save, and manage your Munja devices',
-                          onTap: () => _open(
-                            hasBrakeLightNearby
-                                ? const BrakeLightScreen()
-                                : const DevicesScreen(),
-                          ),
-                          trailing: hasBrakeLightNearby
-                              ? ClipRRect(
-                                  borderRadius: BorderRadius.circular(16),
-                                  child: SizedBox(
-                                    width: 54,
-                                    height: 54,
-                                    child: Image.asset(
-                                      brakeLightAsset,
-                                      fit: BoxFit.cover,
-                                      errorBuilder: (_, __, ___) =>
-                                          const Icon(Icons.light_mode_rounded),
-                                    ),
-                                  ),
-                                )
-                              : const Icon(Icons.chevron_right_rounded),
-                        ),
-                      ],
-                    ),
+                  const SizedBox(height: 8),
+                  const _ProductInfoPill(
+                    icon: Icons.check_circle_outline_rounded,
+                    label: 'Status',
+                    value: 'Optimal',
                   ),
                 ],
               ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ProductInfoPill extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+
+  const _ProductInfoPill({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 94,
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 9),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.045),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: Colors.white.withOpacity(0.07)),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: MunjaColors.mint, size: 18),
+          const SizedBox(width: 7),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  label,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Colors.white54,
+                    fontSize: 9,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 1),
+                Text(
+                  value,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 12,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ],
             ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _HomeMiniStatsRow extends StatelessWidget {
+  final double weeklyKm;
+  final double weeklyGoalKm;
+
+  const _HomeMiniStatsRow({required this.weeklyKm, required this.weeklyGoalKm});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: _HomeMiniStatCard(
+            icon: Icons.route_rounded,
+            label: 'Denne uge',
+            value: '${weeklyKm.toStringAsFixed(1)} km',
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          child: _HomeMiniStatCard(
+            icon: Icons.flag_rounded,
+            label: 'Ugentligt mål',
+            value: '${weeklyGoalKm.toStringAsFixed(0)} km',
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _HomeMiniStatCard extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final String value;
+
+  const _HomeMiniStatCard({
+    required this.icon,
+    required this.label,
+    required this.value,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 118,
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: MunjaColors.panel.withOpacity(0.72),
+        borderRadius: BorderRadius.circular(28),
+        border: Border.all(color: Colors.white.withOpacity(0.06)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: MunjaColors.mint, size: 24),
+          const Spacer(),
+          Text(
+            label,
+            style: const TextStyle(
+              color: Colors.white60,
+              fontSize: 13,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+          const SizedBox(height: 7),
+          Text(
+            value,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 22,
+              fontWeight: FontWeight.w900,
+              letterSpacing: -0.4,
+            ),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -1953,20 +1653,16 @@ class AutoRideScreen extends StatefulWidget {
 }
 
 class _AutoRideScreenState extends State<AutoRideScreen> {
+  final RideControllerService _rideController = RideControllerService.instance;
+  final LiveRideBus _rideBus = LiveRideBus.instance;
+
   GoogleMapController? mapCtrl;
 
-  bool monitoring = false;
-  bool tripActive = false;
   bool mapsLocationOk = false;
   bool centeringToCurrentLocation = false;
 
-  DateTime? tripStart;
-  Position? currentPos;
-  double tripDistanceM = 0;
-  final List<LatLng> tripPath = [];
+  LatLng? currentCenter;
   List<Trip> trips = [];
-
-  double currentSpeedKmh = 0;
 
   final Set<Factory<OneSequenceGestureRecognizer>> _mapGestureRecognizers = {
     Factory<OneSequenceGestureRecognizer>(() => EagerGestureRecognizer()),
@@ -1977,18 +1673,10 @@ class _AutoRideScreenState extends State<AutoRideScreen> {
     super.initState();
     _loadTrips();
     _initLocationAndCenter();
-    FlutterForegroundTask.addTaskDataCallback(_onForegroundData);
-    _restoreRunningState();
-  }
-
-  @override
-  void dispose() {
-    FlutterForegroundTask.removeTaskDataCallback(_onForegroundData);
-    super.dispose();
   }
 
   Future<void> _loadTrips() async {
-    final loaded = await loadTripsShared();
+    final loaded = await StorageService.loadTrips();
     if (!mounted) return;
     setState(() => trips = loaded);
   }
@@ -1997,12 +1685,16 @@ class _AutoRideScreenState extends State<AutoRideScreen> {
     try {
       final enabled = await Geolocator.isLocationServiceEnabled();
       var perm = await Geolocator.checkPermission();
+
       if (perm == LocationPermission.denied) {
         perm = await Geolocator.requestPermission();
       }
-      final ok = enabled &&
+
+      final ok =
+          enabled &&
           (perm == LocationPermission.always ||
               perm == LocationPermission.whileInUse);
+
       if (!mounted) return;
       setState(() => mapsLocationOk = ok);
     } catch (_) {
@@ -2022,464 +1714,425 @@ class _AutoRideScreenState extends State<AutoRideScreen> {
     bool animated = true,
   }) async {
     if (centeringToCurrentLocation) return;
+
     setState(() => centeringToCurrentLocation = true);
+
     try {
       final pos = await Geolocator.getCurrentPosition(
         desiredAccuracy: LocationAccuracy.best,
       );
-      currentPos = pos;
+
       final target = LatLng(pos.latitude, pos.longitude);
+      currentCenter = target;
+
+      final update = CameraUpdate.newCameraPosition(
+        CameraPosition(target: target, zoom: zoom),
+      );
+
       if (animated) {
-        await mapCtrl?.animateCamera(
-          CameraUpdate.newCameraPosition(
-            CameraPosition(target: target, zoom: zoom),
-          ),
-        );
+        await mapCtrl?.animateCamera(update);
       } else {
-        await mapCtrl?.moveCamera(
-          CameraUpdate.newCameraPosition(
-            CameraPosition(target: target, zoom: zoom),
-          ),
-        );
+        await mapCtrl?.moveCamera(update);
       }
+
       if (mounted) setState(() {});
     } catch (_) {}
-    if (mounted) setState(() => centeringToCurrentLocation = false);
+
+    if (mounted) {
+      setState(() => centeringToCurrentLocation = false);
+    }
   }
 
-  Future<void> _restoreRunningState() async {
-    final running = await FlutterForegroundTask.isRunningService;
-    final saved = await loadBgTripStateShared();
+  RideSessionData _rideDataFromState(LiveRideState state) {
+    return RideSessionData(
+      isRiding: state.isActive,
+      currentSpeedKmh: state.speedKmh,
+      averageSpeedKmh: state.averageSpeedKmh,
+      maxSpeedKmh: state.maxSpeedKmh,
+      distanceKm: state.distanceKm,
+      rideDuration: state.duration,
+      calories: state.calories.toDouble(),
+      altitude: state.altitude,
+      gpsAccuracy: state.gpsAccuracy,
+      lastUpdate: state.lastUpdate,
+      path: state.path.map((e) => [e.latitude, e.longitude]).toList(),
+    );
+  }
 
-    if (!mounted) return;
+  Future<void> _toggleRide() async {
+    if (_rideController.isRideActive.value) {
+      munjaRideActiveNotifier.value = false;
 
-    setState(() {
-      monitoring = running;
-      if (saved != null) {
-        tripActive = saved['tripActive'] == true;
-        tripDistanceM = ((saved['tripDistanceM'] as num?) ?? 0).toDouble();
+      final trip = await BackgroundRideEngine.instance.stop();
 
-        final savedPath = (saved['tripPath'] as List? ?? const [])
-            .map((e) => (e as List).map((v) => (v as num).toDouble()).toList())
-            .where((e) => e.length >= 2)
-            .map((e) => LatLng(e[0], e[1]))
-            .toList();
+      await _loadTrips();
 
-        tripPath
-          ..clear()
-          ..addAll(savedPath);
+      if (!mounted) return;
 
-        final startMs = saved['tripStartMs'] as int?;
-        tripStart = startMs == null
-            ? null
-            : DateTime.fromMillisecondsSinceEpoch(startMs);
+      if (trip != null) {
+        Navigator.of(context).push(
+          MaterialPageRoute(builder: (_) => RideSummaryScreen(trip: trip)),
+        );
       }
-    });
+
+      return;
+    }
+
+    munjaRideActiveNotifier.value = true;
+    await BackgroundRideEngine.instance.start();
   }
 
-  void _onForegroundData(Object data) {
-    if (data is! Map) return;
+  LatLng _centerForState(LiveRideState state) {
+    if (state.path.isNotEmpty) return state.path.last;
+    if (currentCenter != null) return currentCenter!;
+    return fallbackCenter;
+  }
 
-    try {
-      final msg = BgLocationMessage.fromJson(data.cast<String, dynamic>());
-      final wasTripActive = tripActive;
+  Set<Marker> _markersForState(LiveRideState state) {
+    final markers = <Marker>{};
 
-      final pos = Position(
-        latitude: msg.latitude,
-        longitude: msg.longitude,
-        timestamp: DateTime.now(),
-        accuracy: 0,
-        altitude: 0,
-        altitudeAccuracy: 0,
-        heading: 0,
-        headingAccuracy: 0,
-        speed: msg.speedMps,
-        speedAccuracy: 0,
-        isMocked: false,
+    if (state.path.isNotEmpty) {
+      markers.add(
+        Marker(
+          markerId: const MarkerId('current_position'),
+          position: state.path.last,
+          infoWindow: InfoWindow(title: AppText.t('yourPosition')),
+        ),
       );
 
-      currentPos = pos;
-      currentSpeedKmh = msg.speedMps * 3.6;
-      tripDistanceM = msg.distanceM;
-      tripActive = msg.tripActive;
-      tripStart = msg.tripStartMs == null
-          ? null
-          : DateTime.fromMillisecondsSinceEpoch(msg.tripStartMs!);
-
-      tripPath
-        ..clear()
-        ..addAll(msg.path.map((e) => LatLng(e[0], e[1])));
-
-      if (mounted) {
-        setState(() {});
-      }
-
-      if (wasTripActive && !msg.tripActive) {
-        _loadTrips();
-      }
-    } catch (_) {}
-  }
-
-  Future<void> _saveCurrentUiTripIfNeeded() async {
-    if (!tripActive || tripStart == null || tripPath.isEmpty) return;
-
-    final allTrips = await loadTripsShared();
-    final trip = Trip(
-      startedAtMs: tripStart!.millisecondsSinceEpoch,
-      endedAtMs: DateTime.now().millisecondsSinceEpoch,
-      distanceM: tripDistanceM,
-      brakes: 0,
-      hardBrakes: 0,
-      path: tripPath.map((p) => <double>[p.latitude, p.longitude]).toList(),
-      source: 'software',
-    );
-
-    final duplicate = allTrips.any((t) =>
-        t.startedAtMs == trip.startedAtMs &&
-        (t.distanceM - trip.distanceM).abs() < 1);
-
-    if (!duplicate) {
-      allTrips.insert(0, trip);
-      await saveTripsShared(allTrips);
-    }
-  }
-
-  Future<void> _startForegroundTracking() async {
-    final ok = await requestTrackingPermissions();
-    if (!ok) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Location permissions mangler')),
+      markers.add(
+        Marker(
+          markerId: const MarkerId('ride_start'),
+          position: state.path.first,
+          infoWindow: InfoWindow(title: AppText.t('start')),
+        ),
       );
-      return;
+    } else if (currentCenter != null) {
+      markers.add(
+        Marker(
+          markerId: const MarkerId('current_position'),
+          position: currentCenter!,
+          infoWindow: InfoWindow(title: AppText.t('yourPosition')),
+        ),
+      );
     }
 
-    final isRunning = await FlutterForegroundTask.isRunningService;
-    if (isRunning) {
-      if (!mounted) return;
-      setState(() => monitoring = true);
-      return;
-    }
-
-    await FlutterForegroundTask.startService(
-      serviceId: 2001,
-      notificationTitle: 'Munja monitoring',
-      notificationText: 'Waiting for movement...',
-      notificationIcon: null,
-      notificationInitialRoute: '/',
-      callback: startCallback,
-    );
-
-    final sp = await SharedPreferences.getInstance();
-    await sp.setBool(bgTrackingEnabledKey, true);
-
-    if (!mounted) return;
-    setState(() => monitoring = true);
+    return markers;
   }
 
-  Future<void> _stopForegroundTracking() async {
-    await _saveCurrentUiTripIfNeeded();
+  Set<Polyline> _polylinesForState(LiveRideState state) {
+    final path = List<LatLng>.from(state.path);
 
-    final isRunning = await FlutterForegroundTask.isRunningService;
-    if (isRunning) {
-      await FlutterForegroundTask.stopService();
-    }
+    if (path.length < 2) return {};
 
-    final sp = await SharedPreferences.getInstance();
-    await sp.setBool(bgTrackingEnabledKey, false);
-
-    await clearBgTripStateShared();
-
-    if (!mounted) return;
-    setState(() {
-      monitoring = false;
-      tripActive = false;
-      tripStart = null;
-      tripDistanceM = 0;
-      currentSpeedKmh = 0;
-      tripPath.clear();
-    });
-
-    await _loadTrips();
+    return {
+      Polyline(
+        polylineId: const PolylineId('live_ride_route'),
+        points: path,
+        width: 7,
+        color: MunjaColors.mint,
+      ),
+    };
   }
 
-  Future<void> _toggleMonitoring() async {
-    if (monitoring) {
-      await _stopForegroundTracking();
-      return;
-    }
+  Future<void> _zoomIn() async {
+    await mapCtrl?.animateCamera(CameraUpdate.zoomIn());
+  }
 
-    await _refreshMapsLocationOk();
-    await _moveToCurrentLocation();
-    await _startForegroundTracking();
+  Future<void> _zoomOut() async {
+    await mapCtrl?.animateCamera(CameraUpdate.zoomOut());
+  }
+
+  Future<void> _openCoach() async {
+    await Navigator.of(
+      context,
+    ).push(MaterialPageRoute(builder: (_) => const SmartRideCoachScreen()));
   }
 
   @override
   Widget build(BuildContext context) {
-    final LatLng center = tripPath.isNotEmpty
-        ? tripPath.last
-        : currentPos != null
-            ? LatLng(currentPos!.latitude, currentPos!.longitude)
-            : fallbackCenter;
+    return ValueListenableBuilder<LiveRideState>(
+      valueListenable: _rideBus.state,
+      builder: (context, rideState, _) {
+        final center = _centerForState(rideState);
+        final rideHudData = _rideDataFromState(rideState);
+        final isRiding = rideState.isActive;
 
-    return AppShell(
-      title: 'Auto Ride',
-      child: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-        children: [
-          MunjaCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SectionTitle(
-                  title: 'Automatic tracking',
-                  subtitle:
-                      'Pinch to zoom works on the map, and the ride auto-stops after 30 seconds below the stop threshold.',
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    StatPill(
-                      icon: monitoring
-                          ? Icons.radar_rounded
-                          : Icons.pause_circle_outline_rounded,
-                      label: 'Monitoring',
-                      value: monitoring ? 'ON' : 'OFF',
-                    ),
-                    const SizedBox(width: 10),
-                    StatPill(
-                      icon: tripActive
-                          ? Icons.play_circle_fill_rounded
-                          : Icons.not_started_rounded,
-                      label: 'Ride',
-                      value: tripActive ? 'ACTIVE' : 'NOT STARTED',
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 10),
-                Row(
-                  children: [
-                    StatPill(
-                      icon: Icons.speed_rounded,
-                      label: 'Speed',
-                      value: '${currentSpeedKmh.toStringAsFixed(1)} km/h',
-                    ),
-                    const SizedBox(width: 10),
-                    StatPill(
-                      icon: Icons.route_rounded,
-                      label: 'Distance',
-                      value: '${(tripDistanceM / 1000).toStringAsFixed(2)} km',
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    Expanded(
-                      child: FilledButton.icon(
-                        onPressed: _toggleMonitoring,
-                        icon: Icon(
-                          monitoring ? Icons.stop_circle_outlined : Icons.play_arrow_rounded,
+        return Scaffold(
+          backgroundColor: MunjaColors.bg,
+          body: Stack(
+            children: [
+              Positioned.fill(
+                child: GoogleMap(
+                  gestureRecognizers: _mapGestureRecognizers,
+                  initialCameraPosition: CameraPosition(
+                    target: center,
+                    zoom: 16.5,
+                  ),
+                  myLocationEnabled: mapsLocationOk,
+                  myLocationButtonEnabled: false,
+                  zoomGesturesEnabled: true,
+                  scrollGesturesEnabled: true,
+                  rotateGesturesEnabled: true,
+                  tiltGesturesEnabled: true,
+                  zoomControlsEnabled: false,
+                  compassEnabled: false,
+                  mapToolbarEnabled: false,
+                  buildingsEnabled: true,
+                  indoorViewEnabled: true,
+                  minMaxZoomPreference: const MinMaxZoomPreference(3, 21),
+                  markers: _markersForState(rideState),
+                  polylines: _polylinesForState(rideState),
+                  onMapCreated: (controller) async {
+                    mapCtrl = controller;
+
+                    if (mapsLocationOk && currentCenter != null) {
+                      await mapCtrl?.moveCamera(
+                        CameraUpdate.newCameraPosition(
+                          CameraPosition(target: currentCenter!, zoom: 16.5),
                         ),
-                        label: Text(
-                          monitoring ? 'Stop monitoring' : 'Start auto mode',
-                        ),
+                      );
+                    }
+                  },
+                ),
+              ),
+
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.center,
+                        colors: [
+                          Colors.black.withOpacity(0.48),
+                          Colors.black.withOpacity(0.10),
+                          Colors.transparent,
+                        ],
                       ),
                     ),
-                    const SizedBox(width: 10),
-                    Expanded(
-                      child: OutlinedButton.icon(
-                        onPressed: monitoring ? _stopForegroundTracking : null,
-                        icon: const Icon(Icons.flag_rounded),
-                        label: const Text('Stop tracking'),
+                  ),
+                ),
+              ),
+
+              Positioned.fill(
+                child: IgnorePointer(
+                  child: DecoratedBox(
+                    decoration: BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.bottomCenter,
+                        end: Alignment.center,
+                        colors: [
+                          Colors.black.withOpacity(0.54),
+                          Colors.black.withOpacity(0.12),
+                          Colors.transparent,
+                        ],
                       ),
+                    ),
+                  ),
+                ),
+              ),
+
+              Positioned(
+                top: 0,
+                left: 0,
+                right: 0,
+                child: LiveHudOverlay(
+                  data: rideHudData,
+                  bleConnected: false,
+                  batteryPercent: 64,
+                ),
+              ),
+
+              Positioned(
+                top: MediaQuery.of(context).padding.top + 12,
+                left: 14,
+                child: _RideGlassButton(
+                  icon: Icons.arrow_back_rounded,
+                  onTap: () => Navigator.of(context).maybePop(),
+                ),
+              ),
+
+              Positioned(
+                top: MediaQuery.of(context).padding.top + 12,
+                right: 14,
+                child: Column(
+                  children: [
+                    _RideGlassButton(icon: Icons.add_rounded, onTap: _zoomIn),
+                    const SizedBox(height: 10),
+                    _RideGlassButton(
+                      icon: Icons.remove_rounded,
+                      onTap: _zoomOut,
                     ),
                   ],
                 ),
-              ],
-            ),
+              ),
+
+              Positioned(
+                left: 16,
+                right: 16,
+                bottom: MediaQuery.of(context).padding.bottom + 16,
+                child: _RideBottomDock(
+                  isRiding: isRiding,
+                  centering: centeringToCurrentLocation,
+                  onStartStop: _toggleRide,
+                  onCenterMap: mapsLocationOk
+                      ? () => _moveToCurrentLocation(zoom: 17.5)
+                      : null,
+                  onOpenCoach: _openCoach,
+                ),
+              ),
+            ],
           ),
-          const SizedBox(height: 16),
-          MunjaCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    const Expanded(
-                      child: SectionTitle(
-                        title: 'Map',
-                        subtitle:
-                            'Use two fingers to zoom. You can also use the buttons or jump back to your current location.',
-                      ),
-                    ),
-                    IconButton(
-                      tooltip: 'My location',
-                      onPressed: mapsLocationOk ? _moveToCurrentLocation : null,
-                      icon: const Icon(Icons.my_location_rounded),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 14),
-                Container(
-                  height: 420,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(24),
-                    border: Border.all(color: Colors.white.withOpacity(0.07)),
-                  ),
-                  clipBehavior: Clip.antiAlias,
-                  child: Stack(
-                    children: [
-                      GoogleMap(
-                        gestureRecognizers: _mapGestureRecognizers,
-                        initialCameraPosition: CameraPosition(target: center, zoom: 16),
-                        myLocationEnabled: mapsLocationOk,
-                        myLocationButtonEnabled: false,
-                        zoomGesturesEnabled: true,
-                        scrollGesturesEnabled: true,
-                        rotateGesturesEnabled: true,
-                        tiltGesturesEnabled: true,
-                        zoomControlsEnabled: false,
-                        compassEnabled: true,
-                        mapToolbarEnabled: false,
-                        buildingsEnabled: true,
-                        indoorViewEnabled: true,
-                        minMaxZoomPreference: const MinMaxZoomPreference(3, 21),
-                        markers: currentPos == null
-                            ? {}
-                            : {
-                                Marker(
-                                  markerId: const MarkerId('current_position'),
-                                  position: LatLng(
-                                    currentPos!.latitude,
-                                    currentPos!.longitude,
-                                  ),
-                                  infoWindow: const InfoWindow(title: 'Your position'),
-                                ),
-                              },
-                        polylines: {
-                          Polyline(
-                            polylineId: const PolylineId('software_trip'),
-                            points: List<LatLng>.from(tripPath),
-                            width: 6,
-                          ),
-                        },
-                        onMapCreated: (controller) async {
-                          mapCtrl = controller;
-                          if (mapsLocationOk) {
-                            await _moveToCurrentLocation(animated: false);
-                          }
-                        },
-                      ),
-                      Positioned(
-                        right: 14,
-                        bottom: 14,
-                        child: Column(
-                          children: [
-                            FloatingActionButton.small(
-                              heroTag: 'zoom_in_btn',
-                              onPressed: () => mapCtrl?.animateCamera(CameraUpdate.zoomIn()),
-                              child: const Icon(Icons.add),
-                            ),
-                            const SizedBox(height: 10),
-                            FloatingActionButton.small(
-                              heroTag: 'zoom_out_btn',
-                              onPressed: () => mapCtrl?.animateCamera(CameraUpdate.zoomOut()),
-                              child: const Icon(Icons.remove),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
-          MunjaCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SectionTitle(
-                  title: 'Recent rides',
-                  subtitle: 'Saved rides keep their route. Tap a ride to see it on the map.',
-                ),
-                const SizedBox(height: 14),
-                if (trips.isEmpty)
-                  const Text(
-                    'No rides saved yet.',
-                    style: TextStyle(color: MunjaColors.textSoft),
-                  )
-                else
-                  ...trips.take(5).map(
-                    (trip) => Padding(
-                      padding: const EdgeInsets.only(bottom: 10),
-                      child: InkWell(
-                        onTap: trip.latLngPath.isEmpty
-                            ? null
-                            : () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (_) => TripMapScreen(trip: trip),
-                                  ),
-                                );
-                              },
-                        borderRadius: BorderRadius.circular(18),
-                        child: Container(
-                          padding: const EdgeInsets.all(14),
-                          decoration: BoxDecoration(
-                            color: MunjaColors.panelSoft,
-                            borderRadius: BorderRadius.circular(18),
-                          ),
-                          child: Row(
-                            children: [
-                              Container(
-                                width: 42,
-                                height: 42,
-                                decoration: BoxDecoration(
-                                  color: MunjaColors.mint.withOpacity(0.12),
-                                  borderRadius: BorderRadius.circular(14),
-                                ),
-                                child: const Icon(Icons.directions_bike_rounded),
-                              ),
-                              const SizedBox(width: 12),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      '${(trip.distanceM / 1000).toStringAsFixed(2)} km',
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.w700,
-                                        fontSize: 16,
-                                      ),
-                                    ),
-                                    const SizedBox(height: 4),
-                                    Text(
-                                      '${formatTripDate(trip.startedAtMs)} · ${formatDuration(trip.duration)}',
-                                      style: const TextStyle(color: MunjaColors.textSoft),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              Icon(
-                                trip.latLngPath.isEmpty
-                                    ? Icons.route_outlined
-                                    : Icons.chevron_right_rounded,
-                                color: MunjaColors.textSoft,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-              ],
-            ),
+        );
+      },
+    );
+  }
+}
+
+class _RideBottomDock extends StatelessWidget {
+  final bool isRiding;
+  final bool centering;
+  final VoidCallback onStartStop;
+  final VoidCallback? onCenterMap;
+  final VoidCallback onOpenCoach;
+
+  const _RideBottomDock({
+    required this.isRiding,
+    required this.centering,
+    required this.onStartStop,
+    required this.onCenterMap,
+    required this.onOpenCoach,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 76,
+      padding: const EdgeInsets.symmetric(horizontal: 12),
+      decoration: BoxDecoration(
+        color: MunjaColors.panel.withOpacity(0.88),
+        borderRadius: BorderRadius.circular(30),
+        border: Border.all(color: Colors.white.withOpacity(0.08)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.36),
+            blurRadius: 28,
+            offset: const Offset(0, 14),
           ),
         ],
+      ),
+      child: Row(
+        children: [
+          _RideDockButton(
+            icon: centering
+                ? Icons.hourglass_top_rounded
+                : Icons.my_location_rounded,
+            label: 'Center',
+            onTap: onCenterMap,
+          ),
+          const SizedBox(width: 10),
+          Expanded(
+            child: SizedBox(
+              height: 52,
+              child: FilledButton.icon(
+                onPressed: onStartStop,
+                icon: Icon(
+                  isRiding
+                      ? Icons.stop_circle_outlined
+                      : Icons.play_arrow_rounded,
+                ),
+                label: Text(
+                  isRiding ? 'Stop ride' : 'Start ride',
+                  style: const TextStyle(fontWeight: FontWeight.w900),
+                ),
+              ),
+            ),
+          ),
+          const SizedBox(width: 10),
+          _RideDockButton(
+            icon: Icons.auto_awesome_rounded,
+            label: 'Coach',
+            onTap: onOpenCoach,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _RideDockButton extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final VoidCallback? onTap;
+
+  const _RideDockButton({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final enabled = onTap != null;
+
+    return GestureDetector(
+      onTap: onTap,
+      child: AnimatedOpacity(
+        opacity: enabled ? 1 : 0.45,
+        duration: const Duration(milliseconds: 180),
+        child: Container(
+          width: 58,
+          height: 52,
+          decoration: BoxDecoration(
+            color: Colors.white.withOpacity(0.055),
+            borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: Colors.white.withOpacity(0.08)),
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(icon, color: MunjaColors.mint, size: 20),
+              const SizedBox(height: 3),
+              Text(
+                label,
+                style: const TextStyle(
+                  color: Colors.white60,
+                  fontSize: 9,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _RideGlassButton extends StatelessWidget {
+  final IconData icon;
+  final VoidCallback onTap;
+
+  const _RideGlassButton({required this.icon, required this.onTap});
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: MunjaColors.panel.withOpacity(0.84),
+      borderRadius: BorderRadius.circular(18),
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(18),
+        child: Container(
+          width: 44,
+          height: 44,
+          decoration: BoxDecoration(
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: Colors.white.withOpacity(0.08)),
+          ),
+          child: Icon(icon, color: Colors.white, size: 22),
+        ),
       ),
     );
   }
@@ -2508,7 +2161,7 @@ class _TripMapScreenState extends State<TripMapScreen> {
     final end = points.isNotEmpty ? points.last : fallbackCenter;
 
     return AppShell(
-      title: 'Ride route',
+      title: AppText.t('rideRoute'),
       child: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
         children: [
@@ -2517,7 +2170,8 @@ class _TripMapScreenState extends State<TripMapScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 SectionTitle(
-                  title: '${(widget.trip.distanceM / 1000).toStringAsFixed(2)} km',
+                  title:
+                      '${(widget.trip.distanceM / 1000).toStringAsFixed(2)} km',
                   subtitle:
                       '${formatTripDate(widget.trip.startedAtMs)} · ${formatDuration(widget.trip.duration)}',
                 ),
@@ -2528,7 +2182,10 @@ class _TripMapScreenState extends State<TripMapScreen> {
                     borderRadius: BorderRadius.circular(24),
                     child: GoogleMap(
                       gestureRecognizers: _mapGestureRecognizers,
-                      initialCameraPosition: CameraPosition(target: start, zoom: 14),
+                      initialCameraPosition: CameraPosition(
+                        target: start,
+                        zoom: 14,
+                      ),
                       zoomGesturesEnabled: true,
                       scrollGesturesEnabled: true,
                       rotateGesturesEnabled: true,
@@ -2540,12 +2197,12 @@ class _TripMapScreenState extends State<TripMapScreen> {
                         Marker(
                           markerId: const MarkerId('trip_start'),
                           position: start,
-                          infoWindow: const InfoWindow(title: 'Start'),
+                          infoWindow: InfoWindow(title: AppText.t('start')),
                         ),
                         Marker(
                           markerId: const MarkerId('trip_end'),
                           position: end,
-                          infoWindow: const InfoWindow(title: 'Finish'),
+                          infoWindow: InfoWindow(title: AppText.t('finish')),
                         ),
                       },
                       polylines: {
@@ -2602,26 +2259,23 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
   }
 
   Future<void> _save() async {
-    final sp = await SharedPreferences.getInstance();
-    await sp.setBool(challengeAcceptedKey, accepted);
-    await sp.setString(challengePlanKey, plan);
-    await sp.setDouble(weeklyGoalKmKey, weeklyGoalKm);
-    if (deadline == null) {
-      await sp.remove(challengeDeadlineKey);
-    } else {
-      await sp.setInt(challengeDeadlineKey, deadline!.millisecondsSinceEpoch);
-    }
+    await StorageService.saveChallenge(
+      accepted: accepted,
+      plan: plan,
+      weeklyGoalKm: weeklyGoalKm,
+      deadline: deadline,
+    );
   }
 
   String _daysLeftText() {
-    if (deadline == null) return 'Set a date for your challenge.';
+    if (deadline == null) return AppText.t('setChallengeDate');
     final now = DateTime.now();
     final d = deadline!
         .difference(DateTime(now.year, now.month, now.day))
         .inDays;
-    if (d < 0) return 'Deadline passed — set a new one 💪';
-    if (d == 0) return 'It is today! 🚴';
-    return '$d days left';
+    if (d < 0) return AppText.t('deadlinePassed');
+    if (d == 0) return AppText.t('itIsToday');
+    return '$d ${AppText.t('daysLeft')}';
   }
 
   Future<void> _pickDeadline() async {
@@ -2641,7 +2295,7 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
   @override
   Widget build(BuildContext context) {
     return AppShell(
-      title: 'Bike Challenge',
+      title: AppText.t('bikeChallenge'),
       child: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
         children: [
@@ -2649,9 +2303,9 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const SectionTitle(
-                  title: 'Your challenge',
-                  subtitle: 'Set a deadline and make cycling a regular habit.',
+                SectionTitle(
+                  title: AppText.t('yourChallenge'),
+                  subtitle: AppText.t('yourChallengeSubtitle'),
                 ),
                 const SizedBox(height: 14),
                 Container(
@@ -2663,7 +2317,10 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
                   ),
                   child: Text(
                     _daysLeftText(),
-                    style: const TextStyle(fontSize: 16, color: MunjaColors.textSoft),
+                    style: const TextStyle(
+                      fontSize: 16,
+                      color: MunjaColors.textSoft,
+                    ),
                   ),
                 ),
                 const SizedBox(height: 14),
@@ -2673,7 +2330,11 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
                       child: FilledButton.icon(
                         onPressed: _pickDeadline,
                         icon: const Icon(Icons.event_rounded),
-                        label: Text(deadline == null ? 'Set date' : 'Change date'),
+                        label: Text(
+                          deadline == null
+                              ? AppText.t('setDate')
+                              : AppText.t('changeDate'),
+                        ),
                       ),
                     ),
                     const SizedBox(width: 10),
@@ -2684,9 +2345,13 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
                           await _save();
                         },
                         icon: Icon(
-                          accepted ? Icons.check_circle_rounded : Icons.flag_rounded,
+                          accepted
+                              ? Icons.check_circle_rounded
+                              : Icons.flag_rounded,
                         ),
-                        label: Text(accepted ? 'ACTIVE' : 'Start challenge'),
+                        label: Text(
+                          accepted ? 'ACTIVE' : AppText.t('startChallenge'),
+                        ),
                       ),
                     ),
                   ],
@@ -2699,35 +2364,41 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const SectionTitle(
-                  title: 'Plan and goal',
-                  subtitle: 'Choose when you usually ride and adjust your weekly goal.',
+                SectionTitle(
+                  title: AppText.t('planAndGoal'),
+                  subtitle: AppText.t('planAndGoalSubtitle'),
                 ),
                 const SizedBox(height: 14),
                 DropdownButtonFormField<String>(
                   value: plan,
-                  items: const [
+                  items: [
                     DropdownMenuItem(
                       value: 'Bike to work',
-                      child: Text('Bike to work'),
+                      child: Text(AppText.t('bikeToWork')),
                     ),
                     DropdownMenuItem(
                       value: 'After work',
-                      child: Text('After work'),
+                      child: Text(AppText.t('afterWork')),
                     ),
-                    DropdownMenuItem(value: 'Weekend', child: Text('Weekend')),
-                    DropdownMenuItem(value: 'Morning', child: Text('Morning')),
+                    DropdownMenuItem(
+                      value: 'Weekend',
+                      child: Text(AppText.t('weekend')),
+                    ),
+                    DropdownMenuItem(
+                      value: 'Morning',
+                      child: Text(AppText.t('morning')),
+                    ),
                   ],
                   onChanged: (v) async {
                     if (v == null) return;
                     setState(() => plan = v);
                     await _save();
                   },
-                  decoration: const InputDecoration(labelText: 'Your plan'),
+                  decoration: InputDecoration(labelText: AppText.t('yourPlan')),
                 ),
                 const SizedBox(height: 16),
                 Text(
-                  'Weekly goal: ${weeklyGoalKm.toStringAsFixed(0)} km',
+                  '${AppText.t('weeklyGoal')}: ${weeklyGoalKm.toStringAsFixed(0)} km',
                   style: const TextStyle(fontWeight: FontWeight.w700),
                 ),
                 Slider(
@@ -2748,7 +2419,7 @@ class _ChallengeScreenState extends State<ChallengeScreen> {
                     );
                   },
                   icon: const Icon(Icons.menu_book_rounded),
-                  label: const Text('Open guide'),
+                  label: Text(AppText.t('openGuide')),
                 ),
               ],
             ),
@@ -2767,41 +2438,41 @@ class GuidesScreen extends StatelessWidget {
     return DefaultTabController(
       length: 3,
       child: AppShell(
-        title: 'Challenge Guide',
+        title: AppText.t('challengeGuide'),
         child: Column(
           children: [
-            const TabBar(
+            TabBar(
               tabs: [
-                Tab(text: 'Start'),
-                Tab(text: 'Daily steps'),
-                Tab(text: 'Mindset'),
+                Tab(text: AppText.t('start')),
+                Tab(text: AppText.t('dailySteps')),
+                Tab(text: AppText.t('mindset')),
               ],
             ),
-            const Expanded(
+            Expanded(
               child: TabBarView(
                 children: [
                   _GuidePage(
-                    title: 'Start — set your goal',
+                    title: AppText.t('startSetGoal'),
                     bullets: [
-                      'Write down a date.',
-                      'Choose when you want to ride during the week.',
-                      'Make the start as easy as possible.',
+                      AppText.t('writeDownDate'),
+                      AppText.t('chooseRideTime'),
+                      AppText.t('makeStartEasy'),
                     ],
                   ),
                   _GuidePage(
-                    title: 'Daily steps',
+                    title: AppText.t('dailySteps'),
                     bullets: [
-                      'Find 10–20 minutes in your routine.',
-                      'Tell yourself: I will just take a short ride today.',
-                      'Repeat it until it becomes a habit.',
+                      AppText.t('findRoutineTime'),
+                      AppText.t('takeShortRide'),
+                      AppText.t('repeatHabit'),
                     ],
                   ),
                   _GuidePage(
-                    title: 'Mindset',
+                    title: AppText.t('mindset'),
                     bullets: [
-                      'Focus on progress, not perfection.',
-                      'Hold on to small wins.',
-                      'The most important thing is to take action.',
+                      AppText.t('focusProgress'),
+                      AppText.t('holdSmallWins'),
+                      AppText.t('importantAction'),
                     ],
                   ),
                 ],
@@ -2818,7 +2489,7 @@ class _GuidePage extends StatelessWidget {
   final String title;
   final List<String> bullets;
 
-  const _GuidePage({required this.title, required this.bullets});
+  _GuidePage({required this.title, required this.bullets});
 
   @override
   Widget build(BuildContext context) {
@@ -2831,7 +2502,10 @@ class _GuidePage extends StatelessWidget {
             children: [
               Text(
                 title,
-                style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
+                style: const TextStyle(
+                  fontSize: 20,
+                  fontWeight: FontWeight.w800,
+                ),
               ),
               const SizedBox(height: 16),
               ...bullets.map(
@@ -2840,11 +2514,14 @@ class _GuidePage extends StatelessWidget {
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const Text('•  ', style: TextStyle(color: MunjaColors.mint)),
+                      Text('•  ', style: TextStyle(color: MunjaColors.mint)),
                       Expanded(
                         child: Text(
                           b,
-                          style: const TextStyle(color: MunjaColors.textSoft, height: 1.4),
+                          style: const TextStyle(
+                            color: MunjaColors.textSoft,
+                            height: 1.4,
+                          ),
                         ),
                       ),
                     ],
@@ -2855,156 +2532,6 @@ class _GuidePage extends StatelessWidget {
           ),
         ),
       ],
-    );
-  }
-}
-
-class ProfileScreen extends StatefulWidget {
-  const ProfileScreen({super.key});
-
-  @override
-  State<ProfileScreen> createState() => _ProfileScreenState();
-}
-
-class _ProfileScreenState extends State<ProfileScreen> {
-  final nameCtrl = TextEditingController();
-  final ageCtrl = TextEditingController();
-  final cityCtrl = TextEditingController();
-  int selectedAvatar = 0;
-
-  @override
-  void initState() {
-    super.initState();
-    _load();
-  }
-
-  @override
-  void dispose() {
-    nameCtrl.dispose();
-    ageCtrl.dispose();
-    cityCtrl.dispose();
-    super.dispose();
-  }
-
-  Future<void> _load() async {
-    final profile = await loadUserProfileShared();
-    nameCtrl.text = profile.name;
-    ageCtrl.text = profile.age > 0 ? '${profile.age}' : '';
-    cityCtrl.text = profile.city;
-    selectedAvatar = profile.avatarIndex;
-    if (mounted) setState(() {});
-  }
-
-  Future<void> _save() async {
-    final age = int.tryParse(ageCtrl.text.trim()) ?? 0;
-    final profile = UserProfile(
-      name: nameCtrl.text.trim().isEmpty ? 'Rider' : nameCtrl.text.trim(),
-      age: age,
-      city: cityCtrl.text.trim().isEmpty ? 'Copenhagen' : cityCtrl.text.trim(),
-      avatarIndex: selectedAvatar,
-    );
-    await saveUserProfileShared(profile);
-    if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Avatar and profile saved')),
-    );
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return AppShell(
-      title: 'Avatar & settings',
-      child: ListView(
-        padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-        children: [
-          MunjaCard(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SectionTitle(
-                  title: 'Your rider identity',
-                  subtitle: 'Choose an avatar mode and update your details.',
-                ),
-                const SizedBox(height: 16),
-                Wrap(
-                  spacing: 12,
-                  runSpacing: 12,
-                  children: avatarOptions.map((avatar) {
-                    final selected = selectedAvatar == avatar.id;
-                    return GestureDetector(
-                      onTap: () => setState(() => selectedAvatar = avatar.id),
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 250),
-                        width: 106,
-                        padding: const EdgeInsets.all(14),
-                        decoration: BoxDecoration(
-                          color: selected
-                              ? MunjaColors.mint.withOpacity(0.16)
-                              : MunjaColors.panelSoft,
-                          borderRadius: BorderRadius.circular(22),
-                          border: Border.all(
-                            color: selected
-                                ? MunjaColors.mintStrong
-                                : Colors.white.withOpacity(0.06),
-                          ),
-                        ),
-                        child: Column(
-                          children: [
-                            Text(avatar.emoji, style: const TextStyle(fontSize: 28)),
-                            const SizedBox(height: 8),
-                            Text(
-                              avatar.label,
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(fontSize: 12),
-                            ),
-                          ],
-                        ),
-                      ),
-                    );
-                  }).toList(),
-                ),
-                const SizedBox(height: 16),
-                TextField(
-                  controller: nameCtrl,
-                  textCapitalization: TextCapitalization.words,
-                  decoration: const InputDecoration(
-                    labelText: 'Name',
-                    prefixIcon: Icon(Icons.person_rounded),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: ageCtrl,
-                  keyboardType: TextInputType.number,
-                  inputFormatters: [FilteringTextInputFormatter.digitsOnly],
-                  decoration: const InputDecoration(
-                    labelText: 'Age',
-                    prefixIcon: Icon(Icons.cake_rounded),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                TextField(
-                  controller: cityCtrl,
-                  textCapitalization: TextCapitalization.words,
-                  decoration: const InputDecoration(
-                    labelText: 'City',
-                    prefixIcon: Icon(Icons.location_city_rounded),
-                  ),
-                ),
-                const SizedBox(height: 16),
-                SizedBox(
-                  width: double.infinity,
-                  child: FilledButton.icon(
-                    onPressed: _save,
-                    icon: const Icon(Icons.save_rounded),
-                    label: const Text('Save avatar & profile'),
-                  ),
-                ),
-              ],
-            ),
-          ),
-        ],
-      ),
     );
   }
 }
@@ -3028,8 +2555,10 @@ class _DevicesScreenState extends State<DevicesScreen> {
   }
 
   Future<void> _load() async {
-    final savedDevices = await loadSavedDevicesShared();
-    final nearbyDevices = await scanNearbyMunjaDevices(saved: savedDevices);
+    final savedDevices = await StorageService.loadSavedDevices();
+    final nearbyDevices = await BleService.scanNearbyMunjaDevices(
+      saved: savedDevices,
+    );
     if (!mounted) return;
     setState(() {
       saved = savedDevices;
@@ -3040,7 +2569,7 @@ class _DevicesScreenState extends State<DevicesScreen> {
 
   Future<void> _removeSaved(String id) async {
     final sp = await SharedPreferences.getInstance();
-    final current = await loadSavedDevicesShared();
+    final current = await StorageService.loadSavedDevices();
     current.removeWhere((e) => e.id == id);
     await sp.setString(
       savedDevicesKey,
@@ -3050,11 +2579,11 @@ class _DevicesScreenState extends State<DevicesScreen> {
   }
 
   Future<void> _saveNearby(MunjaDevice d) async {
-    await saveDeviceShared(d);
+    await StorageService.saveDevice(d);
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('${d.name} saved to My products')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text('${d.name} saved to My products')));
     _load();
   }
 
@@ -3076,7 +2605,9 @@ class _DevicesScreenState extends State<DevicesScreen> {
                 color: MunjaColors.mint.withOpacity(0.12),
                 borderRadius: BorderRadius.circular(16),
               ),
-              child: Icon(isSavedList ? Icons.devices_rounded : Icons.bluetooth_rounded),
+              child: Icon(
+                isSavedList ? Icons.devices_rounded : Icons.bluetooth_rounded,
+              ),
             ),
             const SizedBox(width: 14),
             Expanded(
@@ -3085,11 +2616,16 @@ class _DevicesScreenState extends State<DevicesScreen> {
                 children: [
                   Text(
                     d.name,
-                    style: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+                    style: const TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.w700,
+                    ),
                   ),
                   const SizedBox(height: 4),
                   Text(
-                    isSavedList ? d.id : '${proximityLabel(d.rssi)} · RSSI ${d.rssi}',
+                    isSavedList
+                        ? d.id
+                        : '${BleService.proximityLabel(d.rssi)} · RSSI ${d.rssi}',
                     style: const TextStyle(color: MunjaColors.textSoft),
                   ),
                 ],
@@ -3103,7 +2639,7 @@ class _DevicesScreenState extends State<DevicesScreen> {
             else
               FilledButton(
                 onPressed: d.isSaved ? null : () => _saveNearby(d),
-                child: Text(d.isSaved ? 'Saved' : 'Save'),
+                child: Text(d.isSaved ? AppText.t('saved') : AppText.t('save')),
               ),
           ],
         ),
@@ -3114,7 +2650,7 @@ class _DevicesScreenState extends State<DevicesScreen> {
   @override
   Widget build(BuildContext context) {
     return AppShell(
-      title: 'My products',
+      title: AppText.t('myProducts'),
       actions: [
         IconButton(onPressed: _load, icon: const Icon(Icons.refresh_rounded)),
       ],
@@ -3127,18 +2663,20 @@ class _DevicesScreenState extends State<DevicesScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const SectionTitle(
-                        title: 'Nearby',
-                        subtitle: 'Scan for Munja products around you.',
+                      SectionTitle(
+                        title: AppText.t('nearby'),
+                        subtitle: AppText.t('scanProductsSubtitle'),
                       ),
                       const SizedBox(height: 14),
                       if (nearby.isEmpty)
-                        const Text(
-                          'No products found nearby.',
+                        Text(
+                          AppText.t('noProductsNearby'),
                           style: TextStyle(color: MunjaColors.textSoft),
                         )
                       else
-                        ...nearby.map((d) => _deviceTile(d, isSavedList: false)),
+                        ...nearby.map(
+                          (d) => _deviceTile(d, isSavedList: false),
+                        ),
                     ],
                   ),
                 ),
@@ -3147,14 +2685,14 @@ class _DevicesScreenState extends State<DevicesScreen> {
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      const SectionTitle(
-                        title: 'Saved products',
-                        subtitle: 'Devices you have saved before.',
+                      SectionTitle(
+                        title: AppText.t('savedProducts'),
+                        subtitle: AppText.t('savedProductsSubtitle'),
                       ),
                       const SizedBox(height: 14),
                       if (saved.isEmpty)
-                        const Text(
-                          'No saved products yet.',
+                        Text(
+                          AppText.t('noSavedProducts'),
                           style: TextStyle(color: MunjaColors.textSoft),
                         )
                       else
@@ -3222,16 +2760,16 @@ class _BrakeLightScreenState extends State<BrakeLightScreen> {
   }
 
   Future<void> _connectSmart() async {
-    final permOk = await ensureBlePermissions();
+    final permOk = await BleService.ensureBlePermissions();
     if (!permOk) {
       if (!mounted) return;
-      setState(() => connectStatus = 'Bluetooth or location permission missing');
+      setState(() => connectStatus = AppText.t('bluetoothPermissionMissing'));
       return;
     }
 
     setState(() {
       connecting = true;
-      connectStatus = 'Trying to connect…';
+      connectStatus = AppText.t('tryingToConnect');
     });
 
     final sp = await SharedPreferences.getInstance();
@@ -3240,14 +2778,17 @@ class _BrakeLightScreenState extends State<BrakeLightScreen> {
       if (!mounted) return;
       setState(() {
         connecting = false;
-        connectStatus = 'No saved device yet';
+        connectStatus = AppText.t('noSavedDeviceYet');
       });
       return;
     }
 
     try {
       device = BluetoothDevice.fromId(id);
-      await device!.connect(autoConnect: false, timeout: const Duration(seconds: 7));
+      await device!.connect(
+        autoConnect: false,
+        timeout: const Duration(seconds: 7),
+      );
       final services = await device!.discoverServices();
 
       for (final s in services) {
@@ -3278,7 +2819,9 @@ class _BrakeLightScreenState extends State<BrakeLightScreen> {
         setState(() {
           connected = state == BluetoothConnectionState.connected;
           connecting = false;
-          connectStatus = connected ? 'Connected' : 'Disconnected';
+          connectStatus = connected
+              ? AppText.t('connected')
+              : AppText.t('disconnected');
         });
       });
 
@@ -3286,14 +2829,14 @@ class _BrakeLightScreenState extends State<BrakeLightScreen> {
       setState(() {
         connected = true;
         connecting = false;
-        connectStatus = 'Connected';
+        connectStatus = AppText.t('connected');
       });
     } catch (_) {
       if (!mounted) return;
       setState(() {
         connected = false;
         connecting = false;
-        connectStatus = 'Could not connect';
+        connectStatus = AppText.t('couldNotConnect');
       });
     }
   }
@@ -3301,7 +2844,7 @@ class _BrakeLightScreenState extends State<BrakeLightScreen> {
   @override
   Widget build(BuildContext context) {
     return AppShell(
-      title: 'Smart Brake Light',
+      title: AppText.t('smartBrakeLight'),
       child: ListView(
         padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
         children: [
@@ -3309,22 +2852,32 @@ class _BrakeLightScreenState extends State<BrakeLightScreen> {
             child: Column(
               children: [
                 Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 14,
+                    vertical: 8,
+                  ),
                   decoration: BoxDecoration(
-                    color: (connected
+                    color:
+                        (connected
                                 ? MunjaColors.success
                                 : connecting
-                                    ? MunjaColors.warning
-                                    : MunjaColors.danger)
+                                ? MunjaColors.warning
+                                : MunjaColors.danger)
                             .withOpacity(0.12),
                     borderRadius: BorderRadius.circular(999),
                   ),
                   child: Text(
-                    connected ? 'CONNECTED' : (connecting ? 'CONNECTING…' : 'NOT CONNECTED'),
+                    connected
+                        ? 'CONNECTED'
+                        : (connecting
+                              ? AppText.t('connecting')
+                              : AppText.t('notConnected')),
                     style: TextStyle(
                       color: connected
                           ? MunjaColors.success
-                          : (connecting ? MunjaColors.warning : MunjaColors.danger),
+                          : (connecting
+                                ? MunjaColors.warning
+                                : MunjaColors.danger),
                       fontWeight: FontWeight.w800,
                     ),
                   ),
@@ -3335,18 +2888,23 @@ class _BrakeLightScreenState extends State<BrakeLightScreen> {
                   style: TextStyle(
                     fontSize: 34,
                     fontWeight: FontWeight.w900,
-                    color: brakeActive ? MunjaColors.danger : MunjaColors.success,
+                    color: brakeActive
+                        ? MunjaColors.danger
+                        : MunjaColors.success,
                   ),
                 ),
                 const SizedBox(height: 10),
                 Text('PWM: $pwm · BS: ${bs.toStringAsFixed(2)}'),
                 const SizedBox(height: 6),
-                Text(connectStatus, style: const TextStyle(color: MunjaColors.textSoft)),
+                Text(
+                  connectStatus,
+                  style: const TextStyle(color: MunjaColors.textSoft),
+                ),
                 const SizedBox(height: 14),
                 FilledButton.icon(
                   onPressed: connecting ? null : _connectSmart,
                   icon: const Icon(Icons.bluetooth_connected_rounded),
-                  label: const Text('Connect now'),
+                  label: Text(AppText.t('connectNow')),
                 ),
               ],
             ),
@@ -3356,9 +2914,9 @@ class _BrakeLightScreenState extends State<BrakeLightScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const SectionTitle(
-                  title: 'Brake light sensitivity',
-                  subtitle: 'Low = reacts faster · High = requires harder braking',
+                SectionTitle(
+                  title: AppText.t('brakeLightSensitivity'),
+                  subtitle: AppText.t('sensitivityHint'),
                 ),
                 const SizedBox(height: 16),
                 Slider(
