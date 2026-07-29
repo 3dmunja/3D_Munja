@@ -30,8 +30,12 @@
 	<string>$(FLUTTER_BUILD_NUMBER)</string>
 	<key>LSRequiresIPhoneOS</key>
 	<true/>
+	<key>NSCameraUsageDescription</key>
+	<string>Munja bruger kameraet, så du kan tage et profilbillede og fotografere din cykel.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>Munja bruger din lokation til at vise din position og spore din rute, mens appen er i brug.</string>
+	<key>NSPhotoLibraryUsageDescription</key>
+	<string>Munja bruger dit fotobibliotek, så du kan vælge et profilbillede og tilføje billeder af din cykel.</string>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<key>UIBackgroundModes</key>
