@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 import '../core/localization/app_text.dart';
@@ -121,6 +122,40 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+  Future<void> _signInWithApple() async {
+    if (_isLoading) return;
+
+    FocusScope.of(context).unfocus();
+
+    setState(() {
+      _isLoading = true;
+      _errorMessage = null;
+      _successMessage = null;
+    });
+
+    try {
+      await _authService.signInWithApple();
+    } on AuthServiceException catch (error) {
+      if (!mounted) return;
+
+      setState(() {
+        _errorMessage = error.message;
+      });
+    } catch (_) {
+      if (!mounted) return;
+
+      setState(() {
+        _errorMessage = 'Apple-login kunne ikke gennemføres.';
+      });
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
+
   Future<void> _resetPassword() async {
     if (_isLoading) return;
 
@@ -190,6 +225,12 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     final bottomPadding = MediaQuery.of(context).viewInsets.bottom;
+
+    final isAppleDevice =
+        !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
+    final isAndroidDevice =
+        !kIsWeb && defaultTargetPlatform == TargetPlatform.android;
+    final showGoogleLogin = kIsWeb || isAndroidDevice;
 
     return Scaffold(
       backgroundColor: MunjaColors.bg,
@@ -384,35 +425,68 @@ class _LoginScreenState extends State<LoginScreen> {
                                     ),
                             ),
                           ),
-                          const SizedBox(height: 22),
-                          const _OrDivider(),
-                          const SizedBox(height: 22),
-                          SizedBox(
-                            height: 56,
-                            child: OutlinedButton.icon(
-                              onPressed: _isLoading ? null : _signInWithGoogle,
-                              style: OutlinedButton.styleFrom(
-                                foregroundColor: Colors.white,
-                                side: BorderSide(
-                                  color: Colors.white.withOpacity(0.13),
+                          if (isAppleDevice || showGoogleLogin) ...[
+                            const SizedBox(height: 22),
+                            const _OrDivider(),
+                            const SizedBox(height: 22),
+                          ],
+                          if (isAppleDevice)
+                            SizedBox(
+                              height: 56,
+                              child: OutlinedButton.icon(
+                                onPressed:
+                                    _isLoading ? null : _signInWithApple,
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: Colors.black,
+                                  backgroundColor: Colors.white,
+                                  disabledBackgroundColor:
+                                      Colors.white.withOpacity(0.55),
+                                  side: const BorderSide(color: Colors.white),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
                                 ),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(20),
+                                icon: const Icon(
+                                  Icons.apple,
+                                  size: 25,
+                                  color: Colors.black,
                                 ),
-                                backgroundColor: Colors.white.withOpacity(
-                                  0.035,
-                                ),
-                              ),
-                              icon: const _GoogleMark(),
-                              label: const Text(
-                                'Fortsæt med Google',
-                                style: TextStyle(
-                                  fontSize: 15,
-                                  fontWeight: FontWeight.w800,
+                                label: const Text(
+                                  'Fortsæt med Apple',
+                                  style: TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w900,
+                                  ),
                                 ),
                               ),
                             ),
-                          ),
+                          if (showGoogleLogin)
+                            SizedBox(
+                              height: 56,
+                              child: OutlinedButton.icon(
+                                onPressed:
+                                    _isLoading ? null : _signInWithGoogle,
+                                style: OutlinedButton.styleFrom(
+                                  foregroundColor: Colors.white,
+                                  side: BorderSide(
+                                    color: Colors.white.withOpacity(0.13),
+                                  ),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(20),
+                                  ),
+                                  backgroundColor:
+                                      Colors.white.withOpacity(0.035),
+                                ),
+                                icon: const _GoogleMark(),
+                                label: const Text(
+                                  'Fortsæt med Google',
+                                  style: TextStyle(
+                                    fontSize: 15,
+                                    fontWeight: FontWeight.w800,
+                                  ),
+                                ),
+                              ),
+                            ),
                         ],
                       ),
                     ),
@@ -481,10 +555,20 @@ class _BrandHeader extends StatelessWidget {
             borderRadius: BorderRadius.circular(16),
             border: Border.all(color: MunjaColors.mint.withOpacity(0.32)),
           ),
-          child: const Icon(
-            Icons.change_history_rounded,
-            color: MunjaColors.mint,
-            size: 28,
+          child: Padding(
+            padding: const EdgeInsets.all(6),
+            child: Image.asset(
+              'assets/munja-logo-icon.png',
+              fit: BoxFit.contain,
+              filterQuality: FilterQuality.high,
+              errorBuilder: (context, error, stackTrace) {
+                return const Icon(
+                  Icons.bolt_rounded,
+                  color: MunjaColors.mint,
+                  size: 28,
+                );
+              },
+            ),
           ),
         ),
         const SizedBox(width: 14),

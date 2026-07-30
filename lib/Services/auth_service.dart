@@ -250,6 +250,56 @@ class AuthService {
     }
   }
 
+  Future<UserCredential> signInWithApple() async {
+    if (!kIsWeb && defaultTargetPlatform != TargetPlatform.iOS) {
+      throw const AuthServiceException(
+        code: 'apple-sign-in-unsupported-platform',
+        message: 'Apple-login er kun tilgængeligt på Apple-enheder.',
+      );
+    }
+
+    try {
+      final provider = AppleAuthProvider()
+        ..addScope('email')
+        ..addScope('name');
+
+      if (kIsWeb) {
+        return await _firebaseAuth.signInWithPopup(provider);
+      }
+
+      return await _firebaseAuth.signInWithProvider(provider);
+    } on FirebaseAuthException catch (error, stackTrace) {
+      debugPrint(
+        'APPLE FIREBASE AUTH ERROR: '
+        'code=${error.code}, message=${error.message}',
+      );
+      debugPrintStack(stackTrace: stackTrace);
+
+      if (error.code == 'web-context-canceled' ||
+          error.code == 'popup-closed-by-user' ||
+          error.code == 'canceled') {
+        throw AuthServiceException(
+          code: 'apple-sign-in-cancelled',
+          message: 'Apple-login blev annulleret.',
+          originalError: error,
+        );
+      }
+
+      throw AuthServiceException.fromFirebase(error);
+    } on AuthServiceException {
+      rethrow;
+    } catch (error, stackTrace) {
+      debugPrint('APPLE SIGN-IN UNKNOWN ERROR: $error');
+      debugPrintStack(stackTrace: stackTrace);
+
+      throw AuthServiceException(
+        code: 'apple-sign-in-failed',
+        message: 'Apple-login kunne ikke gennemføres. Prøv igen.',
+        originalError: error,
+      );
+    }
+  }
+
   Future<void> sendPasswordResetEmail({required String email}) async {
     final normalizedEmail = email.trim().toLowerCase();
 
@@ -539,6 +589,7 @@ class AuthServiceException implements Exception {
         return 'Log ind igen, før du kan udføre denne handling.';
 
       case 'popup-closed-by-user':
+      case 'web-context-canceled':
         return 'Loginvinduet blev lukket.';
 
       case 'popup-blocked':
