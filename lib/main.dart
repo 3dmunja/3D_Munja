@@ -11,6 +11,7 @@ import 'package:flutter_blue_plus/flutter_blue_plus.dart';
 import 'package:flutter_foreground_task/flutter_foreground_task.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
+import 'package:model_viewer_plus/model_viewer_plus.dart';
 import 'package:permission_handler/permission_handler.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -39,6 +40,7 @@ import 'models/munja_device.dart';
 import 'models/trip.dart';
 import 'models/user_profile.dart';
 import 'widgets/munja_card.dart';
+import 'widgets/munja_background.dart';
 import 'widgets/stat_pill.dart';
 import 'widgets/section_title.dart';
 import 'widgets/menu_tile.dart';
@@ -618,7 +620,7 @@ class _AppEntryScreenState extends State<AppEntryScreen> {
         body: Center(child: CircularProgressIndicator()),
       );
     }
-    return onboardingDone ? const MainNavigation() : const OnboardingScreen();
+    return onboardingDone ? MainNavigation() : const OnboardingScreen();
   }
 }
 
@@ -636,14 +638,7 @@ class AppShell extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      decoration: const BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topCenter,
-          end: Alignment.bottomCenter,
-          colors: [Color(0xFF071C18), Color(0xFF04110F), Color(0xFF020A09)],
-        ),
-      ),
+    return MunjaBackground(
       child: Scaffold(
         backgroundColor: Colors.transparent,
         appBar: AppBar(title: Text(title), actions: actions),
@@ -767,7 +762,7 @@ Widget buildMiniBarChart(List<MonthlyStats> stats) {
               children: [
                 Text(
                   item.km.toStringAsFixed(1),
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 12,
                     color: MunjaColors.textSoft,
                   ),
@@ -814,12 +809,16 @@ class OnboardingScreen extends StatefulWidget {
 }
 
 class _OnboardingScreenState extends State<OnboardingScreen> {
-  final pageCtrl = PageController();
-  int page = 0;
+  static const int _pageCount = 5;
 
-  final nameCtrl = TextEditingController();
-  final ageCtrl = TextEditingController();
-  final cityCtrl = TextEditingController(text: 'Copenhagen');
+  final PageController pageCtrl = PageController();
+  final TextEditingController nameCtrl = TextEditingController();
+  final TextEditingController ageCtrl = TextEditingController();
+  final TextEditingController cityCtrl = TextEditingController(
+    text: 'Copenhagen',
+  );
+
+  int page = 0;
   int selectedAvatar = 0;
 
   @override
@@ -831,7 +830,25 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     super.dispose();
   }
 
+  String _text(
+    BuildContext context, {
+    required String da,
+    required String en,
+    required String bs,
+  }) {
+    switch (Localizations.localeOf(context).languageCode) {
+      case 'bs':
+        return bs;
+      case 'en':
+        return en;
+      default:
+        return da;
+    }
+  }
+
   Future<void> _finish() async {
+    FocusScope.of(context).unfocus();
+
     final age = int.tryParse(ageCtrl.text.trim()) ?? 24;
     await StorageService.saveUserProfile(
       UserProfile(
@@ -844,205 +861,1209 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       ),
     );
     await StorageService.setOnboardingDone(true);
+
     if (!mounted) return;
+
     Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (_) => const MainNavigation()),
+      MaterialPageRoute(builder: (_) => MainNavigation()),
+    );
+  }
+
+  Future<void> _next() async {
+    FocusScope.of(context).unfocus();
+
+    if (page == _pageCount - 1) {
+      await _finish();
+      return;
+    }
+
+    await pageCtrl.nextPage(
+      duration: const Duration(milliseconds: 360),
+      curve: Curves.easeOutCubic,
+    );
+  }
+
+  Future<void> _back() async {
+    FocusScope.of(context).unfocus();
+
+    if (page == 0) return;
+
+    await pageCtrl.previousPage(
+      duration: const Duration(milliseconds: 320),
+      curve: Curves.easeOutCubic,
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    return AppShell(
-      title: AppText.t('welcome'),
-      child: Column(
-        children: [
-          Expanded(
-            child: PageView(
-              controller: pageCtrl,
-              onPageChanged: (v) => setState(() => page = v),
-              children: [
-                ListView(
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-                  children: [
-                    MunjaCard(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          HeroBadge(
-                            icon: Icons.waving_hand_rounded,
-                            text: AppText.t('welcomeToMunja'),
-                            color: MunjaColors.mint,
-                          ),
-                          SizedBox(height: 18),
-                          Text(
-                            AppText.t('howToUseApp'),
-                            style: TextStyle(
-                              fontSize: 28,
-                              fontWeight: FontWeight.w800,
-                            ),
-                          ),
-                          SizedBox(height: 12),
-                          Text(
-                            AppText.t('howToUseAppBody'),
-                            style: TextStyle(
-                              color: MunjaColors.textSoft,
-                              height: 1.55,
-                            ),
-                          ),
-                        ],
-                      ),
+    final isLastPage = page == _pageCount - 1;
+
+    return MunjaBackground(
+      child: Scaffold(
+        backgroundColor: Colors.transparent,
+        body: SafeArea(
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.fromLTRB(26, 18, 26, 12),
+                child: Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    _text(
+                      context,
+                      da: 'Kom godt i gang',
+                      en: 'Get started',
+                      bs: 'Započni',
                     ),
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: MediaQuery.sizeOf(context).width < 390 ? 31 : 35,
+                      height: 1.05,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: -1.1,
+                    ),
+                  ),
+                ),
+              ),
+              Expanded(
+                child: PageView(
+                  controller: pageCtrl,
+                  physics: const BouncingScrollPhysics(),
+                  onPageChanged: (value) => setState(() => page = value),
+                  children: [
+                    _buildDigitalTwinPage(context),
+                    _buildNavigationPage(context),
+                    _buildRideHubPage(context),
+                    _buildRewardsPage(context),
+                    _buildProfilePage(context),
                   ],
                 ),
-                ListView(
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-                  children: [
-                    MunjaCard(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          SectionTitle(
-                            title: AppText.t('chooseAvatarMode'),
-                            subtitle: AppText.t('avatarModeSubtitle'),
-                          ),
-                          const SizedBox(height: 16),
-                          Wrap(
-                            spacing: 12,
-                            runSpacing: 12,
-                            children: avatarOptions.map((avatar) {
-                              final selected = selectedAvatar == avatar.id;
-                              return GestureDetector(
-                                onTap: () =>
-                                    setState(() => selectedAvatar = avatar.id),
-                                child: AnimatedContainer(
-                                  duration: const Duration(milliseconds: 250),
-                                  width: 106,
-                                  padding: const EdgeInsets.all(14),
-                                  decoration: BoxDecoration(
-                                    color: selected
-                                        ? MunjaColors.mint.withOpacity(0.16)
-                                        : MunjaColors.panelSoft,
-                                    borderRadius: BorderRadius.circular(22),
-                                    border: Border.all(
-                                      color: selected
-                                          ? MunjaColors.mintStrong
-                                          : Colors.white.withOpacity(0.06),
-                                    ),
-                                  ),
-                                  child: Column(
-                                    children: [
-                                      Text(
-                                        avatar.emoji,
-                                        style: const TextStyle(fontSize: 28),
-                                      ),
-                                      const SizedBox(height: 8),
-                                      Text(
-                                        avatar.label,
-                                        textAlign: TextAlign.center,
-                                        style: const TextStyle(fontSize: 12),
-                                      ),
-                                    ],
-                                  ),
+              ),
+              _OnboardingBottomBar(
+                page: page,
+                pageCount: _pageCount,
+                backLabel: _text(
+                  context,
+                  da: 'Tilbage',
+                  en: 'Back',
+                  bs: 'Nazad',
+                ),
+                nextLabel: isLastPage
+                    ? _text(
+                        context,
+                        da: 'Start app',
+                        en: 'Start app',
+                        bs: 'Pokreni',
+                      )
+                    : _text(
+                        context,
+                        da: 'Næste',
+                        en: 'Next',
+                        bs: 'Dalje',
+                      ),
+                isLastPage: isLastPage,
+                onBack: page == 0 ? null : _back,
+                onNext: _next,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _pageList({required List<Widget> children}) {
+    return ListView(
+      keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+      padding: const EdgeInsets.fromLTRB(22, 14, 22, 42),
+      children: children,
+    );
+  }
+
+  Widget _buildDigitalTwinPage(BuildContext context) {
+    return _pageList(
+      children: [
+        _OnboardingGlassCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _OnboardingBadge(
+                icon: Icons.auto_awesome_rounded,
+                label: _text(
+                  context,
+                  da: 'VELKOMMEN TIL MUNJA',
+                  en: 'WELCOME TO MUNJA',
+                  bs: 'DOBRODOŠLI U MUNJU',
+                ),
+              ),
+              const SizedBox(height: 28),
+              Text(
+                _text(
+                  context,
+                  da: 'Din cykel får sit eget digitale liv.',
+                  en: 'Your bike gets a digital life of its own.',
+                  bs: 'Tvoj bicikl dobija vlastiti digitalni život.',
+                ),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 34,
+                  height: 1.08,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: -1.1,
+                ),
+              ),
+              const SizedBox(height: 18),
+              Text(
+                _text(
+                  context,
+                  da: 'Munja samler din digitale cykel, dine ture, produkter, udfordringer og belønninger i én visuel oplevelse.',
+                  en: 'Munja brings your digital bike, rides, products, challenges and rewards together in one visual experience.',
+                  bs: 'Munja spaja tvoj digitalni bicikl, vožnje, proizvode, izazove i nagrade u jedno vizuelno iskustvo.',
+                ),
+                style: const TextStyle(
+                  color: MunjaColors.textSoft,
+                  fontSize: 17,
+                  height: 1.55,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 26),
+              const _DigitalTwinPreview(),
+              const SizedBox(height: 22),
+              _OnboardingFeatureTile(
+                icon: Icons.view_in_ar_rounded,
+                title: 'Digital Twin',
+                subtitle: _text(
+                  context,
+                  da: 'Din cykel i 3D',
+                  en: 'Your bike in 3D',
+                  bs: 'Tvoj bicikl u 3D-u',
+                ),
+              ),
+              const SizedBox(height: 12),
+              _OnboardingFeatureTile(
+                icon: Icons.route_rounded,
+                title: 'Live Ride',
+                subtitle: _text(
+                  context,
+                  da: 'Ture, tracking og navigation',
+                  en: 'Rides, tracking and navigation',
+                  bs: 'Vožnje, praćenje i navigacija',
+                ),
+              ),
+              const SizedBox(height: 12),
+              _OnboardingFeatureTile(
+                icon: Icons.workspace_premium_rounded,
+                title: _text(
+                  context,
+                  da: 'Belønninger',
+                  en: 'Rewards',
+                  bs: 'Nagrade',
+                ),
+                subtitle: _text(
+                  context,
+                  da: 'Udfordringer, levels og skins',
+                  en: 'Challenges, levels and skins',
+                  bs: 'Izazovi, nivoi i skinovi',
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildNavigationPage(BuildContext context) {
+    return _pageList(
+      children: [
+        _OnboardingGlassCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _OnboardingBadge(
+                icon: Icons.touch_app_rounded,
+                label: _text(
+                  context,
+                  da: 'HJULNAVIGATION',
+                  en: 'WHEEL NAVIGATION',
+                  bs: 'NAVIGACIJA TOČKOM',
+                ),
+              ),
+              const SizedBox(height: 28),
+              Text(
+                _text(
+                  context,
+                  da: 'Hele Munja styres fra hjulet.',
+                  en: 'Munja is controlled from the wheel.',
+                  bs: 'Cijelom Munjom upravljaš preko točka.',
+                ),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 33,
+                  height: 1.08,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: -1,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                _text(
+                  context,
+                  da: 'Hold fingeren på hjulet for at åbne menuen. Træk mod det ønskede område, og slip for at åbne det.',
+                  en: 'Press and hold the wheel to open the menu. Drag toward a section and release to open it.',
+                  bs: 'Pritisni i zadrži točak da otvoriš meni. Povuci prema željenom dijelu i pusti.',
+                ),
+                style: const TextStyle(
+                  color: MunjaColors.textSoft,
+                  fontSize: 17,
+                  height: 1.5,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 24),
+              _WheelNavigationPreview(
+                homeLabel: _text(context, da: 'Hjem', en: 'Home', bs: 'Početna'),
+                rideLabel: _text(context, da: 'Tur', en: 'Ride', bs: 'Vožnja'),
+                garageLabel: _text(
+                  context,
+                  da: 'Garage',
+                  en: 'Garage',
+                  bs: 'Garaža',
+                ),
+                gearLabel: _text(
+                  context,
+                  da: 'Udstyr',
+                  en: 'Gear',
+                  bs: 'Oprema',
+                ),
+                profileLabel: _text(
+                  context,
+                  da: 'Profil',
+                  en: 'Profile',
+                  bs: 'Profil',
+                ),
+              ),
+              const SizedBox(height: 24),
+              _OnboardingInstructionTile(
+                number: '1',
+                icon: Icons.pan_tool_alt_rounded,
+                title: _text(
+                  context,
+                  da: 'Tryk og hold',
+                  en: 'Press and hold',
+                  bs: 'Pritisni i zadrži',
+                ),
+                subtitle: _text(
+                  context,
+                  da: 'Menuen åbner omkring hjulet.',
+                  en: 'The menu opens around the wheel.',
+                  bs: 'Meni se otvara oko točka.',
+                ),
+              ),
+              const SizedBox(height: 12),
+              _OnboardingInstructionTile(
+                number: '2',
+                icon: Icons.swipe_rounded,
+                title: _text(
+                  context,
+                  da: 'Træk og slip',
+                  en: 'Drag and release',
+                  bs: 'Povuci i pusti',
+                ),
+                subtitle: _text(
+                  context,
+                  da: 'Vælg Hjem, Tur, Garage, Udstyr eller Profil.',
+                  en: 'Choose Home, Ride, Garage, Gear or Profile.',
+                  bs: 'Izaberi Početnu, Vožnju, Garažu, Opremu ili Profil.',
+                ),
+              ),
+              const SizedBox(height: 12),
+              _OnboardingInstructionTile(
+                number: '3',
+                icon: Icons.play_circle_fill_rounded,
+                title: _text(
+                  context,
+                  da: 'Hold midten for start eller stop',
+                  en: 'Hold the centre to start or stop',
+                  bs: 'Drži sredinu za start ili stop',
+                ),
+                subtitle: _text(
+                  context,
+                  da: 'Et langt tryk på midten starter eller stopper din aktive tur.',
+                  en: 'A long press on the centre starts or stops your active ride.',
+                  bs: 'Dugi pritisak na sredinu pokreće ili zaustavlja aktivnu vožnju.',
+                ),
+                highlighted: true,
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildRideHubPage(BuildContext context) {
+    return _pageList(
+      children: [
+        _OnboardingGlassCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _OnboardingBadge(
+                icon: Icons.route_rounded,
+                label: _text(
+                  context,
+                  da: 'RIDE HUB',
+                  en: 'RIDE HUB',
+                  bs: 'RIDE HUB',
+                ),
+              ),
+              const SizedBox(height: 28),
+              Text(
+                _text(
+                  context,
+                  da: 'Find den rigtige tur — ikke bare en tom startknap.',
+                  en: 'Find the right ride — not just an empty start button.',
+                  bs: 'Pronađi pravu vožnju — ne samo prazno dugme za start.',
+                ),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 31,
+                  height: 1.1,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: -1,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                _text(
+                  context,
+                  da: 'Tur-menuen bliver dit centrum for live tracking, ruteforslag, gemte ruter, planlagte ture og AI Coach.',
+                  en: 'The Ride menu becomes your hub for live tracking, route suggestions, saved routes, planned rides and AI Coach.',
+                  bs: 'Meni Vožnja postaje centar za praćenje uživo, prijedloge ruta, sačuvane rute, planirane vožnje i AI Coach.',
+                ),
+                style: const TextStyle(
+                  color: MunjaColors.textSoft,
+                  fontSize: 17,
+                  height: 1.5,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 24),
+              _RideHubPreview(
+                nearbyLabel: _text(
+                  context,
+                  da: 'Ruter i nærheden',
+                  en: 'Routes nearby',
+                  bs: 'Rute u blizini',
+                ),
+                customLabel: _text(
+                  context,
+                  da: 'Lav min rundtur',
+                  en: 'Build my loop',
+                  bs: 'Napravi moju kružnu rutu',
+                ),
+              ),
+              const SizedBox(height: 20),
+              _OnboardingFeatureTile(
+                icon: Icons.near_me_rounded,
+                title: _text(
+                  context,
+                  da: 'Forslag omkring dig',
+                  en: 'Suggestions around you',
+                  bs: 'Prijedlozi oko tebe',
+                ),
+                subtitle: _text(
+                  context,
+                  da: 'Familie, MTB, landevej, natur og rolig trafik.',
+                  en: 'Family, MTB, road, nature and low-traffic routes.',
+                  bs: 'Porodične, MTB, cestovne, prirodne i mirne rute.',
+                ),
+              ),
+              const SizedBox(height: 12),
+              _OnboardingFeatureTile(
+                icon: Icons.tune_rounded,
+                title: _text(
+                  context,
+                  da: 'Vælg afstand og type',
+                  en: 'Choose distance and type',
+                  bs: 'Izaberi udaljenost i tip',
+                ),
+                subtitle: _text(
+                  context,
+                  da: 'Munja foreslår en rundtur fra din position.',
+                  en: 'Munja suggests a loop from your position.',
+                  bs: 'Munja predlaže kružnu rutu od tvoje lokacije.',
+                ),
+              ),
+              const SizedBox(height: 12),
+              _OnboardingFeatureTile(
+                icon: Icons.auto_awesome_rounded,
+                title: 'AI Coach',
+                subtitle: _text(
+                  context,
+                  da: 'Guidance før, under og efter turen.',
+                  en: 'Guidance before, during and after the ride.',
+                  bs: 'Vođenje prije, tokom i nakon vožnje.',
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildRewardsPage(BuildContext context) {
+    return _pageList(
+      children: [
+        _OnboardingGlassCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _OnboardingBadge(
+                icon: Icons.workspace_premium_rounded,
+                label: _text(
+                  context,
+                  da: 'UDFORDRINGER OG SKINS',
+                  en: 'CHALLENGES AND SKINS',
+                  bs: 'IZAZOVI I SKINOVI',
+                ),
+              ),
+              const SizedBox(height: 28),
+              Text(
+                _text(
+                  context,
+                  da: 'Dine ture udvikler din digitale cykel.',
+                  en: 'Your rides evolve your digital bike.',
+                  bs: 'Tvoje vožnje razvijaju digitalni bicikl.',
+                ),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 33,
+                  height: 1.08,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: -1,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                _text(
+                  context,
+                  da: 'Gennemfør mål og særlige ruter for at låse skins, badges, levels og nye digitale opgraderinger op.',
+                  en: 'Complete goals and special routes to unlock skins, badges, levels and new digital upgrades.',
+                  bs: 'Završi ciljeve i posebne rute da otključaš skinove, značke, nivoe i digitalne nadogradnje.',
+                ),
+                style: const TextStyle(
+                  color: MunjaColors.textSoft,
+                  fontSize: 17,
+                  height: 1.5,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 24),
+              const _RewardPreview(),
+              const SizedBox(height: 22),
+              _OnboardingFeatureTile(
+                icon: Icons.flag_rounded,
+                title: _text(
+                  context,
+                  da: 'Ugentlige challenges',
+                  en: 'Weekly challenges',
+                  bs: 'Sedmični izazovi',
+                ),
+                subtitle: _text(
+                  context,
+                  da: 'Distance, streaks, højdemeter og særlige ruter.',
+                  en: 'Distance, streaks, elevation and special routes.',
+                  bs: 'Udaljenost, nizovi, usponi i posebne rute.',
+                ),
+              ),
+              const SizedBox(height: 12),
+              _OnboardingFeatureTile(
+                icon: Icons.layers_rounded,
+                title: _text(
+                  context,
+                  da: 'Skins i Garage',
+                  en: 'Skins in Garage',
+                  bs: 'Skinovi u Garaži',
+                ),
+                subtitle: _text(
+                  context,
+                  da: 'Tilpas din Digital Twin med belønninger og køb.',
+                  en: 'Customise your Digital Twin with rewards and purchases.',
+                  bs: 'Prilagodi Digital Twin nagradama i kupovinama.',
+                ),
+              ),
+              const SizedBox(height: 12),
+              _OnboardingFeatureTile(
+                icon: Icons.lightbulb_rounded,
+                title: 'Smart Products',
+                subtitle: _text(
+                  context,
+                  da: 'Montér produkter og se status direkte på cyklen.',
+                  en: 'Mount products and see their status directly on the bike.',
+                  bs: 'Montiraj proizvode i vidi status direktno na biciklu.',
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildProfilePage(BuildContext context) {
+    return _pageList(
+      children: [
+        _OnboardingGlassCard(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _OnboardingBadge(
+                icon: Icons.person_rounded,
+                label: _text(
+                  context,
+                  da: 'DIN PROFIL',
+                  en: 'YOUR PROFILE',
+                  bs: 'TVOJ PROFIL',
+                ),
+              ),
+              const SizedBox(height: 28),
+              Text(
+                _text(
+                  context,
+                  da: 'Gør Munja til din.',
+                  en: 'Make Munja yours.',
+                  bs: 'Napravi Munju svojom.',
+                ),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 34,
+                  height: 1.08,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: -1,
+                ),
+              ),
+              const SizedBox(height: 16),
+              Text(
+                _text(
+                  context,
+                  da: 'Vælg din rider-identitet og tilføj de grundlæggende oplysninger. Du kan altid ændre dem senere i Profil.',
+                  en: 'Choose your rider identity and add the basics. You can always change them later in Profile.',
+                  bs: 'Izaberi svoj rider identitet i unesi osnovne podatke. Kasnije ih možeš promijeniti u Profilu.',
+                ),
+                style: const TextStyle(
+                  color: MunjaColors.textSoft,
+                  fontSize: 17,
+                  height: 1.5,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 24),
+              GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                itemCount: avatarOptions.length,
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 3,
+                  mainAxisSpacing: 12,
+                  crossAxisSpacing: 12,
+                  childAspectRatio: 0.93,
+                ),
+                itemBuilder: (context, index) {
+                  final avatar = avatarOptions[index];
+                  return _RiderModeCard(
+                    icon: _avatarIcon(avatar.id),
+                    label: avatar.label,
+                    selected: selectedAvatar == avatar.id,
+                    onTap: () => setState(() => selectedAvatar = avatar.id),
+                  );
+                },
+              ),
+              const SizedBox(height: 24),
+              TextField(
+                controller: nameCtrl,
+                textInputAction: TextInputAction.next,
+                decoration: InputDecoration(
+                  labelText: _text(
+                    context,
+                    da: 'Navn',
+                    en: 'Name',
+                    bs: 'Ime',
+                  ),
+                  prefixIcon: const Icon(Icons.person_rounded),
+                ),
+              ),
+              const SizedBox(height: 14),
+              TextField(
+                controller: ageCtrl,
+                keyboardType: TextInputType.number,
+                textInputAction: TextInputAction.next,
+                inputFormatters: [FilteringTextInputFormatter.digitsOnly],
+                decoration: InputDecoration(
+                  labelText: _text(
+                    context,
+                    da: 'Alder',
+                    en: 'Age',
+                    bs: 'Godine',
+                  ),
+                  prefixIcon: const Icon(Icons.cake_rounded),
+                ),
+              ),
+              const SizedBox(height: 14),
+              TextField(
+                controller: cityCtrl,
+                textInputAction: TextInputAction.done,
+                onSubmitted: (_) => _finish(),
+                decoration: InputDecoration(
+                  labelText: _text(
+                    context,
+                    da: 'By',
+                    en: 'City',
+                    bs: 'Grad',
+                  ),
+                  prefixIcon: const Icon(Icons.location_city_rounded),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  IconData _avatarIcon(int id) {
+    switch (id) {
+      case 1:
+        return Icons.bolt_rounded;
+      case 2:
+        return Icons.eco_rounded;
+      case 3:
+        return Icons.local_fire_department_rounded;
+      case 4:
+        return Icons.dark_mode_rounded;
+      case 5:
+        return Icons.shield_rounded;
+      default:
+        return Icons.directions_bike_rounded;
+    }
+  }
+}
+
+class _OnboardingBottomBar extends StatelessWidget {
+  final int page;
+  final int pageCount;
+  final String backLabel;
+  final String nextLabel;
+  final bool isLastPage;
+  final VoidCallback? onBack;
+  final VoidCallback onNext;
+
+  const _OnboardingBottomBar({
+    required this.page,
+    required this.pageCount,
+    required this.backLabel,
+    required this.nextLabel,
+    required this.isLastPage,
+    required this.onBack,
+    required this.onNext,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.sizeOf(context).width;
+    final compact = screenWidth < 390;
+
+    return SafeArea(
+      top: false,
+      child: Container(
+        padding: EdgeInsets.fromLTRB(
+          compact ? 14 : 20,
+          14,
+          compact ? 14 : 20,
+          14,
+        ),
+        decoration: BoxDecoration(
+          color: const Color(0xFF010705).withOpacity(0.98),
+          border: Border(
+            top: BorderSide(color: Colors.white.withOpacity(0.06)),
+          ),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.30),
+              blurRadius: 24,
+              offset: const Offset(0, -10),
+            ),
+          ],
+        ),
+        child: Row(
+          children: [
+            Flexible(
+              flex: compact ? 3 : 4,
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: List.generate(pageCount, (index) {
+                  final active = index == page;
+                  return Flexible(
+                    child: AnimatedContainer(
+                      duration: const Duration(milliseconds: 260),
+                      margin: EdgeInsets.only(
+                        right: index == pageCount - 1 ? 0 : 7,
+                      ),
+                      width: active ? (compact ? 32 : 40) : 10,
+                      height: 9,
+                      decoration: BoxDecoration(
+                        color: active
+                            ? MunjaColors.mintStrong
+                            : Colors.white.withOpacity(0.19),
+                        borderRadius: BorderRadius.circular(999),
+                        boxShadow: active
+                            ? [
+                                BoxShadow(
+                                  color: MunjaColors.mint.withOpacity(0.28),
+                                  blurRadius: 12,
                                 ),
-                              );
-                            }).toList(),
-                          ),
-                        ],
+                              ]
+                            : null,
                       ),
                     ),
-                  ],
+                  );
+                }),
+              ),
+            ),
+            if (onBack != null) ...[
+              const SizedBox(width: 6),
+              TextButton(
+                onPressed: onBack,
+                style: TextButton.styleFrom(
+                  minimumSize: Size.zero,
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 12,
+                  ),
+                  tapTargetSize: MaterialTapTargetSize.shrinkWrap,
                 ),
-                ListView(
-                  padding: const EdgeInsets.fromLTRB(16, 8, 16, 24),
-                  children: [
-                    MunjaCard(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          SectionTitle(
-                            title: AppText.t('setupBeforeStart'),
-                            subtitle: AppText.t('setupBeforeStartSubtitle'),
-                          ),
-                          const SizedBox(height: 16),
-                          TextField(
-                            controller: nameCtrl,
-                            decoration: InputDecoration(
-                              labelText: AppText.t('name'),
-                              prefixIcon: Icon(Icons.person_rounded),
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          TextField(
-                            controller: ageCtrl,
-                            keyboardType: TextInputType.number,
-                            inputFormatters: [
-                              FilteringTextInputFormatter.digitsOnly,
-                            ],
-                            decoration: InputDecoration(
-                              labelText: AppText.t('age'),
-                              prefixIcon: Icon(Icons.cake_rounded),
-                            ),
-                          ),
-                          const SizedBox(height: 12),
-                          TextField(
-                            controller: cityCtrl,
-                            decoration: InputDecoration(
-                              labelText: AppText.t('city'),
-                              prefixIcon: Icon(Icons.location_city_rounded),
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-                          SizedBox(
-                            width: double.infinity,
-                            child: FilledButton.icon(
-                              onPressed: _finish,
-                              icon: const Icon(Icons.rocket_launch_rounded),
-                              label: Text(AppText.t('startApp')),
-                            ),
-                          ),
-                        ],
+                child: Text(
+                  backLabel,
+                  maxLines: 1,
+                  style: TextStyle(
+                    color: MunjaColors.textSoft,
+                    fontSize: compact ? 13 : 14,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+            ],
+            const SizedBox(width: 8),
+            Flexible(
+              flex: compact ? 5 : 4,
+              child: SizedBox(
+                height: compact ? 54 : 58,
+                child: FilledButton.icon(
+                  onPressed: onNext,
+                  style: FilledButton.styleFrom(
+                    minimumSize: const Size(0, 54),
+                    padding: EdgeInsets.symmetric(
+                      horizontal: compact ? 14 : 20,
+                    ),
+                    backgroundColor: MunjaColors.mintStrong,
+                    foregroundColor: const Color(0xFF03130F),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(21),
+                    ),
+                  ),
+                  icon: Icon(
+                    isLastPage
+                        ? Icons.rocket_launch_rounded
+                        : Icons.arrow_forward_rounded,
+                    size: compact ? 20 : 22,
+                  ),
+                  label: Flexible(
+                    child: Text(
+                      nextLabel,
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis,
+                      style: TextStyle(
+                        fontSize: compact ? 14 : 16,
+                        fontWeight: FontWeight.w900,
                       ),
                     ),
-                  ],
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _OnboardingGlassCard extends StatelessWidget {
+  final Widget child;
+
+  const _OnboardingGlassCard({required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: const Color(0xFF07130F).withOpacity(0.86),
+        borderRadius: BorderRadius.circular(34),
+        border: Border.all(color: MunjaColors.mint.withOpacity(0.17)),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withOpacity(0.35),
+            blurRadius: 42,
+            offset: const Offset(0, 20),
+          ),
+          BoxShadow(
+            color: MunjaColors.mint.withOpacity(0.07),
+            blurRadius: 36,
+          ),
+        ],
+      ),
+      child: child,
+    );
+  }
+}
+
+class _OnboardingBadge extends StatelessWidget {
+  final IconData icon;
+  final String label;
+
+  const _OnboardingBadge({required this.icon, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 12),
+      decoration: BoxDecoration(
+        color: MunjaColors.mint.withOpacity(0.12),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: MunjaColors.mint.withOpacity(0.34)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: MunjaColors.mint, size: 20),
+          const SizedBox(width: 10),
+          Flexible(
+            child: Text(
+              label,
+              style: const TextStyle(
+                color: MunjaColors.mint,
+                fontSize: 13,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 0.9,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _OnboardingFeatureTile extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String subtitle;
+
+  const _OnboardingFeatureTile({
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.035),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: Colors.white.withOpacity(0.07)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 48,
+            height: 48,
+            decoration: BoxDecoration(
+              color: MunjaColors.mint.withOpacity(0.12),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Icon(icon, color: MunjaColors.mint, size: 25),
+          ),
+          const SizedBox(width: 15),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 16,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  subtitle,
+                  style: const TextStyle(
+                    color: MunjaColors.textSoft,
+                    fontSize: 13,
+                    height: 1.35,
+                    fontWeight: FontWeight.w700,
+                  ),
                 ),
               ],
             ),
           ),
-          Padding(
-            padding: const EdgeInsets.fromLTRB(16, 0, 16, 20),
-            child: Row(
+          const Icon(
+            Icons.check_circle_rounded,
+            color: MunjaColors.mint,
+            size: 24,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _DigitalTwinPreview extends StatelessWidget {
+  const _DigitalTwinPreview();
+
+  static const String _onboardingBikeModel =
+      'assets/models/munja_bike_v2.glb';
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 360,
+      clipBehavior: Clip.antiAlias,
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(30),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            MunjaColors.mint.withOpacity(0.18),
+            const Color(0xFF03130F),
+          ],
+        ),
+        border: Border.all(color: MunjaColors.mint.withOpacity(0.28)),
+        boxShadow: [
+          BoxShadow(
+            color: MunjaColors.mint.withOpacity(0.14),
+            blurRadius: 40,
+            offset: const Offset(0, 18),
+          ),
+        ],
+      ),
+      child: Stack(
+        children: [
+          Positioned.fill(
+            child: CustomPaint(painter: const _OnboardingGridPainter()),
+          ),
+          Positioned.fill(
+            child: Padding(
+              padding: const EdgeInsets.fromLTRB(8, 48, 8, 42),
+              child: ClipRRect(
+                borderRadius: BorderRadius.circular(24),
+                child: ModelViewer(
+                  src: _onboardingBikeModel,
+                  alt: 'Munja interactive 3D digital twin bicycle',
+                  ar: false,
+                  autoRotate: true,
+                  autoRotateDelay: 0,
+                  rotationPerSecond: '18deg',
+                  cameraControls: true,
+                  disableZoom: false,
+                  interactionPrompt: InteractionPrompt.none,
+                  backgroundColor: Colors.transparent,
+                  loading: Loading.eager,
+                ),
+              ),
+            ),
+          ),
+          const Positioned(
+            top: 18,
+            left: 18,
+            child: _PreviewPill(
+              icon: Icons.circle,
+              label: 'LIVE DIGITAL TWIN',
+            ),
+          ),
+          Positioned(
+            left: 18,
+            right: 18,
+            bottom: 16,
+            child: IgnorePointer(
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 10,
+                ),
+                decoration: BoxDecoration(
+                  color: const Color(0xFF03100D).withOpacity(0.88),
+                  borderRadius: BorderRadius.circular(999),
+                  border: Border.all(
+                    color: Colors.white.withOpacity(0.08),
+                  ),
+                ),
+                child: const Row(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    Icon(
+                      Icons.swipe_rounded,
+                      color: MunjaColors.mint,
+                      size: 19,
+                    ),
+                    SizedBox(width: 8),
+                    Flexible(
+                      child: Text(
+                        'Træk for at dreje • Knib for at zoome',
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: TextStyle(
+                          color: Colors.white70,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _WheelNavigationPreview extends StatelessWidget {
+  final String homeLabel;
+  final String rideLabel;
+  final String garageLabel;
+  final String gearLabel;
+  final String profileLabel;
+
+  const _WheelNavigationPreview({
+    required this.homeLabel,
+    required this.rideLabel,
+    required this.garageLabel,
+    required this.gearLabel,
+    required this.profileLabel,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 430,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Container(
+            width: 350,
+            height: 350,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              border: Border.all(color: MunjaColors.mint.withOpacity(0.25)),
+              gradient: RadialGradient(
+                colors: [
+                  MunjaColors.mint.withOpacity(0.22),
+                  MunjaColors.mint.withOpacity(0.02),
+                  Colors.transparent,
+                ],
+              ),
+            ),
+          ),
+          Positioned(
+            top: 15,
+            child: _WheelMenuItem(
+              icon: Icons.home_rounded,
+              label: homeLabel,
+              active: true,
+            ),
+          ),
+          Positioned(
+            left: 2,
+            top: 165,
+            child: _WheelMenuItem(
+              icon: Icons.person_rounded,
+              label: profileLabel,
+            ),
+          ),
+          Positioned(
+            right: 2,
+            top: 165,
+            child: _WheelMenuItem(
+              icon: Icons.directions_bike_rounded,
+              label: rideLabel,
+            ),
+          ),
+          Positioned(
+            left: 74,
+            bottom: 12,
+            child: _WheelMenuItem(
+              icon: Icons.inventory_2_rounded,
+              label: gearLabel,
+            ),
+          ),
+          Positioned(
+            right: 65,
+            bottom: 12,
+            child: _WheelMenuItem(
+              icon: Icons.garage_rounded,
+              label: garageLabel,
+            ),
+          ),
+          Container(
+            width: 156,
+            height: 156,
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              color: const Color(0xFF07130F),
+              border: Border.all(
+                color: MunjaColors.mintStrong,
+                width: 3,
+              ),
+              boxShadow: [
+                BoxShadow(
+                  color: MunjaColors.mint.withOpacity(0.42),
+                  blurRadius: 44,
+                  spreadRadius: 5,
+                ),
+              ],
+            ),
+            child: Stack(
+              alignment: Alignment.center,
               children: [
-                ...List.generate(3, (index) {
-                  final active = page == index;
-                  return AnimatedContainer(
-                    duration: const Duration(milliseconds: 250),
-                    margin: const EdgeInsets.only(right: 8),
-                    width: active ? 28 : 10,
-                    height: 10,
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(999),
-                      color: active ? MunjaColors.mintStrong : Colors.white24,
+                const Icon(
+                  Icons.motion_photos_on_rounded,
+                  color: MunjaColors.mint,
+                  size: 48,
+                ),
+                Positioned(
+                  bottom: 25,
+                  child: Text(
+                    'HOLD',
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(0.72),
+                      fontSize: 10,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 1.4,
                     ),
-                  );
-                }),
-                const Spacer(),
-                if (page > 0)
-                  TextButton(
-                    onPressed: () => pageCtrl.previousPage(
-                      duration: const Duration(milliseconds: 250),
-                      curve: Curves.easeOut,
-                    ),
-                    child: Text(AppText.t('back')),
                   ),
-                const SizedBox(width: 8),
-                if (page < 2)
-                  FilledButton(
-                    onPressed: () => pageCtrl.nextPage(
-                      duration: const Duration(milliseconds: 250),
-                      curve: Curves.easeOut,
-                    ),
-                    child: Text(AppText.t('next')),
-                  ),
+                ),
               ],
             ),
           ),
@@ -1051,6 +2072,557 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     );
   }
 }
+
+class _WheelMenuItem extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final bool active;
+
+  const _WheelMenuItem({
+    required this.icon,
+    required this.label,
+    this.active = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: 108,
+      height: 94,
+      padding: const EdgeInsets.symmetric(horizontal: 10),
+      decoration: BoxDecoration(
+        color: active
+            ? MunjaColors.mint.withOpacity(0.20)
+            : const Color(0xFF07130F).withOpacity(0.92),
+        borderRadius: BorderRadius.circular(25),
+        border: Border.all(
+          color: active
+              ? MunjaColors.mintStrong
+              : Colors.white.withOpacity(0.08),
+        ),
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(icon, color: active ? MunjaColors.mint : Colors.white70),
+          const SizedBox(height: 7),
+          Text(
+            label,
+            textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: active ? MunjaColors.mint : Colors.white70,
+              fontSize: 12,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _OnboardingInstructionTile extends StatelessWidget {
+  final String number;
+  final IconData icon;
+  final String title;
+  final String subtitle;
+  final bool highlighted;
+
+  const _OnboardingInstructionTile({
+    required this.number,
+    required this.icon,
+    required this.title,
+    required this.subtitle,
+    this.highlighted = false,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: highlighted
+            ? MunjaColors.mint.withOpacity(0.11)
+            : Colors.white.withOpacity(0.035),
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(
+          color: highlighted
+              ? MunjaColors.mint.withOpacity(0.34)
+              : Colors.white.withOpacity(0.07),
+        ),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 38,
+            height: 38,
+            alignment: Alignment.center,
+            decoration: BoxDecoration(
+              color: highlighted
+                  ? MunjaColors.mintStrong
+                  : Colors.white.withOpacity(0.07),
+              shape: BoxShape.circle,
+            ),
+            child: Text(
+              number,
+              style: TextStyle(
+                color: highlighted
+                    ? const Color(0xFF03130F)
+                    : Colors.white,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+          ),
+          const SizedBox(width: 13),
+          Icon(icon, color: MunjaColors.mint, size: 25),
+          const SizedBox(width: 13),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 15,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  subtitle,
+                  style: const TextStyle(
+                    color: MunjaColors.textSoft,
+                    fontSize: 12,
+                    height: 1.35,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _RideHubPreview extends StatelessWidget {
+  final String nearbyLabel;
+  final String customLabel;
+
+  const _RideHubPreview({
+    required this.nearbyLabel,
+    required this.customLabel,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: const Color(0xFF03130F),
+        borderRadius: BorderRadius.circular(28),
+        border: Border.all(color: MunjaColors.mint.withOpacity(0.22)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              const Icon(Icons.near_me_rounded, color: MunjaColors.mint),
+              const SizedBox(width: 9),
+              Expanded(
+                child: Text(
+                  nearbyLabel,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 17,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ),
+              const Icon(Icons.tune_rounded, color: Colors.white54),
+            ],
+          ),
+          const SizedBox(height: 16),
+          const _RouteSuggestionCard(
+            icon: Icons.park_rounded,
+            title: 'Forest Flow',
+            meta: '18 km  •  55 min  •  MTB',
+            reward: '+ Forest Skin',
+          ),
+          const SizedBox(height: 10),
+          const _RouteSuggestionCard(
+            icon: Icons.family_restroom_rounded,
+            title: 'Family Loop',
+            meta: '8 km  •  30 min  •  Easy',
+            reward: '+ 250 XP',
+          ),
+          const SizedBox(height: 10),
+          const _RouteSuggestionCard(
+            icon: Icons.speed_rounded,
+            title: 'Fast Evening Ride',
+            meta: '24 km  •  60 min  •  Road',
+            reward: '+ Speed Badge',
+          ),
+          const SizedBox(height: 14),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
+            decoration: BoxDecoration(
+              color: MunjaColors.mintStrong,
+              borderRadius: BorderRadius.circular(19),
+            ),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(
+                  Icons.alt_route_rounded,
+                  color: Color(0xFF03130F),
+                ),
+                const SizedBox(width: 9),
+                Flexible(
+                  child: Text(
+                    customLabel,
+                    style: const TextStyle(
+                      color: Color(0xFF03130F),
+                      fontSize: 15,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _RouteSuggestionCard extends StatelessWidget {
+  final IconData icon;
+  final String title;
+  final String meta;
+  final String reward;
+
+  const _RouteSuggestionCard({
+    required this.icon,
+    required this.title,
+    required this.meta,
+    required this.reward,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(13),
+      decoration: BoxDecoration(
+        color: Colors.white.withOpacity(0.045),
+        borderRadius: BorderRadius.circular(19),
+        border: Border.all(color: Colors.white.withOpacity(0.07)),
+      ),
+      child: Row(
+        children: [
+          Container(
+            width: 46,
+            height: 46,
+            decoration: BoxDecoration(
+              color: MunjaColors.mint.withOpacity(0.12),
+              borderRadius: BorderRadius.circular(15),
+            ),
+            child: Icon(icon, color: MunjaColors.mint),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 14,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  meta,
+                  style: const TextStyle(
+                    color: MunjaColors.textSoft,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 3),
+                Text(
+                  reward,
+                  style: const TextStyle(
+                    color: MunjaColors.mint,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w900,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const Icon(Icons.chevron_right_rounded, color: Colors.white38),
+        ],
+      ),
+    );
+  }
+}
+
+class _RewardPreview extends StatelessWidget {
+  const _RewardPreview();
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        borderRadius: BorderRadius.circular(28),
+        gradient: LinearGradient(
+          begin: Alignment.topLeft,
+          end: Alignment.bottomRight,
+          colors: [
+            MunjaColors.mint.withOpacity(0.18),
+            const Color(0xFF03130F),
+          ],
+        ),
+        border: Border.all(color: MunjaColors.mint.withOpacity(0.24)),
+      ),
+      child: Column(
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 64,
+                height: 64,
+                decoration: BoxDecoration(
+                  color: MunjaColors.mintStrong,
+                  borderRadius: BorderRadius.circular(20),
+                ),
+                child: const Icon(
+                  Icons.workspace_premium_rounded,
+                  color: Color(0xFF03130F),
+                  size: 34,
+                ),
+              ),
+              const SizedBox(width: 15),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'Forest Challenge',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 19,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    SizedBox(height: 4),
+                    Text(
+                      'Ride 20 km on nature routes',
+                      style: TextStyle(
+                        color: MunjaColors.textSoft,
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const Text(
+                '65%',
+                style: TextStyle(
+                  color: MunjaColors.mint,
+                  fontSize: 18,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 18),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(999),
+            child: LinearProgressIndicator(
+              value: 0.65,
+              minHeight: 10,
+              backgroundColor: Colors.white.withOpacity(0.07),
+              valueColor: const AlwaysStoppedAnimation<Color>(
+                MunjaColors.mintStrong,
+              ),
+            ),
+          ),
+          const SizedBox(height: 18),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.045),
+              borderRadius: BorderRadius.circular(20),
+            ),
+            child: const Row(
+              children: [
+                Icon(Icons.layers_rounded, color: MunjaColors.mint),
+                SizedBox(width: 12),
+                Expanded(
+                  child: Text(
+                    'Reward: Forest Pulse Skin',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontSize: 14,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ),
+                Icon(Icons.lock_open_rounded, color: MunjaColors.mint),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _RiderModeCard extends StatelessWidget {
+  final IconData icon;
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  const _RiderModeCard({
+    required this.icon,
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(24),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 230),
+          padding: const EdgeInsets.all(12),
+          decoration: BoxDecoration(
+            color: selected
+                ? MunjaColors.mint.withOpacity(0.14)
+                : Colors.white.withOpacity(0.035),
+            borderRadius: BorderRadius.circular(24),
+            border: Border.all(
+              color: selected
+                  ? MunjaColors.mintStrong
+                  : Colors.white.withOpacity(0.07),
+              width: selected ? 1.6 : 1,
+            ),
+            boxShadow: selected
+                ? [
+                    BoxShadow(
+                      color: MunjaColors.mint.withOpacity(0.18),
+                      blurRadius: 20,
+                    ),
+                  ]
+                : null,
+          ),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                icon,
+                color: selected ? MunjaColors.mint : Colors.white70,
+                size: 34,
+              ),
+              const SizedBox(height: 10),
+              Text(
+                label,
+                textAlign: TextAlign.center,
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+                style: TextStyle(
+                  color: selected ? Colors.white : MunjaColors.textSoft,
+                  fontSize: 11,
+                  height: 1.15,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _PreviewPill extends StatelessWidget {
+  final IconData icon;
+  final String label;
+
+  const _PreviewPill({required this.icon, required this.label});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+      decoration: BoxDecoration(
+        color: const Color(0xFF03130F).withOpacity(0.88),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(color: MunjaColors.mint.withOpacity(0.30)),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, color: MunjaColors.mint, size: 14),
+          const SizedBox(width: 8),
+          Text(
+            label,
+            style: const TextStyle(
+              color: MunjaColors.mint,
+              fontSize: 11,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 1,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _OnboardingGridPainter extends CustomPainter {
+  const _OnboardingGridPainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = Colors.white.withOpacity(0.035)
+      ..strokeWidth = 0.7;
+
+    const spacing = 24.0;
+
+    for (double x = 0; x <= size.width; x += spacing) {
+      canvas.drawLine(Offset(x, 0), Offset(x, size.height), paint);
+    }
+
+    for (double y = 0; y <= size.height; y += spacing) {
+      canvas.drawLine(Offset(0, y), Offset(size.width, y), paint);
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _OnboardingGridPainter oldDelegate) => false;
+}
+
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});

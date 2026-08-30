@@ -6,7 +6,7 @@ import 'package:geolocator/geolocator.dart';
 import 'package:wakelock_plus/wakelock_plus.dart';
 
 import '../models/trip.dart';
-import 'live_ride_bus.dart';
+import '../Services/live_ride_bus.dart';
 import 'ride_controller_service.dart';
 
 class BackgroundRideEngine {
@@ -17,8 +17,6 @@ class BackgroundRideEngine {
   bool _initialized = false;
   bool _starting = false;
   bool _stopping = false;
-
-  StreamSubscription<LiveRideEngineEvent>? _eventSub;
 
   Future<void> initialize() async {
     if (_initialized) return;
@@ -52,12 +50,15 @@ class BackgroundRideEngine {
 
     await LiveRideBus.instance.initialize();
 
-    _eventSub?.cancel();
-    _eventSub = LiveRideEngineEventBus.instance.stream.listen(_handleEvent);
+    FlutterForegroundTask.removeTaskDataCallback(_onReceiveTaskData);
+    FlutterForegroundTask.addTaskDataCallback(_onReceiveTaskData);
 
     _initialized = true;
 
-    debugPrint('BackgroundRideEngine initialized');
+    debugPrint(
+      'BackgroundRideEngine initialized: '
+      'bus=${LiveRideBus.instance.debugInstanceId}',
+    );
   }
 
   Future<void> start() async {
@@ -75,8 +76,6 @@ class BackgroundRideEngine {
       }
 
       await WakelockPlus.enable();
-
-      LiveRideBus.instance.start();
 
       final running = await FlutterForegroundTask.isRunningService;
 
@@ -140,16 +139,29 @@ class BackgroundRideEngine {
 
     if (!state.isActive) return;
 
+    await RideControllerService.instance.startRide();
+    await _syncFromController();
+
     final running = await FlutterForegroundTask.isRunningService;
 
     if (!running) {
-      await start();
-    } else {
-      await WakelockPlus.enable();
-      await _syncNotification();
+      await FlutterForegroundTask.startService(
+        serviceId: 3001,
+        notificationTitle: 'Munja Ride Active',
+        notificationText: 'Recovering ride tracking...',
+        notificationIcon: null,
+        notificationInitialRoute: '/',
+        callback: backgroundRideStartCallback,
+      );
     }
 
-    debugPrint('BackgroundRideEngine recovery checked');
+    await WakelockPlus.enable();
+    await _syncNotification();
+
+    debugPrint(
+      'BackgroundRideEngine recovery checked: '
+      'active=${LiveRideBus.instance.state.value.isActive}',
+    );
   }
 
   Future<void> _syncFromController() async {
@@ -170,8 +182,6 @@ class BackgroundRideEngine {
   }
 
   Future<void> _syncNotification() async {
-    await _syncFromController();
-
     final state = LiveRideBus.instance.state.value;
 
     if (!state.isActive) return;
@@ -186,17 +196,27 @@ class BackgroundRideEngine {
     );
   }
 
-  void _handleEvent(LiveRideEngineEvent event) {
-    switch (event.type) {
-      case LiveRideEngineEventType.syncNotification:
-        _syncNotification();
+  void _onReceiveTaskData(Object data) {
+    if (data is! String) {
+      debugPrint(
+        'BackgroundRideEngine ignored non-string task data: '
+        '${data.runtimeType}',
+      );
+      return;
+    }
+
+    switch (data) {
+      case 'syncNotification':
+        unawaited(_syncNotification());
         break;
-      case LiveRideEngineEventType.stopRide:
-        stop();
+      case 'stopRide':
+        unawaited(stop());
         break;
-      case LiveRideEngineEventType.recover:
-        recoverIfNeeded();
+      case 'recoverRide':
+        unawaited(recoverIfNeeded());
         break;
+      default:
+        debugPrint('BackgroundRideEngine ignored task data: $data');
     }
   }
 
@@ -237,7 +257,7 @@ class BackgroundRideEngine {
   }
 
   Future<void> dispose() async {
-    await _eventSub?.cancel();
+    FlutterForegroundTask.removeTaskDataCallback(_onReceiveTaskData);
   }
 }
 
@@ -254,17 +274,13 @@ class BackgroundRideTaskHandler extends TaskHandler {
     _timer?.cancel();
 
     _timer = Timer.periodic(const Duration(seconds: 5), (_) {
-      LiveRideEngineEventBus.instance.emit(
-        const LiveRideEngineEvent.syncNotification(),
-      );
+      FlutterForegroundTask.sendDataToMain('syncNotification');
     });
   }
 
   @override
   void onRepeatEvent(DateTime timestamp) {
-    LiveRideEngineEventBus.instance.emit(
-      const LiveRideEngineEvent.syncNotification(),
-    );
+    FlutterForegroundTask.sendDataToMain('syncNotification');
   }
 
   @override
@@ -276,22 +292,18 @@ class BackgroundRideTaskHandler extends TaskHandler {
   @override
   void onReceiveData(Object data) {
     if (data == 'STOP_RIDE') {
-      LiveRideEngineEventBus.instance.emit(
-        const LiveRideEngineEvent.stopRide(),
-      );
+      FlutterForegroundTask.sendDataToMain('stopRide');
     }
 
     if (data == 'RECOVER_RIDE') {
-      LiveRideEngineEventBus.instance.emit(const LiveRideEngineEvent.recover());
+      FlutterForegroundTask.sendDataToMain('recoverRide');
     }
   }
 
   @override
   void onNotificationButtonPressed(String id) {
     if (id == 'stop') {
-      LiveRideEngineEventBus.instance.emit(
-        const LiveRideEngineEvent.stopRide(),
-      );
+      FlutterForegroundTask.sendDataToMain('stopRide');
     }
   }
 
@@ -300,40 +312,4 @@ class BackgroundRideTaskHandler extends TaskHandler {
 
   @override
   void onNotificationDismissed() {}
-}
-
-enum LiveRideEngineEventType { syncNotification, stopRide, recover }
-
-class LiveRideEngineEvent {
-  final LiveRideEngineEventType type;
-
-  const LiveRideEngineEvent._(this.type);
-
-  const LiveRideEngineEvent.syncNotification()
-    : this._(LiveRideEngineEventType.syncNotification);
-
-  const LiveRideEngineEvent.stopRide()
-    : this._(LiveRideEngineEventType.stopRide);
-
-  const LiveRideEngineEvent.recover() : this._(LiveRideEngineEventType.recover);
-}
-
-class LiveRideEngineEventBus {
-  LiveRideEngineEventBus._();
-
-  static final LiveRideEngineEventBus instance = LiveRideEngineEventBus._();
-
-  final StreamController<LiveRideEngineEvent> _controller =
-      StreamController<LiveRideEngineEvent>.broadcast();
-
-  Stream<LiveRideEngineEvent> get stream => _controller.stream;
-
-  void emit(LiveRideEngineEvent event) {
-    if (_controller.isClosed) return;
-    _controller.add(event);
-  }
-
-  Future<void> dispose() async {
-    await _controller.close();
-  }
 }

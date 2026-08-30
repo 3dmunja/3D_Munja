@@ -12,6 +12,7 @@ import '../models/munja_device.dart';
 import '../models/ride_route_plan.dart';
 import '../models/trip.dart';
 import '../models/user_profile.dart';
+import 'challenge_ride_progress_service.dart';
 
 typedef StorageUploadProgressCallback = void Function(double progress);
 
@@ -57,6 +58,18 @@ class StorageService {
 
   static const String activeRouteKey = 'munja_active_route';
   static const String userPhotoPathKey = 'profile_photo_path_v1';
+  static const String selectedBikeSkinKey = 'selected_bike_skin_v1';
+
+  // One-time migration metadata.
+  //
+  // IMPORTANT:
+  // The first signed-in account that runs this V2 while legacy local data
+  // still exists becomes the owner of that legacy data. This prevents the
+  // same old rides/profile from being copied into multiple Munja accounts.
+  static const String _legacyMigrationOwnerKey =
+      'munja_legacy_local_data_owner_uid_v2';
+  static const String _legacyMigrationDonePrefix =
+      'munja_legacy_local_data_migrated_v2';
 
   static const int maxProfileImageBytes = 15 * 1024 * 1024;
   static const int maxBikeImageBytes = 20 * 1024 * 1024;
@@ -68,6 +81,249 @@ class StorageService {
 
   static String? get currentUserId => _firebaseAuth.currentUser?.uid;
   static bool get isSignedIn => currentUserId != null;
+
+  /// Returns a SharedPreferences key that belongs to the currently signed-in
+  /// Firebase user.
+  ///
+  /// This is intentionally NOT allowed to fall back to the old global key.
+  /// Falling back would make two different Munja accounts on the same device
+  /// see the same rides/profile/statistics again.
+  static String _userScopedKey(String baseKey) {
+    final userId = currentUserId;
+
+    if (userId == null || userId.trim().isEmpty) {
+      return '${baseKey}__guest';
+    }
+
+    return '${baseKey}__${userId.trim()}';
+  }
+
+
+  static String _migrationDoneKey(String userId) {
+    return '${_legacyMigrationDonePrefix}__${userId.trim()}';
+  }
+
+  /// Copies the old pre-account SharedPreferences data into exactly one
+  /// Firebase UID namespace.
+  ///
+  /// Why this exists:
+  /// Older Munja builds stored rides/profile/device data in global local keys.
+  /// After V1 isolation, those old values remained on-device but were no
+  /// longer visible because the app correctly started reading UID-scoped keys.
+  ///
+  /// Safety rule:
+  /// - Legacy data may be claimed by ONE Firebase UID only.
+  /// - Once claimed, other accounts on the same phone cannot inherit it.
+  /// - Existing UID-scoped values are never overwritten.
+  ///
+  /// Run the app with the ORIGINAL Munja account signed in first.
+  static Future<void> migrateLegacyLocalDataForCurrentUser() async {
+    final userId = currentUserId?.trim();
+
+    if (userId == null || userId.isEmpty) {
+      return;
+    }
+
+    final sp = await SharedPreferences.getInstance();
+    final doneKey = _migrationDoneKey(userId);
+
+    if (sp.getBool(doneKey) == true) {
+      return;
+    }
+
+    final migrationOwner = sp.getString(_legacyMigrationOwnerKey)?.trim();
+
+    // Another Firebase account has already claimed the legacy device data.
+    if (migrationOwner != null &&
+        migrationOwner.isNotEmpty &&
+        migrationOwner != userId) {
+      await sp.setBool(doneKey, true);
+      debugPrint(
+        'STORAGE MIGRATION: skipped for $userId because legacy data '
+        'belongs to $migrationOwner.',
+      );
+      return;
+    }
+
+    final hasLegacyData = _hasAnyLegacyUserData(sp);
+
+    // Nothing old remains to migrate.
+    if (!hasLegacyData) {
+      await sp.setBool(doneKey, true);
+      debugPrint(
+        'STORAGE MIGRATION: no legacy user data found for $userId.',
+      );
+      return;
+    }
+
+    // Claim the legacy data before copying it so another account cannot
+    // claim the same values during a later login.
+    await sp.setString(_legacyMigrationOwnerKey, userId);
+
+    var copiedCount = 0;
+
+    copiedCount += await _copyLegacyStringIfNeeded(
+      sp,
+      baseKey: tripsKey,
+    );
+    copiedCount += await _copyLegacyStringIfNeeded(
+      sp,
+      baseKey: savedDevicesKey,
+    );
+    copiedCount += await _copyLegacyStringIfNeeded(
+      sp,
+      baseKey: lastDeviceKey,
+    );
+
+    copiedCount += await _copyLegacyStringIfNeeded(
+      sp,
+      baseKey: userNameKey,
+    );
+    copiedCount += await _copyLegacyIntIfNeeded(
+      sp,
+      baseKey: userAgeKey,
+    );
+    copiedCount += await _copyLegacyStringIfNeeded(
+      sp,
+      baseKey: userCityKey,
+    );
+    copiedCount += await _copyLegacyIntIfNeeded(
+      sp,
+      baseKey: userAvatarKey,
+    );
+    copiedCount += await _copyLegacyStringIfNeeded(
+      sp,
+      baseKey: userPhotoPathKey,
+    );
+
+    copiedCount += await _copyLegacyStringIfNeeded(
+      sp,
+      baseKey: selectedBikeSkinKey,
+    );
+
+    copiedCount += await _copyLegacyBoolIfNeeded(
+      sp,
+      baseKey: challengeAcceptedKey,
+    );
+    copiedCount += await _copyLegacyStringIfNeeded(
+      sp,
+      baseKey: challengePlanKey,
+    );
+    copiedCount += await _copyLegacyDoubleIfNeeded(
+      sp,
+      baseKey: weeklyGoalKmKey,
+    );
+    copiedCount += await _copyLegacyIntIfNeeded(
+      sp,
+      baseKey: challengeDeadlineKey,
+    );
+
+    // We intentionally do NOT migrate activeRouteKey or bgTripStateKey.
+    // Restoring a stale in-progress ride/navigation session after an account
+    // migration is more dangerous than starting those transient states fresh.
+
+    await sp.setBool(doneKey, true);
+
+    debugPrint(
+      'STORAGE MIGRATION: migrated $copiedCount legacy values to UID $userId.',
+    );
+  }
+
+  static bool _hasAnyLegacyUserData(SharedPreferences sp) {
+    return sp.containsKey(tripsKey) ||
+        sp.containsKey(savedDevicesKey) ||
+        sp.containsKey(lastDeviceKey) ||
+        sp.containsKey(userNameKey) ||
+        sp.containsKey(userAgeKey) ||
+        sp.containsKey(userCityKey) ||
+        sp.containsKey(userAvatarKey) ||
+        sp.containsKey(userPhotoPathKey) ||
+        sp.containsKey(selectedBikeSkinKey) ||
+        sp.containsKey(challengeAcceptedKey) ||
+        sp.containsKey(challengePlanKey) ||
+        sp.containsKey(weeklyGoalKmKey) ||
+        sp.containsKey(challengeDeadlineKey);
+  }
+
+  static Future<int> _copyLegacyStringIfNeeded(
+    SharedPreferences sp, {
+    required String baseKey,
+  }) async {
+    final scopedKey = _userScopedKey(baseKey);
+
+    if (sp.containsKey(scopedKey)) {
+      return 0;
+    }
+
+    final value = sp.getString(baseKey);
+
+    if (value == null) {
+      return 0;
+    }
+
+    await sp.setString(scopedKey, value);
+    return 1;
+  }
+
+  static Future<int> _copyLegacyIntIfNeeded(
+    SharedPreferences sp, {
+    required String baseKey,
+  }) async {
+    final scopedKey = _userScopedKey(baseKey);
+
+    if (sp.containsKey(scopedKey)) {
+      return 0;
+    }
+
+    final value = sp.getInt(baseKey);
+
+    if (value == null) {
+      return 0;
+    }
+
+    await sp.setInt(scopedKey, value);
+    return 1;
+  }
+
+  static Future<int> _copyLegacyDoubleIfNeeded(
+    SharedPreferences sp, {
+    required String baseKey,
+  }) async {
+    final scopedKey = _userScopedKey(baseKey);
+
+    if (sp.containsKey(scopedKey)) {
+      return 0;
+    }
+
+    final value = sp.getDouble(baseKey);
+
+    if (value == null) {
+      return 0;
+    }
+
+    await sp.setDouble(scopedKey, value);
+    return 1;
+  }
+
+  static Future<int> _copyLegacyBoolIfNeeded(
+    SharedPreferences sp, {
+    required String baseKey,
+  }) async {
+    final scopedKey = _userScopedKey(baseKey);
+
+    if (sp.containsKey(scopedKey)) {
+      return 0;
+    }
+
+    final value = sp.getBool(baseKey);
+
+    if (value == null) {
+      return 0;
+    }
+
+    await sp.setBool(scopedKey, value);
+    return 1;
+  }
 
   static Future<StorageUploadResult> uploadProfileImage({
     required String filePath,
@@ -573,8 +829,9 @@ class StorageService {
   }
 
   static Future<List<Trip>> loadTrips() async {
+    await migrateLegacyLocalDataForCurrentUser();
     final sp = await SharedPreferences.getInstance();
-    final raw = sp.getString(tripsKey);
+    final raw = sp.getString(_userScopedKey(tripsKey));
 
     if (raw == null) return [];
 
@@ -593,11 +850,85 @@ class StorageService {
 
   static Future<void> saveTrips(List<Trip> trips) async {
     final sp = await SharedPreferences.getInstance();
+    final scopedKey = _userScopedKey(tripsKey);
+
+    // Read the previously persisted list BEFORE overwriting it.
+    // This lets us identify only genuinely new completed rides.
+    final previousRaw = sp.getString(scopedKey);
+    final previousTrips = _decodeTrips(previousRaw);
+
+    final previousIds = previousTrips
+        .map(_tripPersistenceId)
+        .toSet();
+
+    final newTrips = trips
+        .where(
+          (trip) => !previousIds.contains(
+            _tripPersistenceId(trip),
+          ),
+        )
+        .toList(growable: false);
 
     await sp.setString(
-      tripsKey,
-      jsonEncode(trips.map((trip) => trip.toJson()).toList()),
+      scopedKey,
+      jsonEncode(
+        trips.map((trip) => trip.toJson()).toList(),
+      ),
     );
+
+    // Ride progress is a side effect of a NEW persisted ride.
+    // The ride is already safely stored before we touch Firestore.
+    //
+    // ChallengeRideProgressService is now the single central pipeline for:
+    // - standard 1-vs-1 challenges
+    // - Munja Pro Monthly Special progress
+    //
+    // Never let a network/reward error make the actual ride save fail.
+    if (newTrips.isNotEmpty && isSignedIn) {
+      for (final trip in newTrips.reversed) {
+        try {
+          await ChallengeRideProgressService.instance
+              .processCompletedRide(
+            trip: trip,
+            allTrips: trips,
+          );
+        } catch (error, stackTrace) {
+          debugPrint(
+            'STORAGE RIDE PROGRESS ERROR: $error',
+          );
+          debugPrint('$stackTrace');
+        }
+      }
+    }
+  }
+
+  static List<Trip> _decodeTrips(String? raw) {
+    if (raw == null || raw.trim().isEmpty) {
+      return const <Trip>[];
+    }
+
+    try {
+      final decoded = jsonDecode(raw);
+
+      if (decoded is! List) {
+        return const <Trip>[];
+      }
+
+      return decoded
+          .whereType<Map>()
+          .map(
+            (item) => Trip.fromJson(
+              item.cast<String, dynamic>(),
+            ),
+          )
+          .toList(growable: false);
+    } catch (_) {
+      return const <Trip>[];
+    }
+  }
+
+  static String _tripPersistenceId(Trip trip) {
+    return '${trip.startedAtMs}_${trip.endedAtMs}';
   }
 
   static Future<void> saveTrip(Trip trip) async {
@@ -618,7 +949,7 @@ class StorageService {
 
   static Future<RideRoutePlan?> loadActiveRoute() async {
     final sp = await SharedPreferences.getInstance();
-    final raw = sp.getString(activeRouteKey);
+    final raw = sp.getString(_userScopedKey(activeRouteKey));
 
     if (raw == null || raw.isEmpty) return null;
 
@@ -642,17 +973,18 @@ class StorageService {
   static Future<void> saveActiveRoute(RideRoutePlan route) async {
     final sp = await SharedPreferences.getInstance();
 
-    await sp.setString(activeRouteKey, jsonEncode(route.toJson()));
+    await sp.setString(_userScopedKey(activeRouteKey), jsonEncode(route.toJson()));
   }
 
   static Future<void> clearActiveRoute() async {
     final sp = await SharedPreferences.getInstance();
-    await sp.remove(activeRouteKey);
+    await sp.remove(_userScopedKey(activeRouteKey));
   }
 
   static Future<List<MunjaDevice>> loadSavedDevices() async {
+    await migrateLegacyLocalDataForCurrentUser();
     final sp = await SharedPreferences.getInstance();
-    final raw = sp.getString(savedDevicesKey);
+    final raw = sp.getString(_userScopedKey(savedDevicesKey));
 
     if (raw == null) return [];
 
@@ -683,45 +1015,47 @@ class StorageService {
     }
 
     await sp.setString(
-      savedDevicesKey,
+      _userScopedKey(savedDevicesKey),
       jsonEncode(current.map((item) => item.toJson()).toList()),
     );
 
-    await sp.setString(lastDeviceKey, device.id);
+    await sp.setString(_userScopedKey(lastDeviceKey), device.id);
   }
 
   static Future<UserProfile> loadUserProfile() async {
+    await migrateLegacyLocalDataForCurrentUser();
     final sp = await SharedPreferences.getInstance();
 
     return UserProfile(
-      name: sp.getString(userNameKey) ?? 'Rider',
-      age: sp.getInt(userAgeKey) ?? 24,
-      city: sp.getString(userCityKey) ?? 'Copenhagen',
-      avatarIndex: sp.getInt(userAvatarKey) ?? 0,
-      photoPath: sp.getString(userPhotoPathKey),
+      name: sp.getString(_userScopedKey(userNameKey)) ?? 'Rider',
+      age: sp.getInt(_userScopedKey(userAgeKey)) ?? 24,
+      city: sp.getString(_userScopedKey(userCityKey)) ?? 'Copenhagen',
+      avatarIndex: sp.getInt(_userScopedKey(userAvatarKey)) ?? 0,
+      photoPath: sp.getString(_userScopedKey(userPhotoPathKey)),
     );
   }
 
   static Future<void> saveUserProfile(UserProfile profile) async {
     final sp = await SharedPreferences.getInstance();
 
-    await sp.setString(userNameKey, profile.name.trim());
-    await sp.setInt(userAgeKey, profile.age);
-    await sp.setString(userCityKey, profile.city.trim());
-    await sp.setInt(userAvatarKey, profile.avatarIndex);
+    await sp.setString(_userScopedKey(userNameKey), profile.name.trim());
+    await sp.setInt(_userScopedKey(userAgeKey), profile.age);
+    await sp.setString(_userScopedKey(userCityKey), profile.city.trim());
+    await sp.setInt(_userScopedKey(userAvatarKey), profile.avatarIndex);
 
     final photoPath = profile.photoPath?.trim();
 
     if (photoPath == null || photoPath.isEmpty) {
-      await sp.remove(userPhotoPathKey);
+      await sp.remove(_userScopedKey(userPhotoPathKey));
     } else {
-      await sp.setString(userPhotoPathKey, photoPath);
+      await sp.setString(_userScopedKey(userPhotoPathKey), photoPath);
     }
   }
 
   static Future<String?> loadUserPhotoPath() async {
+    await migrateLegacyLocalDataForCurrentUser();
     final sp = await SharedPreferences.getInstance();
-    return sp.getString(userPhotoPathKey);
+    return sp.getString(_userScopedKey(userPhotoPathKey));
   }
 
   static Future<void> saveUserPhotoPath(String path) async {
@@ -729,21 +1063,21 @@ class StorageService {
     final trimmedPath = path.trim();
 
     if (trimmedPath.isEmpty) {
-      await sp.remove(userPhotoPathKey);
+      await sp.remove(_userScopedKey(userPhotoPathKey));
       return;
     }
 
-    await sp.setString(userPhotoPathKey, trimmedPath);
+    await sp.setString(_userScopedKey(userPhotoPathKey), trimmedPath);
   }
 
   static Future<void> clearUserPhotoPath() async {
     final sp = await SharedPreferences.getInstance();
-    await sp.remove(userPhotoPathKey);
+    await sp.remove(_userScopedKey(userPhotoPathKey));
   }
 
   static Future<Map<String, dynamic>?> loadBgTripState() async {
     final sp = await SharedPreferences.getInstance();
-    final raw = sp.getString(bgTripStateKey);
+    final raw = sp.getString(_userScopedKey(bgTripStateKey));
 
     if (raw == null) return null;
 
@@ -765,12 +1099,34 @@ class StorageService {
   static Future<void> saveBgTripState(Map<String, dynamic> data) async {
     final sp = await SharedPreferences.getInstance();
 
-    await sp.setString(bgTripStateKey, jsonEncode(data));
+    await sp.setString(_userScopedKey(bgTripStateKey), jsonEncode(data));
   }
 
   static Future<void> clearBgTripState() async {
     final sp = await SharedPreferences.getInstance();
-    await sp.remove(bgTripStateKey);
+    await sp.remove(_userScopedKey(bgTripStateKey));
+  }
+
+
+  static Future<void> saveSelectedBikeSkin(String skinId) async {
+    final normalizedSkinId = skinId.trim().toLowerCase();
+    final safeSkinId = normalizedSkinId == 'forest' ? 'forest' : 'standard';
+
+    final sp = await SharedPreferences.getInstance();
+    await sp.setString(_userScopedKey(selectedBikeSkinKey), safeSkinId);
+  }
+
+  static Future<String> loadSelectedBikeSkin() async {
+    await migrateLegacyLocalDataForCurrentUser();
+    final sp = await SharedPreferences.getInstance();
+    final savedSkinId = sp.getString(_userScopedKey(selectedBikeSkinKey))?.trim().toLowerCase();
+
+    return savedSkinId == 'forest' ? 'forest' : 'standard';
+  }
+
+  static Future<void> clearSelectedBikeSkin() async {
+    final sp = await SharedPreferences.getInstance();
+    await sp.remove(_userScopedKey(selectedBikeSkinKey));
   }
 
   static Future<void> setOnboardingDone(bool value) async {
@@ -791,15 +1147,39 @@ class StorageService {
   }) async {
     final sp = await SharedPreferences.getInstance();
 
-    await sp.setBool(challengeAcceptedKey, accepted);
-    await sp.setString(challengePlanKey, plan);
-    await sp.setDouble(weeklyGoalKmKey, weeklyGoalKm);
+    await sp.setBool(_userScopedKey(challengeAcceptedKey), accepted);
+    await sp.setString(_userScopedKey(challengePlanKey), plan);
+    await sp.setDouble(_userScopedKey(weeklyGoalKmKey), weeklyGoalKm);
 
     if (deadline == null) {
-      await sp.remove(challengeDeadlineKey);
+      await sp.remove(_userScopedKey(challengeDeadlineKey));
     } else {
-      await sp.setInt(challengeDeadlineKey, deadline.millisecondsSinceEpoch);
+      await sp.setInt(_userScopedKey(challengeDeadlineKey), deadline.millisecondsSinceEpoch);
     }
+  }
+
+  static Future<Map<String, String>> debugUserScopedStorageKeys() async {
+    final sp = await SharedPreferences.getInstance();
+    final uid = currentUserId ?? 'guest';
+
+    return <String, String>{
+      'uid': uid,
+      'migrationOwner':
+          sp.getString(_legacyMigrationOwnerKey) ?? 'none',
+      'migrationDone': uid == 'guest'
+          ? 'false'
+          : '${sp.getBool(_migrationDoneKey(uid)) ?? false}',
+      'legacyTripsPresent': '${sp.containsKey(tripsKey)}',
+      'scopedTripsPresent':
+          '${sp.containsKey(_userScopedKey(tripsKey))}',
+      'trips': _userScopedKey(tripsKey),
+      'profileName': _userScopedKey(userNameKey),
+      'profileCity': _userScopedKey(userCityKey),
+      'profilePhoto': _userScopedKey(userPhotoPathKey),
+      'savedDevices': _userScopedKey(savedDevicesKey),
+      'activeRoute': _userScopedKey(activeRouteKey),
+      'backgroundRide': _userScopedKey(bgTripStateKey),
+    };
   }
 
   static Future<void> setBackgroundTrackingEnabled(bool value) async {

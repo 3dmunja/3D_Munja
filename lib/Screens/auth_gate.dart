@@ -184,10 +184,12 @@ class _AuthLoadingContent extends StatelessWidget {
                 ),
               ],
             ),
-            child: const Icon(
-              Icons.change_history_rounded,
-              color: MunjaColors.mint,
-              size: 48,
+            child: Padding(
+              padding: const EdgeInsets.all(12),
+              child: Image.asset(
+                'assets/munja-logo-icon_2.png',
+                fit: BoxFit.contain,
+              ),
             ),
           ),
           const SizedBox(height: 24),

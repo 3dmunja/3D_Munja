@@ -107,89 +107,25 @@ class HomeLiveRideCard extends StatelessWidget {
 
           const SizedBox(height: 18),
 
-          SizedBox(
-            height: 260,
-            child: Stack(
-              alignment: Alignment.center,
-              children: [
-                Positioned.fill(
-                  child: CustomPaint(
-                    painter: _SpeedArcPainter(
-                      progress: progress,
-                      active: monitoring,
-                    ),
+          AnimatedSwitcher(
+            duration: const Duration(milliseconds: 420),
+            child: monitoring
+                ? _ActiveRideCockpit(
+                    key: const ValueKey('active-cockpit'),
+                    data: data,
+                    durationText: _durationText(data.rideDuration),
+                    onOpenMap: onOpenMap,
+                  )
+                : _ReadyRideDashboard(
+                    key: const ValueKey('ready-dashboard'),
+                    speed: speed,
+                    progress: progress,
+                    data: data,
+                    durationText: _durationText(data.rideDuration),
                   ),
-                ),
-
-                Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    Icon(
-                      Icons.bolt_rounded,
-                      color: MunjaColors.mint.withOpacity(0.95),
-                      size: 34,
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      speed.toStringAsFixed(1),
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 76,
-                        height: 0.92,
-                        fontWeight: FontWeight.w900,
-                        letterSpacing: -3.5,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    const Text(
-                      'km/h',
-                      style: TextStyle(
-                        color: Colors.white60,
-                        fontSize: 15,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                  ],
-                ),
-
-                Positioned(
-                  left: 6,
-                  bottom: 20,
-                  child: _HeroMetric(
-                    icon: Icons.route_rounded,
-                    value: data.distanceKm.toStringAsFixed(2),
-                    unit: 'km',
-                    label: 'Distance',
-                  ),
-                ),
-
-                Positioned(
-                  bottom: 18,
-                  child: _HeroMetric(
-                    icon: Icons.timer_rounded,
-                    value: _durationText(data.rideDuration),
-                    unit: '',
-                    label: 'Time',
-                    centered: true,
-                  ),
-                ),
-
-                Positioned(
-                  right: 6,
-                  bottom: 20,
-                  child: _HeroMetric(
-                    icon: Icons.speed_rounded,
-                    value: data.averageSpeedKmh.toStringAsFixed(1),
-                    unit: 'km/h',
-                    label: 'Avg',
-                    alignRight: true,
-                  ),
-                ),
-              ],
-            ),
           ),
 
-          const SizedBox(height: 10),
+          const SizedBox(height: 14),
 
           Container(
             height: 66,
@@ -263,6 +199,392 @@ class HomeLiveRideCard extends StatelessWidget {
       ),
     );
   }
+}
+
+
+class _ReadyRideDashboard extends StatelessWidget {
+  const _ReadyRideDashboard({
+    super.key,
+    required this.speed,
+    required this.progress,
+    required this.data,
+    required this.durationText,
+  });
+
+  final double speed;
+  final double progress;
+  final RideSessionData data;
+  final String durationText;
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 260,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Positioned.fill(
+            child: CustomPaint(
+              painter: _SpeedArcPainter(
+                progress: progress,
+                active: false,
+              ),
+            ),
+          ),
+          Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(
+                Icons.bolt_rounded,
+                color: MunjaColors.mint.withOpacity(0.95),
+                size: 34,
+              ),
+              const SizedBox(height: 8),
+              Text(
+                speed.toStringAsFixed(1),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 76,
+                  height: 0.92,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: -3.5,
+                ),
+              ),
+              const SizedBox(height: 6),
+              const Text(
+                'km/h',
+                style: TextStyle(
+                  color: Colors.white60,
+                  fontSize: 15,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ],
+          ),
+          Positioned(
+            left: 6,
+            bottom: 20,
+            child: _HeroMetric(
+              icon: Icons.route_rounded,
+              value: data.distanceKm.toStringAsFixed(2),
+              unit: 'km',
+              label: 'Distance',
+            ),
+          ),
+          Positioned(
+            bottom: 18,
+            child: _HeroMetric(
+              icon: Icons.timer_rounded,
+              value: durationText,
+              unit: '',
+              label: 'Time',
+              centered: true,
+            ),
+          ),
+          Positioned(
+            right: 6,
+            bottom: 20,
+            child: _HeroMetric(
+              icon: Icons.speed_rounded,
+              value: data.averageSpeedKmh.toStringAsFixed(1),
+              unit: 'km/h',
+              label: 'Avg',
+              alignRight: true,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ActiveRideCockpit extends StatelessWidget {
+  const _ActiveRideCockpit({
+    super.key,
+    required this.data,
+    required this.durationText,
+    required this.onOpenMap,
+  });
+
+  final RideSessionData data;
+  final String durationText;
+  final VoidCallback onOpenMap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Container(
+          height: 190,
+          width: double.infinity,
+          decoration: BoxDecoration(
+            color: Colors.black.withOpacity(0.20),
+            borderRadius: BorderRadius.circular(30),
+            border: Border.all(
+              color: MunjaColors.mint.withOpacity(0.16),
+            ),
+          ),
+          clipBehavior: Clip.antiAlias,
+          child: Stack(
+            children: [
+              Positioned.fill(
+                child: CustomPaint(
+                  painter: _CockpitPainter(),
+                ),
+              ),
+              Positioned(
+                left: 18,
+                top: 16,
+                child: _MiniRideBadge(
+                  icon: Icons.navigation_rounded,
+                  label: 'LIVE NAV',
+                ),
+              ),
+              Positioned(
+                right: 18,
+                top: 16,
+                child: _MiniRideBadge(
+                  icon: Icons.speed_rounded,
+                  label: '${data.currentSpeedKmh.toStringAsFixed(1)} km/h',
+                ),
+              ),
+              Positioned(
+                left: 0,
+                right: 0,
+                bottom: 18,
+                child: Column(
+                  children: [
+                    const Icon(
+                      Icons.straight_rounded,
+                      color: MunjaColors.mint,
+                      size: 42,
+                    ),
+                    const SizedBox(height: 4),
+                    const Text(
+                      'Fortsæt ligeud',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 18,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      'Næste manøvre vises her',
+                      style: TextStyle(
+                        color: Colors.white.withOpacity(0.48),
+                        fontSize: 12,
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+        const SizedBox(height: 12),
+        GestureDetector(
+          onTap: onOpenMap,
+          child: Container(
+            height: 132,
+            width: double.infinity,
+            padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(30),
+              border: Border.all(
+                color: MunjaColors.mint.withOpacity(0.16),
+              ),
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  MunjaColors.mint.withOpacity(0.10),
+                  Colors.black.withOpacity(0.18),
+                ],
+              ),
+            ),
+            child: Row(
+              children: [
+                Container(
+                  width: 68,
+                  height: 68,
+                  decoration: BoxDecoration(
+                    color: MunjaColors.mint.withOpacity(0.12),
+                    borderRadius: BorderRadius.circular(22),
+                  ),
+                  child: const Icon(
+                    Icons.map_rounded,
+                    color: MunjaColors.mint,
+                    size: 34,
+                  ),
+                ),
+                const SizedBox(width: 16),
+                Expanded(
+                  child: Column(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'Åbn rute og vejviser',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize: 17,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        '${data.distanceKm.toStringAsFixed(2)} km  •  $durationText',
+                        style: TextStyle(
+                          color: Colors.white.withOpacity(0.50),
+                          fontSize: 12,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      const Text(
+                        'Tryk for fuldskærmskort',
+                        style: TextStyle(
+                          color: MunjaColors.mint,
+                          fontSize: 12,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const Icon(
+                  Icons.chevron_right_rounded,
+                  color: Colors.white54,
+                  size: 30,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _MiniRideBadge extends StatelessWidget {
+  const _MiniRideBadge({
+    required this.icon,
+    required this.label,
+  });
+
+  final IconData icon;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 34,
+      padding: const EdgeInsets.symmetric(horizontal: 11),
+      decoration: BoxDecoration(
+        color: Colors.black.withOpacity(0.42),
+        borderRadius: BorderRadius.circular(999),
+        border: Border.all(
+          color: MunjaColors.mint.withOpacity(0.22),
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, color: MunjaColors.mint, size: 15),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 10,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 0.4,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CockpitPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final center = Offset(size.width / 2, size.height / 2);
+
+    final glow = Paint()
+      ..color = MunjaColors.mint.withOpacity(0.16)
+      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 28);
+
+    canvas.drawCircle(
+      Offset(center.dx, size.height * 0.62),
+      size.width * 0.22,
+      glow,
+    );
+
+    final barPaint = Paint()
+      ..color = Colors.white.withOpacity(0.72)
+      ..strokeWidth = 8
+      ..strokeCap = StrokeCap.round;
+
+    final darkPaint = Paint()
+      ..color = Colors.black.withOpacity(0.82)
+      ..strokeWidth = 18
+      ..strokeCap = StrokeCap.round;
+
+    final left = Offset(size.width * 0.18, size.height * 0.48);
+    final right = Offset(size.width * 0.82, size.height * 0.48);
+
+    canvas.drawLine(left, right, darkPaint);
+    canvas.drawLine(
+      Offset(size.width * 0.20, size.height * 0.48),
+      Offset(size.width * 0.80, size.height * 0.48),
+      barPaint,
+    );
+
+    final stemPaint = Paint()
+      ..color = Colors.black.withOpacity(0.90)
+      ..strokeWidth = 22
+      ..strokeCap = StrokeCap.round;
+
+    canvas.drawLine(
+      Offset(center.dx, size.height * 0.48),
+      Offset(center.dx, size.height * 0.70),
+      stemPaint,
+    );
+
+    final gripPaint = Paint()
+      ..color = Colors.black.withOpacity(0.95)
+      ..strokeWidth = 22
+      ..strokeCap = StrokeCap.round;
+
+    canvas.drawLine(
+      Offset(size.width * 0.12, size.height * 0.48),
+      Offset(size.width * 0.24, size.height * 0.48),
+      gripPaint,
+    );
+
+    canvas.drawLine(
+      Offset(size.width * 0.76, size.height * 0.48),
+      Offset(size.width * 0.88, size.height * 0.48),
+      gripPaint,
+    );
+
+    final mintPaint = Paint()
+      ..color = MunjaColors.mint.withOpacity(0.90)
+      ..style = PaintingStyle.stroke
+      ..strokeWidth = 3;
+
+    canvas.drawCircle(
+      Offset(center.dx, size.height * 0.70),
+      16,
+      mintPaint,
+    );
+  }
+
+  @override
+  bool shouldRepaint(covariant _CockpitPainter oldDelegate) => false;
 }
 
 class _SpeedArcPainter extends CustomPainter {

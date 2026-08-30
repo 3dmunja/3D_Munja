@@ -22,11 +22,42 @@ class LiveRideBus {
       StreamController<LiveRideState>.broadcast();
 
   Timer? _persistDebounce;
+  Future<void>? _initializeFuture;
+  bool _initialized = false;
 
   Stream<LiveRideState> get stream => _streamController.stream;
 
-  Future<void> initialize() async {
-    await restore();
+  int get debugInstanceId => identityHashCode(this);
+  int get debugNotifierId => identityHashCode(state);
+
+  Future<void> initialize() {
+    if (_initialized) {
+      return Future<void>.value();
+    }
+
+    final inFlight = _initializeFuture;
+    if (inFlight != null) {
+      return inFlight;
+    }
+
+    final future = _initialize();
+    _initializeFuture = future;
+    return future;
+  }
+
+  Future<void> _initialize() async {
+    try {
+      await restore();
+      _initialized = true;
+
+      debugPrint(
+        'LiveRideBus initialized: '
+        'bus=$debugInstanceId notifier=$debugNotifierId '
+        'active=${state.value.isActive}',
+      );
+    } finally {
+      _initializeFuture = null;
+    }
   }
 
   void update(LiveRideState newState) {
@@ -40,6 +71,7 @@ class LiveRideBus {
 
     debugPrint(
       'LiveRideBus updated: '
+      'bus=$debugInstanceId notifier=$debugNotifierId '
       'active=${newState.isActive} '
       'paused=${newState.isPaused} '
       'speed=${newState.speedKmh.toStringAsFixed(1)} '
@@ -143,24 +175,91 @@ class LiveRideBus {
       final prefs = await SharedPreferences.getInstance();
       final raw = prefs.getString(_storageKey);
 
-      if (raw == null) return;
+      if (raw == null) {
+        _publishInitialState(
+          reason: 'no persisted ride state',
+        );
+        return;
+      }
 
       final decoded = jsonDecode(raw);
 
-      if (decoded is! Map<String, dynamic>) return;
+      if (decoded is! Map<String, dynamic>) {
+        await prefs.remove(_storageKey);
+        _publishInitialState(
+          reason: 'invalid persisted ride state',
+        );
+        return;
+      }
 
       final restored = LiveRideState.fromJson(decoded);
 
-      state.value = restored;
-
-      if (!_streamController.isClosed) {
-        _streamController.add(restored);
+      // IMPORTANT:
+      // A persisted LiveRideState is only a snapshot from the previous app
+      // process. It must NOT automatically reactivate Home navigation after
+      // an app restart.
+      //
+      // Previously an unfinished/stale snapshot with isActive=true was
+      // restored directly. Home correctly trusted LiveRideBus and therefore
+      // showed Google Maps + cockpit view even though the rider had not
+      // started a new ride.
+      //
+      // For now Munja uses a strict rule:
+      //   - a fresh app process always starts with NO active ride;
+      //   - only start() may transition LiveRideBus to isActive=true.
+      //
+      // This deliberately favors a correct Home state over automatic
+      // crash-recovery of an interrupted ride. Proper crash recovery can be
+      // added later with an explicit resumable-session token.
+      if (restored.isActive || restored.isPaused) {
+        debugPrint(
+          'LiveRideBus discarded stale active snapshot: '
+          'active=${restored.isActive} '
+          'paused=${restored.isPaused} '
+          'distance=${restored.distanceKm.toStringAsFixed(3)} '
+          'path=${restored.path.length}',
+        );
       }
 
-      debugPrint('LiveRideBus restored');
-    } catch (e) {
+      await prefs.remove(_storageKey);
+
+      _publishInitialState(
+        reason: 'startup restore sanitized',
+      );
+    } catch (e, stackTrace) {
       debugPrint('LiveRideBus restore error: $e');
+      debugPrint('$stackTrace');
+
+      try {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.remove(_storageKey);
+      } catch (_) {
+        // Best effort cleanup only.
+      }
+
+      _publishInitialState(
+        reason: 'restore error fallback',
+      );
     }
+  }
+
+  void _publishInitialState({
+    required String reason,
+  }) {
+    final initial = LiveRideState.initial();
+
+    state.value = initial;
+
+    if (!_streamController.isClosed) {
+      _streamController.add(initial);
+    }
+
+    debugPrint(
+      'LiveRideBus startup state reset: '
+      'reason=$reason '
+      'bus=$debugInstanceId notifier=$debugNotifierId '
+      'active=${initial.isActive}',
+    );
   }
 
   bool get isActive => state.value.isActive;

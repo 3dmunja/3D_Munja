@@ -23,6 +23,128 @@ extension FirestoreBikeTypeValue on FirestoreBikeType {
   }
 }
 
+class FirestoreBikeDigitalTwin {
+  final String glbModelUrl;
+  final String imageUrl;
+  final String thumbnailUrl;
+  final String activeSkinId;
+  final String activeFrameId;
+  final String frameColor;
+
+  const FirestoreBikeDigitalTwin({
+    this.glbModelUrl = '',
+    this.imageUrl = '',
+    this.thumbnailUrl = '',
+    this.activeSkinId = '',
+    this.activeFrameId = '',
+    this.frameColor = '',
+  });
+
+  factory FirestoreBikeDigitalTwin.fromMap(dynamic value) {
+    if (value is! Map) {
+      return const FirestoreBikeDigitalTwin();
+    }
+
+    final map = Map<String, dynamic>.from(value);
+
+    return FirestoreBikeDigitalTwin(
+      glbModelUrl: _readDigitalTwinString(map['glbModelUrl']),
+      imageUrl: _readDigitalTwinString(map['imageUrl']),
+      thumbnailUrl: _readDigitalTwinString(map['thumbnailUrl']),
+      activeSkinId: _readDigitalTwinString(
+        map['activeSkinId'] ?? map['activeSkin'],
+      ),
+      activeFrameId: _readDigitalTwinString(
+        map['activeFrameId'] ?? map['activeFrame'],
+      ),
+      frameColor: _readDigitalTwinString(map['frameColor']),
+    );
+  }
+
+  FirestoreBikeDigitalTwin copyWith({
+    String? glbModelUrl,
+    String? imageUrl,
+    String? thumbnailUrl,
+    String? activeSkinId,
+    String? activeFrameId,
+    String? frameColor,
+  }) {
+    return FirestoreBikeDigitalTwin(
+      glbModelUrl: glbModelUrl ?? this.glbModelUrl,
+      imageUrl: imageUrl ?? this.imageUrl,
+      thumbnailUrl: thumbnailUrl ?? this.thumbnailUrl,
+      activeSkinId: activeSkinId ?? this.activeSkinId,
+      activeFrameId: activeFrameId ?? this.activeFrameId,
+      frameColor: frameColor ?? this.frameColor,
+    );
+  }
+
+  FirestoreBikeDigitalTwin normalized() {
+    return FirestoreBikeDigitalTwin(
+      glbModelUrl: glbModelUrl.trim(),
+      imageUrl: imageUrl.trim(),
+      thumbnailUrl: thumbnailUrl.trim(),
+      activeSkinId: activeSkinId.trim(),
+      activeFrameId: activeFrameId.trim(),
+      frameColor: frameColor.trim(),
+    );
+  }
+
+  bool get hasData =>
+      glbModelUrl.trim().isNotEmpty ||
+      imageUrl.trim().isNotEmpty ||
+      thumbnailUrl.trim().isNotEmpty ||
+      activeSkinId.trim().isNotEmpty ||
+      activeFrameId.trim().isNotEmpty ||
+      frameColor.trim().isNotEmpty;
+
+  Map<String, dynamic> toMap() {
+    return <String, dynamic>{
+      if (glbModelUrl.trim().isNotEmpty)
+        'glbModelUrl': glbModelUrl.trim(),
+      if (imageUrl.trim().isNotEmpty)
+        'imageUrl': imageUrl.trim(),
+      if (thumbnailUrl.trim().isNotEmpty)
+        'thumbnailUrl': thumbnailUrl.trim(),
+      if (activeSkinId.trim().isNotEmpty)
+        'activeSkinId': activeSkinId.trim(),
+      if (activeFrameId.trim().isNotEmpty)
+        'activeFrameId': activeFrameId.trim(),
+      if (frameColor.trim().isNotEmpty)
+        'frameColor': frameColor.trim(),
+    };
+  }
+
+  @override
+  bool operator ==(Object other) {
+    return other is FirestoreBikeDigitalTwin &&
+        other.glbModelUrl == glbModelUrl &&
+        other.imageUrl == imageUrl &&
+        other.thumbnailUrl == thumbnailUrl &&
+        other.activeSkinId == activeSkinId &&
+        other.activeFrameId == activeFrameId &&
+        other.frameColor == frameColor;
+  }
+
+  @override
+  int get hashCode => Object.hash(
+        glbModelUrl,
+        imageUrl,
+        thumbnailUrl,
+        activeSkinId,
+        activeFrameId,
+        frameColor,
+      );
+
+  static String _readDigitalTwinString(dynamic value) {
+    if (value is String) {
+      return value.trim();
+    }
+
+    return '';
+  }
+}
+
 class FirestoreBike {
   final String id;
   final String ownerId;
@@ -36,6 +158,11 @@ class FirestoreBike {
   final String serialNumber;
   final String imageUrl;
   final String glbModelUrl;
+  final String thumbnailUrl;
+  final String activeSkin;
+  final String activeFrameId;
+  final String frameColor;
+  final FirestoreBikeDigitalTwin digitalTwin;
   final String firmwareVersion;
   final bool active;
   final bool digitalTwinEnabled;
@@ -57,6 +184,11 @@ class FirestoreBike {
     required this.serialNumber,
     required this.imageUrl,
     required this.glbModelUrl,
+    this.thumbnailUrl = '',
+    this.activeSkin = '',
+    this.activeFrameId = '',
+    this.frameColor = '',
+    this.digitalTwin = const FirestoreBikeDigitalTwin(),
     required this.firmwareVersion,
     required this.active,
     required this.digitalTwinEnabled,
@@ -80,6 +212,11 @@ class FirestoreBike {
       serialNumber: '',
       imageUrl: '',
       glbModelUrl: '',
+      thumbnailUrl: '',
+      activeSkin: '',
+      activeFrameId: '',
+      frameColor: '',
+      digitalTwin: const FirestoreBikeDigitalTwin(),
       firmwareVersion: '',
       active: false,
       digitalTwinEnabled: false,
@@ -99,22 +236,93 @@ class FirestoreBike {
   }
 
   factory FirestoreBike.fromMap(Map<String, dynamic> map, {String? id}) {
+    final digitalTwin = FirestoreBikeDigitalTwin.fromMap(
+      map['digitalTwin'],
+    );
+
+    final topLevelGlbModelUrl =
+        _readString(map['glbModelUrl'] ?? map['glbModel']);
+    final topLevelImageUrl = _readString(map['imageUrl']);
+    final topLevelThumbnailUrl = _readString(map['thumbnailUrl']);
+    final topLevelActiveSkin = _readString(map['activeSkin']);
+    final topLevelActiveFrameId = _readString(
+      map['activeFrameId'] ?? map['activeFrame'],
+    );
+    final topLevelFrameColor = _readString(map['frameColor']);
+
+    final resolvedGlbModelUrl = topLevelGlbModelUrl.isNotEmpty
+        ? topLevelGlbModelUrl
+        : digitalTwin.glbModelUrl;
+
+    final resolvedImageUrl = topLevelImageUrl.isNotEmpty
+        ? topLevelImageUrl
+        : digitalTwin.imageUrl;
+
+    final resolvedThumbnailUrl = topLevelThumbnailUrl.isNotEmpty
+        ? topLevelThumbnailUrl
+        : digitalTwin.thumbnailUrl;
+
+    final resolvedActiveSkin = topLevelActiveSkin.isNotEmpty
+        ? topLevelActiveSkin
+        : digitalTwin.activeSkinId;
+
+    final resolvedActiveFrameId = topLevelActiveFrameId.isNotEmpty
+        ? topLevelActiveFrameId
+        : digitalTwin.activeFrameId;
+
+    final resolvedFrameColor = topLevelFrameColor.isNotEmpty
+        ? topLevelFrameColor
+        : digitalTwin.frameColor;
+
+    final topLevelColor = _readString(map['color']);
+    final resolvedColor = topLevelColor.isNotEmpty
+        ? topLevelColor
+        : resolvedFrameColor;
+
+    final synchronizedDigitalTwin = digitalTwin.copyWith(
+      glbModelUrl: digitalTwin.glbModelUrl.isNotEmpty
+          ? digitalTwin.glbModelUrl
+          : resolvedGlbModelUrl,
+      imageUrl: digitalTwin.imageUrl.isNotEmpty
+          ? digitalTwin.imageUrl
+          : resolvedImageUrl,
+      thumbnailUrl: digitalTwin.thumbnailUrl.isNotEmpty
+          ? digitalTwin.thumbnailUrl
+          : resolvedThumbnailUrl,
+      activeSkinId: digitalTwin.activeSkinId.isNotEmpty
+          ? digitalTwin.activeSkinId
+          : resolvedActiveSkin,
+      activeFrameId: digitalTwin.activeFrameId.isNotEmpty
+          ? digitalTwin.activeFrameId
+          : resolvedActiveFrameId,
+      frameColor: digitalTwin.frameColor.isNotEmpty
+          ? digitalTwin.frameColor
+          : resolvedFrameColor,
+    );
+
     return FirestoreBike(
       id: _readString(id ?? map['id']),
-      ownerId: _readString(map['ownerId']),
+      ownerId: _readString(map['ownerId'] ?? map['userId']),
       name: _readString(map['name'] ?? map['bikeName']),
       brand: _readString(map['brand']),
       model: _readString(map['model']),
       type: _parseBikeType(map['type'] ?? map['bikeType']),
-      color: _readString(map['color'] ?? map['frameColor']),
+      color: resolvedColor,
       frameSize: _readString(map['frameSize']),
       wheelSize: _readString(map['wheelSize']),
       serialNumber: _readString(map['serialNumber']),
-      imageUrl: _readString(map['imageUrl']),
-      glbModelUrl: _readString(map['glbModelUrl'] ?? map['glbModel']),
+      imageUrl: resolvedImageUrl,
+      glbModelUrl: resolvedGlbModelUrl,
+      thumbnailUrl: resolvedThumbnailUrl,
+      activeSkin: resolvedActiveSkin,
+      activeFrameId: resolvedActiveFrameId,
+      frameColor: resolvedFrameColor,
+      digitalTwin: synchronizedDigitalTwin,
       firmwareVersion: _readString(map['firmwareVersion']),
-      active: _readBool(map['active']),
-      digitalTwinEnabled: _readBool(map['digitalTwinEnabled']),
+      active: _readBool(map['active'] ?? map['isActive']),
+      digitalTwinEnabled:
+          _readBool(map['digitalTwinEnabled']) ||
+          synchronizedDigitalTwin.hasData,
       installedProductIds: _readStringList(map['installedProductIds']),
       notes: _readString(map['notes']),
       createdAt: _readDateTime(map['createdAt']),
@@ -136,6 +344,11 @@ class FirestoreBike {
       'serialNumber': serialNumber,
       'imageUrl': imageUrl,
       'glbModelUrl': glbModelUrl,
+      'thumbnailUrl': thumbnailUrl,
+      'activeSkin': activeSkin,
+      'activeFrameId': activeFrameId,
+      'frameColor': frameColor,
+      'digitalTwin': digitalTwin.toMap(),
       'firmwareVersion': firmwareVersion,
       'active': active,
       'digitalTwinEnabled': digitalTwinEnabled,
@@ -159,6 +372,11 @@ class FirestoreBike {
       'serialNumber': serialNumber,
       'imageUrl': imageUrl,
       'glbModelUrl': glbModelUrl,
+      'thumbnailUrl': thumbnailUrl,
+      'activeSkin': activeSkin,
+      'activeFrameId': activeFrameId,
+      'frameColor': frameColor,
+      if (digitalTwin.hasData) 'digitalTwin': digitalTwin.toMap(),
       'firmwareVersion': firmwareVersion,
       'active': active,
       'digitalTwinEnabled': digitalTwinEnabled,
@@ -182,6 +400,11 @@ class FirestoreBike {
       'serialNumber': serialNumber,
       'imageUrl': imageUrl,
       'glbModelUrl': glbModelUrl,
+      'thumbnailUrl': thumbnailUrl,
+      'activeSkin': activeSkin,
+      'activeFrameId': activeFrameId,
+      'frameColor': frameColor,
+      'digitalTwin': digitalTwin.toMap(),
       'firmwareVersion': firmwareVersion,
       'active': active,
       'digitalTwinEnabled': digitalTwinEnabled,
@@ -204,6 +427,11 @@ class FirestoreBike {
     String? serialNumber,
     String? imageUrl,
     String? glbModelUrl,
+    String? thumbnailUrl,
+    String? activeSkin,
+    String? activeFrameId,
+    String? frameColor,
+    FirestoreBikeDigitalTwin? digitalTwin,
     String? firmwareVersion,
     bool? active,
     bool? digitalTwinEnabled,
@@ -227,6 +455,11 @@ class FirestoreBike {
       serialNumber: serialNumber ?? this.serialNumber,
       imageUrl: imageUrl ?? this.imageUrl,
       glbModelUrl: glbModelUrl ?? this.glbModelUrl,
+      thumbnailUrl: thumbnailUrl ?? this.thumbnailUrl,
+      activeSkin: activeSkin ?? this.activeSkin,
+      activeFrameId: activeFrameId ?? this.activeFrameId,
+      frameColor: frameColor ?? this.frameColor,
+      digitalTwin: digitalTwin ?? this.digitalTwin,
       firmwareVersion: firmwareVersion ?? this.firmwareVersion,
       active: active ?? this.active,
       digitalTwinEnabled: digitalTwinEnabled ?? this.digitalTwinEnabled,
@@ -252,6 +485,11 @@ class FirestoreBike {
       serialNumber: serialNumber.trim(),
       imageUrl: imageUrl.trim(),
       glbModelUrl: glbModelUrl.trim(),
+      thumbnailUrl: thumbnailUrl.trim(),
+      activeSkin: activeSkin.trim(),
+      activeFrameId: activeFrameId.trim(),
+      frameColor: frameColor.trim(),
+      digitalTwin: digitalTwin.normalized(),
       firmwareVersion: firmwareVersion.trim(),
       installedProductIds: installedProductIds
           .map((productId) => productId.trim())
@@ -267,7 +505,45 @@ class FirestoreBike {
   }
 
   bool get hasDigitalTwinModel {
-    return glbModelUrl.trim().isNotEmpty;
+    return glbModelUrl.trim().isNotEmpty ||
+        digitalTwin.glbModelUrl.trim().isNotEmpty;
+  }
+
+  bool get hasDigitalTwinCustomization {
+    return activeSkin.trim().isNotEmpty ||
+        activeFrameId.trim().isNotEmpty ||
+        frameColor.trim().isNotEmpty ||
+        digitalTwin.activeSkinId.trim().isNotEmpty ||
+        digitalTwin.activeFrameId.trim().isNotEmpty ||
+        digitalTwin.frameColor.trim().isNotEmpty;
+  }
+
+  String get effectiveActiveSkin {
+    if (activeSkin.trim().isNotEmpty) {
+      return activeSkin.trim();
+    }
+
+    return digitalTwin.activeSkinId.trim();
+  }
+
+  String get effectiveActiveFrameId {
+    if (activeFrameId.trim().isNotEmpty) {
+      return activeFrameId.trim();
+    }
+
+    return digitalTwin.activeFrameId.trim();
+  }
+
+  String get effectiveFrameColor {
+    if (frameColor.trim().isNotEmpty) {
+      return frameColor.trim();
+    }
+
+    if (digitalTwin.frameColor.trim().isNotEmpty) {
+      return digitalTwin.frameColor.trim();
+    }
+
+    return color.trim();
   }
 
   bool get hasImage {
@@ -304,7 +580,10 @@ class FirestoreBike {
         'brand: $brand, '
         'model: $model, '
         'type: ${type.value}, '
-        'active: $active'
+        'active: $active, '
+        'activeSkin: $activeSkin, '
+        'activeFrameId: $activeFrameId, '
+        'frameColor: $frameColor'
         ')';
   }
 
@@ -327,6 +606,11 @@ class FirestoreBike {
         other.serialNumber == serialNumber &&
         other.imageUrl == imageUrl &&
         other.glbModelUrl == glbModelUrl &&
+        other.thumbnailUrl == thumbnailUrl &&
+        other.activeSkin == activeSkin &&
+        other.activeFrameId == activeFrameId &&
+        other.frameColor == frameColor &&
+        other.digitalTwin == digitalTwin &&
         other.firmwareVersion == firmwareVersion &&
         other.active == active &&
         other.digitalTwinEnabled == digitalTwinEnabled &&
@@ -351,6 +635,11 @@ class FirestoreBike {
       serialNumber,
       imageUrl,
       glbModelUrl,
+      thumbnailUrl,
+      activeSkin,
+      activeFrameId,
+      frameColor,
+      digitalTwin,
       firmwareVersion,
       active,
       digitalTwinEnabled,

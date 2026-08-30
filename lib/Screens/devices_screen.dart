@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../core/localization/app_text.dart';
 import '../core/theme/munja_colors.dart';
 
 class DevicesScreen extends StatelessWidget {
@@ -15,8 +16,8 @@ class DevicesScreen extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'Mine produkter',
+              Text(
+                AppText.t('myProducts'),
                 style: TextStyle(
                   color: Colors.white,
                   fontSize: 38,
@@ -70,8 +71,8 @@ class DevicesScreen extends StatelessWidget {
 
                     const SizedBox(height: 24),
 
-                    const Text(
-                      'Munja Brake Light',
+                    Text(
+                      AppText.t('smartBrakeLight'),
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         color: Colors.white,
@@ -82,8 +83,8 @@ class DevicesScreen extends StatelessWidget {
 
                     const SizedBox(height: 12),
 
-                    const Text(
-                      'Smart baglygte med automatisk bremselys og Bluetooth-forbindelse.',
+                    Text(
+                      AppText.t('smartBrakeLightDescription'),
                       textAlign: TextAlign.center,
                       style: TextStyle(
                         color: MunjaColors.textSoft,
@@ -106,8 +107,8 @@ class DevicesScreen extends StatelessWidget {
                           color: MunjaColors.mint.withOpacity(0.25),
                         ),
                       ),
-                      child: const Text(
-                        'Ingen enhed forbundet endnu',
+                      child: Text(
+                        AppText.t('noDeviceConnectedYet'),
                         style: TextStyle(
                           color: MunjaColors.mint,
                           fontWeight: FontWeight.w800,
@@ -123,8 +124,8 @@ class DevicesScreen extends StatelessWidget {
                       child: FilledButton.icon(
                         onPressed: () {},
                         icon: const Icon(Icons.bluetooth_searching_rounded),
-                        label: const Text(
-                          'Scan efter produkter',
+                        label: Text(
+                          AppText.t('scanForProducts'),
                           style: TextStyle(
                             fontSize: 17,
                             fontWeight: FontWeight.w800,

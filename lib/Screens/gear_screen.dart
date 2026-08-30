@@ -7,6 +7,7 @@ import '../models/munja_device.dart';
 import '../services/ble_service.dart';
 import '../services/storage_service.dart';
 import '../widgets/digital_twin/digital_twin.dart';
+import '../widgets/munja_3d_bike_viewer.dart';
 import '../widgets/digital_twin_bottom_sheet.dart';
 
 class GearScreen extends StatefulWidget {
@@ -184,26 +185,28 @@ class _GearScreenState extends State<GearScreen> {
               bottomWheelSafePadding,
             ),
             children: [
-              _GarageHeader(
-                title: t('garage'),
-                subtitle: t('garageSubtitle'),
+              _GearHeaderV2(scanning: scanning, onScan: _scan),
+              const SizedBox(height: 22),
+
+              _SmartBrakeLightHero(
+                installed: hasBrakeLight,
+                batteryPercent: brakeBatteryPercent,
                 scanning: scanning,
                 onScan: _scan,
+                onOpen: () {
+                  _openProductSheet(
+                    title: 'MUNJA Smart Brake Light',
+                    installed: hasBrakeLight,
+                    batteryPercent: brakeBatteryPercent,
+                  );
+                },
               ),
 
-              const SizedBox(height: 18),
+              const SizedBox(height: 22),
 
-              _GarageHero(
+              _MountedOnBikeCard(
                 hasBrakeLight: hasBrakeLight,
                 batteryPercent: brakeBatteryPercent,
-                mountedProducts: mountedProducts,
-                mountedLabel: t('mounted'),
-                batteryLabel: t('battery'),
-                readyLabel: t('ready'),
-                activeLabel: t('active'),
-                offLabel: t('off'),
-                scanMountText: t('scanAndMountProducts'),
-                brakeMountedText: t('brakeMountedOnBike'),
                 onBikeTap: () {
                   _openProductSheet(
                     title: t('digitalTwin'),
@@ -214,149 +217,741 @@ class _GearScreenState extends State<GearScreen> {
                 },
                 onBrakeLightTap: () {
                   _openProductSheet(
-                    title: 'Smart Lighting Brake',
+                    title: 'MUNJA Smart Brake Light',
                     installed: hasBrakeLight,
                     batteryPercent: brakeBatteryPercent,
                   );
                 },
               ),
 
-              const SizedBox(height: 16),
+              const SizedBox(height: 18),
 
-              _AddProductCard(
-                title: t('addProduct'),
-                subtitle: t('scanBleQrLater'),
-                scanLabel: t('scan'),
-                scanningLabel: t('searching'),
+              _AddGearBar(
                 scanning: scanning,
                 onScan: _scan,
-                onAdd: _showAddProductHint,
+                onQr: _showAddProductHint,
               ),
 
-              const SizedBox(height: 16),
+              if (scanning || nearbyDevices.isNotEmpty) ...[
+                const SizedBox(height: 20),
+                _GearSectionV2(
+                  title: t('nearby'),
+                  subtitle: scanning
+                      ? t('scanningMunjaProducts')
+                      : t('foundNearbyProducts'),
+                  child: nearbyDevices.isEmpty
+                      ? _EmptyScanState(scanning: scanning, onScan: _scan)
+                      : Column(
+                          children: nearbyDevices.map((device) {
+                            final alreadySaved = savedDevices.any(
+                              (saved) => saved.id == device.id,
+                            );
 
-              _SectionCard(
-                title: t('mountedOnBike'),
-                subtitle: t('mountedOnBikeSubtitle'),
-                child: Column(
-                  children: [
-                    _GarageProductCard(
-                      title: 'Smart Lighting Brake',
-                      subtitle: hasBrakeLight
-                          ? t('brakeMountedReady')
-                          : t('brakeProductSubtitle'),
-                      icon: Icons.light_mode_rounded,
-                      mounted: hasBrakeLight,
-                      batteryPercent: hasBrakeLight
-                          ? brakeBatteryPercent
-                          : null,
-                      position: t('rear'),
-                      activeLabel: t('active'),
-                      offLabel: t('off'),
-                      onTap: () {
-                        _openProductSheet(
-                          title: 'Smart Lighting Brake',
-                          installed: hasBrakeLight,
-                          batteryPercent: brakeBatteryPercent,
-                        );
-                      },
-                    ),
-                    const SizedBox(height: 10),
-                    _GarageProductCard(
-                      title: 'Smart Helmet',
-                      subtitle: t('helmetProductSubtitle'),
-                      icon: Icons.health_and_safety_rounded,
-                      mounted: false,
-                      batteryPercent: null,
-                      position: t('helmet'),
-                      activeLabel: t('active'),
-                      offLabel: t('off'),
-                      onTap: () {
-                        _openProductSheet(
-                          title: 'Smart Helmet',
-                          installed: false,
-                        );
-                      },
-                    ),
-                    const SizedBox(height: 10),
-                    _GarageProductCard(
-                      title: 'Munja Band',
-                      subtitle: t('bandProductSubtitle'),
-                      icon: Icons.watch_rounded,
-                      mounted: false,
-                      batteryPercent: null,
-                      position: t('wrist'),
-                      activeLabel: t('active'),
-                      offLabel: t('off'),
-                      onTap: () {
-                        _openProductSheet(
-                          title: 'Munja Band',
-                          installed: false,
-                        );
-                      },
-                    ),
-                  ],
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: 10),
+                              child: _DeviceTile(
+                                device: device,
+                                saved: alreadySaved,
+                                savedText: t('saved'),
+                                readyText: t('readyToMount'),
+                                saveText: t('save'),
+                                onSave: alreadySaved
+                                    ? null
+                                    : () => _saveDevice(device),
+                              ),
+                            );
+                          }).toList(),
+                        ),
+                ),
+              ],
+
+              if (savedDevices.isNotEmpty) ...[
+                const SizedBox(height: 20),
+                _GearSectionV2(
+                  title: t('savedProducts'),
+                  subtitle: t('savedProductsSubtitle'),
+                  child: Column(
+                    children: savedDevices.map((device) {
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 10),
+                        child: _DeviceTile(
+                          device: device,
+                          saved: true,
+                          savedText: t('saved'),
+                          readyText: t('readyToMount'),
+                          saveText: t('save'),
+                          onSave: null,
+                        ),
+                      );
+                    }).toList(),
+                  ),
+                ),
+              ],
+
+              const SizedBox(height: 24),
+              const _MunjaEcosystemV2(),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _GearHeaderV2 extends StatelessWidget {
+  final bool scanning;
+  final VoidCallback onScan;
+
+  const _GearHeaderV2({required this.scanning, required this.onScan});
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text(
+                'MUNJA GEAR',
+                style: TextStyle(
+                  color: MunjaColors.mint,
+                  fontSize: 11,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 1.8,
                 ),
               ),
-
-              const SizedBox(height: 16),
-
-              _SectionCard(
-                title: t('nearby'),
-                subtitle: scanning
-                    ? t('scanningMunjaProducts')
-                    : t('foundNearbyProducts'),
-                child: nearbyDevices.isEmpty
-                    ? _EmptyScanState(scanning: scanning, onScan: _scan)
-                    : Column(
-                        children: nearbyDevices.map((device) {
-                          final alreadySaved = savedDevices.any(
-                            (saved) => saved.id == device.id,
-                          );
-
-                          return Padding(
-                            padding: const EdgeInsets.only(bottom: 10),
-                            child: _DeviceTile(
-                              device: device,
-                              saved: alreadySaved,
-                              savedText: t('saved'),
-                              readyText: t('readyToMount'),
-                              saveText: t('save'),
-                              onSave: alreadySaved
-                                  ? null
-                                  : () => _saveDevice(device),
-                            ),
-                          );
-                        }).toList(),
-                      ),
+              const SizedBox(height: 8),
+              Text(
+                AppText.t('gear'),
+                style: const TextStyle(
+                  color: Colors.white,
+                  fontSize: 40,
+                  height: 1,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: -1.25,
+                ),
               ),
-
-              const SizedBox(height: 16),
-
-              _SectionCard(
-                title: t('savedProducts'),
-                subtitle: t('savedProductsSubtitle'),
-                child: savedDevices.isEmpty
-                    ? const _EmptySavedState()
-                    : Column(
-                        children: savedDevices.map((device) {
-                          return Padding(
-                            padding: const EdgeInsets.only(bottom: 10),
-                            child: _DeviceTile(
-                              device: device,
-                              saved: true,
-                              savedText: t('saved'),
-                              readyText: t('readyToMount'),
-                              saveText: t('save'),
-                              onSave: null,
-                            ),
-                          );
-                        }).toList(),
-                      ),
+              const SizedBox(height: 10),
+              Text(
+                AppText.t('scanAndMountProducts'),
+                style: const TextStyle(
+                  color: MunjaColors.textSoft,
+                  fontSize: 14,
+                  height: 1.35,
+                  fontWeight: FontWeight.w600,
+                ),
               ),
             ],
           ),
         ),
+        const SizedBox(width: 14),
+        Material(
+          color: Colors.transparent,
+          child: InkWell(
+            onTap: scanning ? null : onScan,
+            borderRadius: BorderRadius.circular(20),
+            child: Container(
+              width: 54,
+              height: 54,
+              decoration: BoxDecoration(
+                color: MunjaColors.mint.withOpacity(0.10),
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(color: MunjaColors.mint.withOpacity(0.24)),
+              ),
+              child: scanning
+                  ? const Padding(
+                      padding: EdgeInsets.all(15),
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                        color: MunjaColors.mint,
+                      ),
+                    )
+                  : const Icon(Icons.radar_rounded, color: MunjaColors.mint),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _SmartBrakeLightHero extends StatelessWidget {
+  final bool installed;
+  final int batteryPercent;
+  final bool scanning;
+  final VoidCallback onScan;
+  final VoidCallback onOpen;
+
+  const _SmartBrakeLightHero({
+    required this.installed,
+    required this.batteryPercent,
+    required this.scanning,
+    required this.onScan,
+    required this.onOpen,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: MunjaColors.panel.withOpacity(0.72),
+        borderRadius: BorderRadius.circular(34),
+        border: Border.all(
+          color: installed
+              ? MunjaColors.mint.withOpacity(0.28)
+              : Colors.white.withOpacity(0.07),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: MunjaColors.mint.withOpacity(0.11),
+            blurRadius: 54,
+            spreadRadius: 1,
+            offset: const Offset(0, 20),
+          ),
+        ],
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 20, 20, 4),
+            child: Row(
+              children: [
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        'FIRST MUNJA HARDWARE',
+                        style: TextStyle(
+                          color: MunjaColors.mint,
+                          fontSize: 9,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: 1.25,
+                        ),
+                      ),
+                      const SizedBox(height: 6),
+                      Text(
+                        AppText.t('smartBrakeLight'),
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 24,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: -0.55,
+                        ),
+                      ),
+                      const SizedBox(height: 5),
+                      Text(
+                        AppText.t('brakeProductSubtitle'),
+                        style: const TextStyle(
+                          color: MunjaColors.textSoft,
+                          fontSize: 12,
+                          height: 1.35,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Container(
+                  width: 48,
+                  height: 48,
+                  decoration: BoxDecoration(
+                    color: MunjaColors.mint.withOpacity(0.11),
+                    borderRadius: BorderRadius.circular(17),
+                    border: Border.all(
+                      color: MunjaColors.mint.withOpacity(0.18),
+                    ),
+                  ),
+                  child: const Icon(
+                    Icons.light_mode_rounded,
+                    color: MunjaColors.mint,
+                    size: 24,
+                  ),
+                ),
+              ],
+            ),
+          ),
+
+          const SizedBox(height: 8),
+
+          // Real MUNJA Smart Brake Light GLB.
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 14),
+            child: Munja3DBikeViewer(
+              modelPath: 'assets/models/Smart_Light_1.glb',
+              height: 280,
+              enableTouch: true,
+              autoRotate: true,
+              autoRotateSpeed: 6,
+              resumeAutoRotateAfterInteraction: true,
+              showControls: true,
+              showBadges: false,
+              showBottomInfo: false,
+              showProductHotspot: false,
+              showroomMode: true,
+              showroomTheta: 180,
+              showroomPhi: 90,
+              showroomRadius: 2.95,
+            ),
+          ),
+
+          Padding(
+            padding: const EdgeInsets.fromLTRB(20, 15, 20, 20),
+            child: Column(
+              children: [
+                Row(
+                  children: [
+                    Expanded(
+                      child: _GearMetricV2(
+                        label: AppText.t('connection'),
+                        value: installed
+                            ? AppText.t('connected')
+                            : AppText.t('notConnected'),
+                        active: installed,
+                      ),
+                    ),
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: _GearMetricV2(
+                        label: AppText.t('battery'),
+                        value: installed ? '$batteryPercent%' : '—',
+                        active: installed,
+                      ),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 15),
+                SizedBox(
+                  width: double.infinity,
+                  height: 54,
+                  child: FilledButton(
+                    onPressed: installed ? onOpen : (scanning ? null : onScan),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: MunjaColors.mint,
+                      foregroundColor: Colors.black,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(18),
+                      ),
+                    ),
+                    child: Text(
+                      installed
+                          ? AppText.t('smartBrakeLight')
+                          : (scanning
+                                ? AppText.t('searching')
+                                : AppText.t('scan')),
+                      style: const TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _GearMetricV2 extends StatelessWidget {
+  final String label;
+  final String value;
+  final bool active;
+
+  const _GearMetricV2({
+    required this.label,
+    required this.value,
+    required this.active,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      height: 62,
+      padding: const EdgeInsets.symmetric(horizontal: 13),
+      decoration: BoxDecoration(
+        color: Colors.black.withOpacity(0.17),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: Colors.white.withOpacity(0.06)),
+      ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label.toUpperCase(),
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: Colors.white38,
+              fontSize: 8.5,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 0.75,
+            ),
+          ),
+          const SizedBox(height: 5),
+          Text(
+            value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(
+              color: active ? MunjaColors.mint : Colors.white70,
+              fontSize: 12,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _MountedOnBikeCard extends StatelessWidget {
+  final bool hasBrakeLight;
+  final int batteryPercent;
+  final VoidCallback onBikeTap;
+  final VoidCallback onBrakeLightTap;
+
+  const _MountedOnBikeCard({
+    required this.hasBrakeLight,
+    required this.batteryPercent,
+    required this.onBikeTap,
+    required this.onBrakeLightTap,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.fromLTRB(18, 18, 18, 16),
+      decoration: BoxDecoration(
+        color: MunjaColors.panel.withOpacity(0.58),
+        borderRadius: BorderRadius.circular(28),
+        border: Border.all(color: Colors.white.withOpacity(0.065)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            AppText.t('mountedOnBike'),
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 20,
+              fontWeight: FontWeight.w900,
+              letterSpacing: -0.3,
+            ),
+          ),
+          const SizedBox(height: 5),
+          Text(
+            AppText.t('mountedOnBikeSubtitle'),
+            style: const TextStyle(
+              color: MunjaColors.textSoft,
+              fontSize: 12,
+              height: 1.35,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 13),
+          Container(
+            height: 220,
+            decoration: BoxDecoration(
+              color: Colors.black.withOpacity(0.12),
+              borderRadius: BorderRadius.circular(24),
+              border: Border.all(color: Colors.white.withOpacity(0.05)),
+            ),
+            clipBehavior: Clip.antiAlias,
+            child: Stack(
+              children: [
+                Positioned.fill(
+                  child: GestureDetector(
+                    onTap: onBikeTap,
+                    child: DigitalTwin(
+                      isLive: false,
+                      brakeLightConnected: hasBrakeLight,
+                      brakeLightBattery: batteryPercent.toDouble(),
+                      onBikeTap: onBikeTap,
+                      onBrakeLightTap: onBrakeLightTap,
+                    ),
+                  ),
+                ),
+                if (hasBrakeLight)
+                  Positioned(
+                    right: 12,
+                    top: 12,
+                    child: GestureDetector(
+                      onTap: onBrakeLightTap,
+                      child: Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 10,
+                          vertical: 7,
+                        ),
+                        decoration: BoxDecoration(
+                          color: MunjaColors.mint.withOpacity(0.13),
+                          borderRadius: BorderRadius.circular(999),
+                          border: Border.all(
+                            color: MunjaColors.mint.withOpacity(0.28),
+                          ),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(
+                              Icons.light_mode_rounded,
+                              color: MunjaColors.mint,
+                              size: 14,
+                            ),
+                            const SizedBox(width: 6),
+                            Text(
+                              '$batteryPercent%',
+                              style: const TextStyle(
+                                color: MunjaColors.mint,
+                                fontSize: 10,
+                                fontWeight: FontWeight.w900,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _AddGearBar extends StatelessWidget {
+  final bool scanning;
+  final VoidCallback onScan;
+  final VoidCallback onQr;
+
+  const _AddGearBar({
+    required this.scanning,
+    required this.onScan,
+    required this.onQr,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: Material(
+            color: MunjaColors.panel.withOpacity(0.56),
+            borderRadius: BorderRadius.circular(23),
+            child: InkWell(
+              onTap: scanning ? null : onScan,
+              borderRadius: BorderRadius.circular(23),
+              child: Container(
+                height: 70,
+                padding: const EdgeInsets.symmetric(horizontal: 17),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(23),
+                  border: Border.all(color: Colors.white.withOpacity(0.06)),
+                ),
+                child: Row(
+                  children: [
+                    Icon(
+                      scanning ? Icons.radar_rounded : Icons.add_link_rounded,
+                      color: MunjaColors.mint,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(
+                        scanning
+                            ? AppText.t('searching')
+                            : AppText.t('addProduct'),
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 15,
+                          fontWeight: FontWeight.w800,
+                        ),
+                      ),
+                    ),
+                    const Icon(
+                      Icons.arrow_forward_rounded,
+                      color: Colors.white38,
+                      size: 20,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 10),
+        Material(
+          color: MunjaColors.panel.withOpacity(0.56),
+          borderRadius: BorderRadius.circular(23),
+          child: InkWell(
+            onTap: onQr,
+            borderRadius: BorderRadius.circular(23),
+            child: Container(
+              width: 70,
+              height: 70,
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(23),
+                border: Border.all(color: Colors.white.withOpacity(0.06)),
+              ),
+              child: const Icon(Icons.qr_code_rounded, color: Colors.white54),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _GearSectionV2 extends StatelessWidget {
+  final String title;
+  final String subtitle;
+  final Widget child;
+
+  const _GearSectionV2({
+    required this.title,
+    required this.subtitle,
+    required this.child,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(19),
+      decoration: BoxDecoration(
+        color: MunjaColors.panel.withOpacity(0.56),
+        borderRadius: BorderRadius.circular(28),
+        border: Border.all(color: Colors.white.withOpacity(0.06)),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 21,
+              fontWeight: FontWeight.w900,
+              letterSpacing: -0.3,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            subtitle,
+            style: const TextStyle(
+              color: MunjaColors.textSoft,
+              fontSize: 13,
+              height: 1.35,
+              fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 15),
+          child,
+        ],
+      ),
+    );
+  }
+}
+
+class _MunjaEcosystemV2 extends StatelessWidget {
+  const _MunjaEcosystemV2();
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'MUNJA ECOSYSTEM',
+          style: TextStyle(
+            color: Colors.white38,
+            fontSize: 10,
+            fontWeight: FontWeight.w900,
+            letterSpacing: 1.3,
+          ),
+        ),
+        const SizedBox(height: 11),
+        Container(
+          decoration: BoxDecoration(
+            color: MunjaColors.panel.withOpacity(0.46),
+            borderRadius: BorderRadius.circular(25),
+            border: Border.all(color: Colors.white.withOpacity(0.055)),
+          ),
+          child: const Column(
+            children: [
+              _EcosystemRowV2(
+                icon: Icons.gps_fixed_rounded,
+                title: 'MUNJA GPS',
+              ),
+              Divider(height: 1, color: Color(0x12FFFFFF)),
+              _EcosystemRowV2(
+                icon: Icons.sensors_rounded,
+                title: 'Ride Sensor',
+              ),
+              Divider(height: 1, color: Color(0x12FFFFFF)),
+              _EcosystemRowV2(
+                icon: Icons.health_and_safety_rounded,
+                title: 'Smart Helmet',
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _EcosystemRowV2 extends StatelessWidget {
+  final IconData icon;
+  final String title;
+
+  const _EcosystemRowV2({required this.icon, required this.title});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+      child: Row(
+        children: [
+          Icon(icon, color: Colors.white38, size: 20),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Text(
+              title,
+              style: const TextStyle(
+                color: Colors.white70,
+                fontSize: 14,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ),
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
+            decoration: BoxDecoration(
+              color: Colors.white.withOpacity(0.045),
+              borderRadius: BorderRadius.circular(999),
+            ),
+            child: const Text(
+              'SNART',
+              style: TextStyle(
+                color: Colors.white38,
+                fontSize: 8,
+                fontWeight: FontWeight.w900,
+                letterSpacing: 0.6,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

@@ -355,6 +355,10 @@ class FirestoreBikeService {
     String? serialNumber,
     String? imageUrl,
     String? glbModelUrl,
+    String? thumbnailUrl,
+    String? activeSkin,
+    String? activeFrameId,
+    String? frameColor,
     String? firmwareVersion,
     bool? digitalTwinEnabled,
     String? notes,
@@ -407,11 +411,45 @@ class FirestoreBikeService {
     }
 
     if (imageUrl != null) {
-      updates['imageUrl'] = imageUrl.trim();
+      final normalizedImageUrl = imageUrl.trim();
+
+      updates['imageUrl'] = normalizedImageUrl;
+      updates['digitalTwin.imageUrl'] = normalizedImageUrl;
     }
 
     if (glbModelUrl != null) {
-      updates['glbModelUrl'] = glbModelUrl.trim();
+      final normalizedGlbModelUrl = glbModelUrl.trim();
+
+      updates['glbModelUrl'] = normalizedGlbModelUrl;
+      updates['digitalTwin.glbModelUrl'] = normalizedGlbModelUrl;
+    }
+
+    if (thumbnailUrl != null) {
+      final normalizedThumbnailUrl = thumbnailUrl.trim();
+
+      updates['thumbnailUrl'] = normalizedThumbnailUrl;
+      updates['digitalTwin.thumbnailUrl'] = normalizedThumbnailUrl;
+    }
+
+    if (activeSkin != null) {
+      final normalizedActiveSkin = activeSkin.trim();
+
+      updates['activeSkin'] = normalizedActiveSkin;
+      updates['digitalTwin.activeSkinId'] = normalizedActiveSkin;
+    }
+
+    if (activeFrameId != null) {
+      final normalizedActiveFrameId = activeFrameId.trim();
+
+      updates['activeFrameId'] = normalizedActiveFrameId;
+      updates['digitalTwin.activeFrameId'] = normalizedActiveFrameId;
+    }
+
+    if (frameColor != null) {
+      final normalizedFrameColor = frameColor.trim();
+
+      updates['frameColor'] = normalizedFrameColor;
+      updates['digitalTwin.frameColor'] = normalizedFrameColor;
     }
 
     if (firmwareVersion != null) {
@@ -587,12 +625,14 @@ class FirestoreBikeService {
     required String imageUrl,
   }) async {
     final user = _requireFirebaseUser();
+    final normalizedImageUrl = imageUrl.trim();
 
     await _updateBikeDocument(
       uid: user.uid,
       bikeId: bikeId,
       updates: <String, dynamic>{
-        'imageUrl': imageUrl.trim(),
+        'imageUrl': normalizedImageUrl,
+        'digitalTwin.imageUrl': normalizedImageUrl,
         'updatedAt': FieldValue.serverTimestamp(),
       },
       fallbackCode: 'update-bike-image-failed',
@@ -606,17 +646,132 @@ class FirestoreBikeService {
     bool enableDigitalTwin = true,
   }) async {
     final user = _requireFirebaseUser();
+    final normalizedGlbModelUrl = glbModelUrl.trim();
 
     await _updateBikeDocument(
       uid: user.uid,
       bikeId: bikeId,
       updates: <String, dynamic>{
-        'glbModelUrl': glbModelUrl.trim(),
+        'glbModelUrl': normalizedGlbModelUrl,
+        'digitalTwin.glbModelUrl': normalizedGlbModelUrl,
         'digitalTwinEnabled': enableDigitalTwin,
         'updatedAt': FieldValue.serverTimestamp(),
       },
       fallbackCode: 'update-glb-model-failed',
       fallbackMessage: '3D-modellen kunne ikke opdateres.',
+    );
+  }
+
+  Future<void> updateDigitalTwin({
+    required String bikeId,
+    String? glbModelUrl,
+    String? imageUrl,
+    String? thumbnailUrl,
+    String? activeSkinId,
+    String? activeFrameId,
+    String? frameColor,
+    bool enableDigitalTwin = true,
+  }) async {
+    final user = _requireFirebaseUser();
+
+    final updates = <String, dynamic>{
+      'digitalTwinEnabled': enableDigitalTwin,
+      'updatedAt': FieldValue.serverTimestamp(),
+    };
+
+    if (glbModelUrl != null) {
+      final normalizedValue = glbModelUrl.trim();
+
+      updates['glbModelUrl'] = normalizedValue;
+      updates['digitalTwin.glbModelUrl'] = normalizedValue;
+    }
+
+    if (imageUrl != null) {
+      final normalizedValue = imageUrl.trim();
+
+      updates['imageUrl'] = normalizedValue;
+      updates['digitalTwin.imageUrl'] = normalizedValue;
+    }
+
+    if (thumbnailUrl != null) {
+      final normalizedValue = thumbnailUrl.trim();
+
+      updates['thumbnailUrl'] = normalizedValue;
+      updates['digitalTwin.thumbnailUrl'] = normalizedValue;
+    }
+
+    if (activeSkinId != null) {
+      final normalizedValue = activeSkinId.trim();
+
+      updates['activeSkin'] = normalizedValue;
+      updates['digitalTwin.activeSkinId'] = normalizedValue;
+    }
+
+    if (activeFrameId != null) {
+      final normalizedValue = activeFrameId.trim();
+
+      updates['activeFrameId'] = normalizedValue;
+      updates['digitalTwin.activeFrameId'] = normalizedValue;
+    }
+
+    if (frameColor != null) {
+      final normalizedValue = frameColor.trim();
+
+      updates['frameColor'] = normalizedValue;
+      updates['digitalTwin.frameColor'] = normalizedValue;
+    }
+
+    await _updateBikeDocument(
+      uid: user.uid,
+      bikeId: bikeId,
+      updates: updates,
+      fallbackCode: 'update-digital-twin-failed',
+      fallbackMessage: 'Digital Twin kunne ikke opdateres.',
+    );
+  }
+
+  Future<void> updateActiveSkin({
+    required String bikeId,
+    required String activeSkinId,
+  }) {
+    return updateDigitalTwin(
+      bikeId: bikeId,
+      activeSkinId: activeSkinId,
+    );
+  }
+
+  /// Saves the selected Digital Twin frame.
+  ///
+  /// Expected values are normally `frame_1`, `frame_2`, `frame_3` or
+  /// `frame_4`. The service deliberately stores the value as a string so
+  /// future frame variants can be added without a Firestore migration.
+  Future<void> updateActiveFrame({
+    required String bikeId,
+    required String activeFrameId,
+  }) {
+    return updateDigitalTwin(
+      bikeId: bikeId,
+      activeFrameId: activeFrameId,
+    );
+  }
+
+  Future<void> updateFrameColor({
+    required String bikeId,
+    required String frameColor,
+  }) {
+    return updateDigitalTwin(
+      bikeId: bikeId,
+      frameColor: frameColor,
+    );
+  }
+
+  Future<void> updateThumbnailUrl({
+    required String bikeId,
+    required String thumbnailUrl,
+  }) {
+    return updateDigitalTwin(
+      bikeId: bikeId,
+      thumbnailUrl: thumbnailUrl,
     );
   }
 

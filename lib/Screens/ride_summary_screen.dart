@@ -4,13 +4,37 @@ import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../core/localization/app_text.dart';
 import '../core/theme/munja_colors.dart';
 import '../models/trip.dart';
+import '../services/crystal_reward_service.dart';
+import '../services/storage_service.dart';
+import '../services/ai_ride_analysis_service.dart';
+import '../Services/munja_pro_service.dart';
 
-class RideSummaryScreen extends StatelessWidget {
+class RideSummaryScreen extends StatefulWidget {
   final Trip trip;
 
   const RideSummaryScreen({super.key, required this.trip});
 
+  @override
+  State<RideSummaryScreen> createState() => _RideSummaryScreenState();
+}
+
+class _RideSummaryScreenState extends State<RideSummaryScreen> {
   static const double bottomWheelSafePadding = 360;
+
+  /// Ride rewards are written just after a completed ride is persisted.
+  /// The summary screen can open before Firestore has finished that write,
+  /// so we give the backend a short window before showing an error.
+  static const int _crystalRewardLoadAttempts = 3;
+
+  CrystalRewardClaim? _rideRewardClaim;
+  CrystalRewardClaim? _firstRideRewardClaim;
+  bool _loadingCrystalRewards = true;
+  Object? _crystalRewardError;
+
+  RideAnalysisResult? _rideAnalysis;
+  bool _loadingRideAnalysis = true;
+
+  Trip get trip => widget.trip;
 
   String t(String key) => AppText.t(key);
 
@@ -35,8 +59,227 @@ class RideSummaryScreen extends StatelessWidget {
     return (distanceKm * 18 + rideScore * 1.7).round().clamp(20, 9999);
   }
 
-  int get crystals {
-    return (distanceKm * 2 + rideScore / 10).round().clamp(1, 999);
+
+  String get _rideRewardId =>
+      '${trip.startedAtMs}_${trip.endedAtMs}';
+
+  int get _rideCompletedCrystals =>
+      _rideRewardClaim?.amount ?? 0;
+
+  int get _firstRideBonusCrystals =>
+      _firstRideRewardClaim?.amount ?? 0;
+
+  int get _totalEarnedCrystals =>
+      _rideCompletedCrystals + _firstRideBonusCrystals;
+
+  bool get _hasAnyCrystalReward =>
+      _totalEarnedCrystals > 0;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadCrystalRewards();
+    _loadRideAnalysis();
+  }
+
+  Future<void> _loadRideAnalysis() async {
+    try {
+      await MunjaProService.instance.initialize();
+
+      final history = await StorageService.loadTrips();
+
+      final isPro =
+          MunjaProService.instance.hasFeature(
+        MunjaProFeature.aiRideAnalysis,
+      );
+
+      final result = const AiRideAnalysisService().analyze(
+        trip: trip,
+        history: history,
+        tier: isPro
+            ? RideAnalysisTier.pro
+            : RideAnalysisTier.free,
+      );
+
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _rideAnalysis = result;
+        _loadingRideAnalysis = false;
+      });
+    } catch (error, stackTrace) {
+      debugPrint(
+        'RIDE SUMMARY AI ANALYSIS ERROR: $error',
+      );
+      debugPrint('$stackTrace');
+
+      if (!mounted) {
+        return;
+      }
+
+      setState(() {
+        _rideAnalysis = null;
+        _loadingRideAnalysis = false;
+      });
+    }
+  }
+
+  Future<void> _loadCrystalRewards() async {
+    final uid = StorageService.currentUserId?.trim();
+
+    if (mounted) {
+      setState(() {
+        _loadingCrystalRewards = true;
+        _crystalRewardError = null;
+      });
+    }
+
+    if (uid == null || uid.isEmpty) {
+      if (!mounted) return;
+
+      setState(() {
+        _rideRewardClaim = null;
+        _firstRideRewardClaim = null;
+        _loadingCrystalRewards = false;
+        _crystalRewardError = null;
+      });
+
+      return;
+    }
+
+    final rideId = _rideRewardId;
+    final rewardService = CrystalRewardService.instance;
+
+    Object? lastError;
+
+    for (var attempt = 1;
+        attempt <= _crystalRewardLoadAttempts;
+        attempt++) {
+      try {
+        // First try to read rewards that were already granted by the central
+        // completed-ride pipeline.
+        var rideClaim =
+            await rewardService.getRideCompletedClaim(
+          uid: uid,
+          rideId: rideId,
+        );
+
+        var firstRideClaim =
+            await rewardService.getClaim(
+          uid: uid,
+          rewardId: 'first_ride',
+        );
+
+        // Self-healing fallback:
+        //
+        // If Ride Summary opened before the central ride reward side effect
+        // finished (or that side effect was interrupted), safely request the
+        // reward here. CrystalRewardService uses the reward document ID as an
+        // idempotency key, so this can NEVER credit the same ride twice.
+        if (rideClaim == null) {
+          final rideResult =
+              await rewardService.grantRideCompletedReward(
+            uid: uid,
+            rideId: rideId,
+            amount: 2,
+            distanceKm: distanceKm,
+          );
+
+          debugPrint(
+            'RIDE SUMMARY CRYSTAL REPAIR: '
+            'ride=$rideId '
+            'status=${rideResult.status} '
+            'amount=${rideResult.amount} '
+            'balance=${rideResult.newBalance}',
+          );
+
+          rideClaim =
+              await rewardService.getRideCompletedClaim(
+            uid: uid,
+            rideId: rideId,
+          );
+        }
+
+        // First Ride Bonus uses one global reward ID (`first_ride`), so calling
+        // this again is also safe. If another ride already owns the bonus,
+        // CrystalRewardService simply returns alreadyClaimed.
+        if (firstRideClaim == null) {
+          final firstRideResult =
+              await rewardService.grantFirstRideReward(
+            uid: uid,
+            rideId: rideId,
+            amount: 20,
+          );
+
+          debugPrint(
+            'RIDE SUMMARY FIRST RIDE REPAIR: '
+            'ride=$rideId '
+            'status=${firstRideResult.status} '
+            'amount=${firstRideResult.amount} '
+            'balance=${firstRideResult.newBalance}',
+          );
+
+          firstRideClaim =
+              await rewardService.getClaim(
+            uid: uid,
+            rewardId: 'first_ride',
+          );
+        }
+
+        final firstRideBelongsToThisTrip =
+            firstRideClaim != null &&
+            firstRideClaim.sourceId == rideId;
+
+        if (!mounted) return;
+
+        setState(() {
+          _rideRewardClaim = rideClaim;
+          _firstRideRewardClaim =
+              firstRideBelongsToThisTrip
+                  ? firstRideClaim
+                  : null;
+          _loadingCrystalRewards = false;
+          _crystalRewardError = null;
+        });
+
+        debugPrint(
+          'RIDE SUMMARY CRYSTALS LOADED: '
+          'ride=$rideId '
+          'rideReward=${rideClaim?.amount ?? 0} '
+          'firstRide=${firstRideBelongsToThisTrip ? firstRideClaim?.amount ?? 0 : 0}',
+        );
+
+        return;
+      } catch (error, stackTrace) {
+        lastError = error;
+
+        debugPrint(
+          'RIDE SUMMARY CRYSTAL REWARD LOAD ERROR '
+          'attempt=$attempt/$_crystalRewardLoadAttempts: $error',
+        );
+        debugPrint('$stackTrace');
+
+        if (attempt < _crystalRewardLoadAttempts) {
+          await Future<void>.delayed(
+            Duration(
+              milliseconds: 350 * attempt,
+            ),
+          );
+        }
+      }
+    }
+
+    if (!mounted) return;
+
+    setState(() {
+      _rideRewardClaim = null;
+      _firstRideRewardClaim = null;
+      _loadingCrystalRewards = false;
+      _crystalRewardError =
+          lastError ?? StateError('Crystal rewards unavailable.');
+    });
   }
 
   int get calories {
@@ -188,11 +431,11 @@ class RideSummaryScreen extends StatelessWidget {
             Row(
               children: [
                 Expanded(
-                  child: _PremiumMetric(
-                    icon: Icons.diamond_rounded,
+                  child: _CrystalRewardMetric(
                     label: t('mCrystals'),
-                    value: '+$crystals',
-                    unit: '',
+                    loading: _loadingCrystalRewards,
+                    hasError: _crystalRewardError != null,
+                    totalEarned: _totalEarnedCrystals,
                   ),
                 ),
                 const SizedBox(width: 10),
@@ -205,6 +448,18 @@ class RideSummaryScreen extends StatelessWidget {
                   ),
                 ),
               ],
+            ),
+
+            const SizedBox(height: 16),
+
+            _CrystalRewardsCard(
+              loading: _loadingCrystalRewards,
+              hasError: _crystalRewardError != null,
+              rideCompletedAmount: _rideCompletedCrystals,
+              firstRideBonusAmount: _firstRideBonusCrystals,
+              totalEarned: _totalEarnedCrystals,
+              hasAnyReward: _hasAnyCrystalReward,
+              onRetry: _loadCrystalRewards,
             ),
 
             const SizedBox(height: 16),
@@ -238,12 +493,19 @@ class RideSummaryScreen extends StatelessWidget {
             const SizedBox(height: 16),
 
             _SectionCard(
-              title: t('munjaCoach'),
-              subtitle: t('coachRideFeedbackSubtitle'),
-              child: _CoachInsight(
-                distanceKm: distanceKm,
-                avgSpeedKmh: avgSpeedKmh,
-                rideScore: rideScore,
+              title: AppText.t('rideSummaryAiAnalysis'),
+              subtitle: MunjaProService.instance.hasFeature(
+                MunjaProFeature.aiRideAnalysis,
+              )
+                  ? AppText.t('rideSummaryAiProSubtitle')
+                  : AppText.t('rideSummaryAiFreeSubtitle'),
+              child: _RideAnalysisCard(
+                loading: _loadingRideAnalysis,
+                result: _rideAnalysis,
+                isPro:
+                    MunjaProService.instance.hasFeature(
+                  MunjaProFeature.aiRideAnalysis,
+                ),
               ),
             ),
 
@@ -262,6 +524,237 @@ class RideSummaryScreen extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _RideAnalysisCard extends StatelessWidget {
+  const _RideAnalysisCard({
+    required this.loading,
+    required this.result,
+    required this.isPro,
+  });
+
+  final bool loading;
+  final RideAnalysisResult? result;
+  final bool isPro;
+
+  @override
+  Widget build(BuildContext context) {
+    if (loading) {
+      return Padding(
+        padding: const EdgeInsets.symmetric(vertical: 18),
+        child: Row(
+          children: [
+            const SizedBox(
+              width: 20,
+              height: 20,
+              child: CircularProgressIndicator(
+                strokeWidth: 2,
+                color: MunjaColors.mint,
+              ),
+            ),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Text(
+                AppText.t('rideSummaryAnalyzing'),
+                style: const TextStyle(
+                  color: MunjaColors.textSoft,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+          ],
+        ),
+      );
+    }
+
+    final analysis = result;
+
+    if (analysis == null) {
+      return Text(
+        AppText.t('rideSummaryAnalysisUnavailable'),
+        style: const TextStyle(
+          color: MunjaColors.textSoft,
+          fontSize: 12,
+          height: 1.4,
+          fontWeight: FontWeight.w600,
+        ),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            Container(
+              width: 42,
+              height: 42,
+              decoration: BoxDecoration(
+                color: MunjaColors.mint.withOpacity(0.10),
+                borderRadius: BorderRadius.circular(14),
+              ),
+              child: const Icon(
+                Icons.auto_awesome_rounded,
+                color: MunjaColors.mint,
+                size: 21,
+              ),
+            ),
+            const SizedBox(width: 11),
+            Expanded(
+              child: Column(
+                crossAxisAlignment:
+                    CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    isPro
+                        ? AppText.t('rideSummaryProAnalysis')
+                        : AppText.t('rideSummaryRideRecap'),
+                    style: const TextStyle(
+                      color: MunjaColors.mint,
+                      fontSize: 9,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 1.1,
+                    ),
+                  ),
+                  const SizedBox(height: 3),
+                  Text(
+                    analysis.title,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            if (isPro)
+              const Icon(
+                Icons.verified_rounded,
+                color: MunjaColors.mint,
+                size: 20,
+              ),
+          ],
+        ),
+        const SizedBox(height: 14),
+        Text(
+          analysis.summary,
+          style: const TextStyle(
+            color: Colors.white70,
+            fontSize: 12,
+            height: 1.5,
+            fontWeight: FontWeight.w600,
+          ),
+        ),
+        const SizedBox(height: 14),
+        Row(
+          children: [
+            Expanded(
+              child: _AnalysisMetric(
+                label: AppText.t('rideSummaryConsistency'),
+                value: '${analysis.consistencyScore}/100',
+              ),
+            ),
+            const SizedBox(width: 10),
+            Expanded(
+              child: _AnalysisMetric(
+                label: AppText.t('rideSummaryTrend'),
+                value: analysis.isAboveUsualSpeed
+                    ? AppText.t('rideSummaryFaster')
+                    : analysis.isAboveUsualDistance
+                        ? AppText.t('rideSummaryLonger')
+                        : AppText.t('rideSummarySteady'),
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 14),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(13),
+          decoration: BoxDecoration(
+            color: Colors.black.withOpacity(0.14),
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(
+              color: Colors.white.withOpacity(0.055),
+            ),
+          ),
+          child: Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Icon(
+                Icons.lightbulb_outline_rounded,
+                color: MunjaColors.mint,
+                size: 19,
+              ),
+              const SizedBox(width: 9),
+              Expanded(
+                child: Text(
+                  analysis.recommendation,
+                  style: const TextStyle(
+                    color: MunjaColors.textSoft,
+                    fontSize: 11.5,
+                    height: 1.45,
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+class _AnalysisMetric extends StatelessWidget {
+  const _AnalysisMetric({
+    required this.label,
+    required this.value,
+  });
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: 12,
+        vertical: 11,
+      ),
+      decoration: BoxDecoration(
+        color: Colors.black.withOpacity(0.14),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: Colors.white.withOpacity(0.05),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: const TextStyle(
+              color: MunjaColors.textSoft,
+              fontSize: 8.5,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 0.8,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: const TextStyle(
+              color: MunjaColors.mint,
+              fontSize: 13,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -408,9 +901,9 @@ class _Header extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'MUNJA SUMMARY',
-                style: TextStyle(
+              Text(
+                AppText.t('rideSummaryHeader'),
+                style: const TextStyle(
                   color: MunjaColors.mint,
                   fontSize: 12,
                   fontWeight: FontWeight.w900,
@@ -600,7 +1093,7 @@ class _ScoreHeroCard extends StatelessWidget {
               Expanded(
                 child: _HeroMiniMetric(
                   label: avgLabel,
-                  value: '${avgSpeedKmh.toStringAsFixed(1)} km/t',
+                  value: '${avgSpeedKmh.toStringAsFixed(1)} ${AppText.t('speedUnitShort')}',
                   icon: Icons.speed_rounded,
                 ),
               ),
@@ -775,6 +1268,361 @@ class _PremiumMetric extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _CrystalRewardMetric extends StatelessWidget {
+  const _CrystalRewardMetric({
+    required this.label,
+    required this.loading,
+    required this.hasError,
+    required this.totalEarned,
+  });
+
+  final String label;
+  final bool loading;
+  final bool hasError;
+  final int totalEarned;
+
+  @override
+  Widget build(BuildContext context) {
+    final value = loading
+        ? '...'
+        : hasError
+            ? '—'
+            : '+$totalEarned';
+
+    return Container(
+      height: 104,
+      padding: const EdgeInsets.all(15),
+      decoration: _premiumDecoration(),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(
+            Icons.diamond_rounded,
+            color: MunjaColors.mint,
+            size: 21,
+          ),
+          const Spacer(),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.end,
+            children: [
+              Flexible(
+                child: Text(
+                  value,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 24,
+                    height: 0.96,
+                    fontWeight: FontWeight.w900,
+                    letterSpacing: -0.6,
+                  ),
+                ),
+              ),
+              if (!loading && !hasError && totalEarned > 0) ...[
+                const SizedBox(width: 4),
+                const Padding(
+                  padding: EdgeInsets.only(bottom: 2),
+                  child: Text(
+                    '◆',
+                    style: TextStyle(
+                      color: MunjaColors.mint,
+                      fontSize: 10,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ),
+              ],
+            ],
+          ),
+          const SizedBox(height: 3),
+          Text(
+            label.toUpperCase(),
+            style: const TextStyle(
+              color: MunjaColors.textSoft,
+              fontSize: 10,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 0.8,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _CrystalRewardsCard extends StatelessWidget {
+  const _CrystalRewardsCard({
+    required this.loading,
+    required this.hasError,
+    required this.rideCompletedAmount,
+    required this.firstRideBonusAmount,
+    required this.totalEarned,
+    required this.hasAnyReward,
+    required this.onRetry,
+  });
+
+  final bool loading;
+  final bool hasError;
+  final int rideCompletedAmount;
+  final int firstRideBonusAmount;
+  final int totalEarned;
+  final bool hasAnyReward;
+  final Future<void> Function() onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: MunjaColors.panel.withOpacity(0.86),
+        borderRadius: BorderRadius.circular(30),
+        border: Border.all(
+          color: MunjaColors.mint.withOpacity(0.16),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: MunjaColors.mint.withOpacity(0.07),
+            blurRadius: 28,
+            offset: const Offset(0, 12),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                width: 46,
+                height: 46,
+                decoration: BoxDecoration(
+                  color: MunjaColors.mint.withOpacity(0.11),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: const Icon(
+                  Icons.diamond_rounded,
+                  color: MunjaColors.mint,
+                  size: 23,
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      AppText.t('rideRewards'),
+                      style: const TextStyle(
+                        color: MunjaColors.mint,
+                        fontSize: 10,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 1.1,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Munja Crystals',
+                      style: const TextStyle(
+                        color: Colors.white,
+                        fontSize: 19,
+                        fontWeight: FontWeight.w900,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (loading)
+                const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(
+                    strokeWidth: 2,
+                    color: MunjaColors.mint,
+                  ),
+                ),
+            ],
+          ),
+          const SizedBox(height: 17),
+          if (loading)
+            Text(
+              AppText.t('loadingEarnedRewards'),
+              style: TextStyle(
+                color: Colors.white.withOpacity(0.52),
+                fontSize: 12,
+                fontWeight: FontWeight.w700,
+              ),
+            )
+          else if (hasError)
+            _RewardErrorState(onRetry: onRetry)
+          else if (!hasAnyReward)
+            Text(
+              AppText.t('noCrystalRewardRide'),
+              style: TextStyle(
+                color: Colors.white.withOpacity(0.52),
+                fontSize: 12,
+                height: 1.35,
+                fontWeight: FontWeight.w700,
+              ),
+            )
+          else ...[
+            if (rideCompletedAmount > 0)
+              _RewardLine(
+                icon: Icons.check_circle_rounded,
+                label: AppText.t('rideCompletedReward'),
+                amount: rideCompletedAmount,
+              ),
+            if (rideCompletedAmount > 0 && firstRideBonusAmount > 0)
+              const SizedBox(height: 10),
+            if (firstRideBonusAmount > 0)
+              _RewardLine(
+                icon: Icons.emoji_events_rounded,
+                label: AppText.t('firstRideBonus'),
+                amount: firstRideBonusAmount,
+              ),
+            const SizedBox(height: 16),
+            Container(
+              width: double.infinity,
+              padding: const EdgeInsets.symmetric(
+                horizontal: 14,
+                vertical: 13,
+              ),
+              decoration: BoxDecoration(
+                color: MunjaColors.mint.withOpacity(0.09),
+                borderRadius: BorderRadius.circular(18),
+                border: Border.all(
+                  color: MunjaColors.mint.withOpacity(0.19),
+                ),
+              ),
+              child: Row(
+                children: [
+                  Text(
+                    AppText.t('totalEarned'),
+                    style: TextStyle(
+                      color: Colors.white.withOpacity(0.58),
+                      fontSize: 9,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 0.8,
+                    ),
+                  ),
+                  const Spacer(),
+                  Text(
+                    '+$totalEarned ◆',
+                    style: const TextStyle(
+                      color: MunjaColors.mint,
+                      fontSize: 17,
+                      fontWeight: FontWeight.w900,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _RewardLine extends StatelessWidget {
+  const _RewardLine({
+    required this.icon,
+    required this.label,
+    required this.amount,
+  });
+
+  final IconData icon;
+  final String label;
+  final int amount;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.symmetric(
+        horizontal: 13,
+        vertical: 12,
+      ),
+      decoration: BoxDecoration(
+        color: Colors.black.withOpacity(0.14),
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: Colors.white.withOpacity(0.055),
+        ),
+      ),
+      child: Row(
+        children: [
+          Icon(
+            icon,
+            color: MunjaColors.mint,
+            size: 18,
+          ),
+          const SizedBox(width: 9),
+          Expanded(
+            child: Text(
+              label,
+              style: const TextStyle(
+                color: Colors.white,
+                fontSize: 12,
+                fontWeight: FontWeight.w800,
+              ),
+            ),
+          ),
+          Text(
+            '+$amount ◆',
+            style: const TextStyle(
+              color: MunjaColors.mint,
+              fontSize: 12,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _RewardErrorState extends StatelessWidget {
+  const _RewardErrorState({
+    required this.onRetry,
+  });
+
+  final Future<void> Function() onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        const Icon(
+          Icons.error_outline_rounded,
+          color: Colors.orangeAccent,
+          size: 20,
+        ),
+        const SizedBox(width: 9),
+        Expanded(
+          child: Text(
+            AppText.t('crystalRewardsLoadFailed'),
+            style: TextStyle(
+              color: Colors.white.withOpacity(0.58),
+              fontSize: 12,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ),
+        TextButton(
+          onPressed: () => onRetry(),
+          child: Text(
+            AppText.t('retry'),
+            style: const TextStyle(
+              color: MunjaColors.mint,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

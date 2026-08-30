@@ -139,6 +139,7 @@ class FirestoreUserService {
             'lastLoginAt': FieldValue.serverTimestamp(),
             'activeBikeId': null,
             'subscription': 'free',
+            'totalXp': 0,
             'role': 'user',
             'platform': platform,
             'emailVerified': firebaseUser.emailVerified,
@@ -182,6 +183,10 @@ class FirestoreUserService {
 
         if (!currentData.containsKey('subscription')) {
           updates['subscription'] = 'free';
+        }
+
+        if (!currentData.containsKey('totalXp')) {
+          updates['totalXp'] = 0;
         }
 
         if (!currentData.containsKey('role')) {
@@ -334,6 +339,126 @@ class FirestoreUserService {
       fallbackCode: 'update-language-failed',
       fallbackMessage: 'Sproget kunne ikke opdateres.',
     );
+  }
+
+  /// Sets account XP to an exact non-negative value.
+  ///
+  /// Prefer [syncTotalXpAtLeast] for migration/reconciliation and [addXp]
+  /// for future XP rewards.
+  Future<void> setTotalXp(int totalXp) async {
+    final user = _requireFirebaseUser();
+    final safeXp = totalXp < 0 ? 0 : totalXp;
+
+    await _updateDocument(
+      uid: user.uid,
+      updates: <String, dynamic>{
+        'totalXp': safeXp,
+        'updatedAt': FieldValue.serverTimestamp(),
+      },
+      fallbackCode: 'update-xp-failed',
+      fallbackMessage: 'XP kunne ikke opdateres.',
+    );
+  }
+
+  /// Non-destructive migration/reconciliation.
+  ///
+  /// Firestore is only increased when [candidateTotalXp] is greater than the
+  /// value already stored. A device with missing/old local rides can therefore
+  /// never reduce account XP.
+  Future<int> syncTotalXpAtLeast(int candidateTotalXp) async {
+    final user = _requireFirebaseUser();
+    final reference = userDocument(user.uid);
+    final safeCandidate =
+        candidateTotalXp < 0 ? 0 : candidateTotalXp;
+
+    try {
+      return await _firestore.runTransaction<int>((transaction) async {
+        final snapshot = await transaction.get(reference);
+
+        if (!snapshot.exists) {
+          throw const FirestoreUserServiceException(
+            code: 'user-document-missing',
+            message: 'Brugerprofilen blev ikke fundet.',
+          );
+        }
+
+        final data = snapshot.data() ?? const <String, dynamic>{};
+        final currentXp = _safeInt(data['totalXp']);
+
+        final resolvedXp =
+            safeCandidate > currentXp ? safeCandidate : currentXp;
+
+        if (!data.containsKey('totalXp') || resolvedXp != currentXp) {
+          transaction.set(
+            reference,
+            <String, dynamic>{
+              'totalXp': resolvedXp,
+              'updatedAt': FieldValue.serverTimestamp(),
+            },
+            SetOptions(merge: true),
+          );
+        }
+
+        return resolvedXp;
+      });
+    } catch (error, stackTrace) {
+      debugPrint('SYNC FIRESTORE XP ERROR: $error');
+      debugPrintStack(stackTrace: stackTrace);
+
+      throw _mapException(
+        error,
+        fallbackCode: 'sync-xp-failed',
+        fallbackMessage: 'XP kunne ikke synkroniseres.',
+      );
+    }
+  }
+
+  /// Atomically adds XP for a completed reward/event.
+  Future<int> addXp(int amount) async {
+    if (amount <= 0) {
+      final current = await getCurrentUser();
+      return current?.safeTotalXp ?? 0;
+    }
+
+    final user = _requireFirebaseUser();
+    final reference = userDocument(user.uid);
+
+    try {
+      return await _firestore.runTransaction<int>((transaction) async {
+        final snapshot = await transaction.get(reference);
+
+        if (!snapshot.exists) {
+          throw const FirestoreUserServiceException(
+            code: 'user-document-missing',
+            message: 'Brugerprofilen blev ikke fundet.',
+          );
+        }
+
+        final data = snapshot.data() ?? const <String, dynamic>{};
+        final currentXp = _safeInt(data['totalXp']);
+        final nextXp = currentXp + amount;
+
+        transaction.set(
+          reference,
+          <String, dynamic>{
+            'totalXp': nextXp,
+            'updatedAt': FieldValue.serverTimestamp(),
+          },
+          SetOptions(merge: true),
+        );
+
+        return nextXp;
+      });
+    } catch (error, stackTrace) {
+      debugPrint('ADD FIRESTORE XP ERROR: $error');
+      debugPrintStack(stackTrace: stackTrace);
+
+      throw _mapException(
+        error,
+        fallbackCode: 'add-xp-failed',
+        fallbackMessage: 'XP-belønningen kunne ikke gemmes.',
+      );
+    }
   }
 
   Future<void> updatePhotoUrl(String? photoUrl) async {
@@ -553,6 +678,24 @@ class FirestoreUserService {
       default:
         return 'da';
     }
+  }
+
+  int _safeInt(dynamic value) {
+    if (value is int) {
+      return value < 0 ? 0 : value;
+    }
+
+    if (value is num) {
+      final parsed = value.toInt();
+      return parsed < 0 ? 0 : parsed;
+    }
+
+    if (value is String) {
+      final parsed = int.tryParse(value.trim()) ?? 0;
+      return parsed < 0 ? 0 : parsed;
+    }
+
+    return 0;
   }
 
   String _safeString(dynamic value) {

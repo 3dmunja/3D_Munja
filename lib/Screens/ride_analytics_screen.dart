@@ -4,6 +4,9 @@ import '../core/localization/app_text.dart';
 import '../core/theme/munja_colors.dart';
 import '../models/trip.dart';
 import '../services/storage_service.dart';
+import '../services/advanced_ride_analytics_service.dart';
+import '../Services/munja_pro_service.dart';
+import 'munja_pro_screen.dart';
 import '../widgets/munja_card.dart';
 import '../widgets/section_title.dart';
 
@@ -17,6 +20,7 @@ class RideAnalyticsScreen extends StatefulWidget {
 class _RideAnalyticsScreenState extends State<RideAnalyticsScreen> {
   bool loading = true;
   List<Trip> trips = [];
+  AdvancedAnalyticsResult? advancedAnalytics;
 
   @override
   void initState() {
@@ -25,12 +29,20 @@ class _RideAnalyticsScreenState extends State<RideAnalyticsScreen> {
   }
 
   Future<void> _loadTrips() async {
+    await MunjaProService.instance.initialize();
+
     final loaded = await StorageService.loadTrips();
+
+    final analytics =
+        const AdvancedRideAnalyticsService().analyze(
+      loaded,
+    );
 
     if (!mounted) return;
 
     setState(() {
       trips = loaded;
+      advancedAnalytics = analytics;
       loading = false;
     });
   }
@@ -40,6 +52,12 @@ class _RideAnalyticsScreenState extends State<RideAnalyticsScreen> {
   }
 
   int get totalRides => trips.length;
+
+  bool get isProAnalytics =>
+      MunjaProService.instance.hasFeature(
+        MunjaProFeature.advancedAnalytics,
+      );
+
 
   Duration get totalDuration {
     return trips.fold(Duration.zero, (sum, t) => sum + t.duration);
@@ -157,6 +175,29 @@ class _RideAnalyticsScreenState extends State<RideAnalyticsScreen> {
     return '$streakDays ${AppText.t('days')}';
   }
 
+  Future<void> _openMunjaPro() async {
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (_) => const MunjaProScreen(),
+      ),
+    );
+
+    if (!mounted) {
+      return;
+    }
+
+    // Re-read the entitlement after returning from the Pro screen.
+    // This makes Local Test Pro and later real Apple/Google purchases
+    // unlock Advanced Analytics immediately without restarting the app.
+    await MunjaProService.instance.refresh();
+
+    if (!mounted) {
+      return;
+    }
+
+    setState(() {});
+  }
+
   @override
   Widget build(BuildContext context) {
     if (loading) {
@@ -166,10 +207,22 @@ class _RideAnalyticsScreenState extends State<RideAnalyticsScreen> {
       );
     }
 
-    return Scaffold(
-      backgroundColor: MunjaColors.bg,
-      body: SafeArea(
-        child: RefreshIndicator(
+    return ValueListenableBuilder<MunjaProState>(
+      valueListenable: MunjaProService.instance.state,
+      builder: (
+        context,
+        proState,
+        _,
+      ) {
+        final isPro = proState.hasActivePro &&
+            MunjaProService.instance.hasFeature(
+              MunjaProFeature.advancedAnalytics,
+            );
+
+        return Scaffold(
+          backgroundColor: MunjaColors.bg,
+          body: SafeArea(
+            child: RefreshIndicator(
           onRefresh: _loadTrips,
           color: MunjaColors.mint,
           backgroundColor: const Color(0xFF07110E),
@@ -195,9 +248,11 @@ class _RideAnalyticsScreenState extends State<RideAnalyticsScreen> {
                         color: MunjaColors.mint.withOpacity(0.3),
                       ),
                     ),
-                    child: const Text(
-                      'Munja Analytics',
-                      style: TextStyle(
+                    child: Text(
+                      isPro
+                          ? 'MUNJA PRO ANALYTICS'
+                          : 'MUNJA ANALYTICS',
+                      style: const TextStyle(
                         color: MunjaColors.mint,
                         fontSize: 12,
                         fontWeight: FontWeight.w900,
@@ -426,6 +481,19 @@ class _RideAnalyticsScreenState extends State<RideAnalyticsScreen> {
 
               const SizedBox(height: 16),
 
+              if (isPro &&
+                  advancedAnalytics != null) ...[
+                _ProAnalyticsPanel(
+                  analytics: advancedAnalytics!,
+                ),
+                const SizedBox(height: 16),
+              ] else ...[
+                _ProAnalyticsLockedCard(
+                  onTap: _openMunjaPro,
+                ),
+                const SizedBox(height: 16),
+              ],
+
               MunjaCard(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
@@ -451,6 +519,349 @@ class _RideAnalyticsScreenState extends State<RideAnalyticsScreen> {
                           ),
                   ],
                 ),
+              ),
+            ],
+          ),
+        ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+class _ProAnalyticsPanel extends StatelessWidget {
+  const _ProAnalyticsPanel({
+    required this.analytics,
+  });
+
+  final AdvancedAnalyticsResult analytics;
+
+  String _change(double? value) {
+    if (value == null) {
+      return 'NEW';
+    }
+
+    final prefix = value >= 0 ? '+' : '';
+    return '$prefix${value.toStringAsFixed(0)}%';
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final week = analytics.weekComparison;
+    final month = analytics.monthComparison;
+
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: MunjaColors.panel,
+        borderRadius: BorderRadius.circular(30),
+        border: Border.all(
+          color: MunjaColors.mint.withOpacity(0.24),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: MunjaColors.mint.withOpacity(0.08),
+            blurRadius: 30,
+            offset: const Offset(0, 14),
+          ),
+        ],
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Row(
+            children: [
+              Icon(
+                Icons.auto_graph_rounded,
+                color: MunjaColors.mint,
+                size: 21,
+              ),
+              SizedBox(width: 8),
+              Text(
+                'ADVANCED ANALYTICS',
+                style: TextStyle(
+                  color: MunjaColors.mint,
+                  fontSize: 10,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 1.2,
+                ),
+              ),
+              Spacer(),
+              Icon(
+                Icons.verified_rounded,
+                color: MunjaColors.mint,
+                size: 18,
+              ),
+            ],
+          ),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: _ProTrendMetric(
+                  label: 'THIS WEEK',
+                  value:
+                      '${week.currentDistanceKm.toStringAsFixed(1)} km',
+                  change:
+                      _change(week.distanceChangePercent),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _ProTrendMetric(
+                  label: 'THIS MONTH',
+                  value:
+                      '${month.currentDistanceKm.toStringAsFixed(1)} km',
+                  change:
+                      _change(month.distanceChangePercent),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 10),
+          Row(
+            children: [
+              Expanded(
+                child: _ProTrendMetric(
+                  label: 'PACE TREND',
+                  value:
+                      '${month.currentAverageSpeedKmh.toStringAsFixed(1)} km/h',
+                  change:
+                      _change(month.speedChangePercent),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: _ProTrendMetric(
+                  label: 'CONSISTENCY',
+                  value:
+                      '${analytics.consistencyScore}/100',
+                  change:
+                      '${week.currentRideCount} RIDES',
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 14),
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(14),
+            decoration: BoxDecoration(
+              color: Colors.black.withOpacity(0.16),
+              borderRadius: BorderRadius.circular(20),
+              border: Border.all(
+                color: Colors.white.withOpacity(0.055),
+              ),
+            ),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Icon(
+                  Icons.auto_awesome_rounded,
+                  color: MunjaColors.mint,
+                  size: 20,
+                ),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment:
+                        CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        analytics.insightTitle,
+                        style: const TextStyle(
+                          color: Colors.white,
+                          fontSize: 13.5,
+                          fontWeight: FontWeight.w900,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        analytics.insightBody,
+                        style: const TextStyle(
+                          color: MunjaColors.textSoft,
+                          fontSize: 11,
+                          height: 1.45,
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              const Text(
+                'BEST MONTH',
+                style: TextStyle(
+                  color: MunjaColors.textSoft,
+                  fontSize: 9,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 0.9,
+                ),
+              ),
+              const Spacer(),
+              Text(
+                '${analytics.bestMonthLabel} · '
+                '${analytics.bestMonthDistanceKm.toStringAsFixed(1)} km',
+                style: const TextStyle(
+                  color: MunjaColors.mint,
+                  fontSize: 10.5,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ProTrendMetric extends StatelessWidget {
+  const _ProTrendMetric({
+    required this.label,
+    required this.value,
+    required this.change,
+  });
+
+  final String label;
+  final String value;
+  final String change;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(13),
+      decoration: BoxDecoration(
+        color: Colors.black.withOpacity(0.16),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: Colors.white.withOpacity(0.055),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            label,
+            style: const TextStyle(
+              color: MunjaColors.textSoft,
+              fontSize: 8.5,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 0.8,
+            ),
+          ),
+          const SizedBox(height: 6),
+          Text(
+            value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+              color: Colors.white,
+              fontSize: 15,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            change,
+            style: const TextStyle(
+              color: MunjaColors.mint,
+              fontSize: 9.5,
+              fontWeight: FontWeight.w900,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ProAnalyticsLockedCard extends StatelessWidget {
+  const _ProAnalyticsLockedCard({
+    required this.onTap,
+  });
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(28),
+        child: Ink(
+          padding: const EdgeInsets.all(17),
+          decoration: BoxDecoration(
+            color: MunjaColors.panel,
+            borderRadius: BorderRadius.circular(28),
+            border: Border.all(
+              color: MunjaColors.mint.withOpacity(0.16),
+            ),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 46,
+                height: 46,
+                decoration: BoxDecoration(
+                  color: MunjaColors.mint.withOpacity(0.10),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: const Icon(
+                  Icons.lock_rounded,
+                  color: MunjaColors.mint,
+                  size: 21,
+                ),
+              ),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment:
+                      CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'ADVANCED ANALYTICS',
+                      style: TextStyle(
+                        color: MunjaColors.mint,
+                        fontSize: 9,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 1.0,
+                      ),
+                    ),
+                    SizedBox(height: 4),
+                    Text(
+                      'Weekly trends, monthly comparison and personal insights',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 12.5,
+                        height: 1.3,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    SizedBox(height: 5),
+                    Text(
+                      'UNLOCK WITH MUNJA PRO',
+                      style: TextStyle(
+                        color: MunjaColors.mint,
+                        fontSize: 9,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 0.8,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              SizedBox(width: 8),
+              Icon(
+                Icons.chevron_right_rounded,
+                color: MunjaColors.mint,
               ),
             ],
           ),

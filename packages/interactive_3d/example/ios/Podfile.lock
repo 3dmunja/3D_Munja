@@ -1,0 +1,36 @@
+PODS:
+  - Flutter (1.0.0)
+  - GLTFSceneKit (0.3.0)
+  - integration_test (0.0.1):
+    - Flutter
+  - interactive_3d (1.2.0):
+    - Flutter
+    - GLTFSceneKit (~> 0.3.0)
+
+DEPENDENCIES:
+  - Flutter (from `Flutter`)
+  - GLTFSceneKit
+  - integration_test (from `.symlinks/plugins/integration_test/ios`)
+  - interactive_3d (from `.symlinks/plugins/interactive_3d/ios`)
+
+SPEC REPOS:
+  trunk:
+    - GLTFSceneKit
+
+EXTERNAL SOURCES:
+  Flutter:
+    :path: Flutter
+  integration_test:
+    :path: ".symlinks/plugins/integration_test/ios"
+  interactive_3d:
+    :path: ".symlinks/plugins/interactive_3d/ios"
+
+SPEC CHECKSUMS:
+  Flutter: cabc95a1d2626b1b06e7179b784ebcf0c0cde467
+  GLTFSceneKit: d1b437c514ba2aed5555afb0fddd64e030612d57
+  integration_test: 4a889634ef21a45d28d50d622cf412dc6d9f586e
+  interactive_3d: da2ced80518ad9dc4f2ccc07607fdc94ab868f0e
+
+PODFILE CHECKSUM: 61b16b86ee81b0e9b149bcf939feb7d9cf439fd4
+
+COCOAPODS: 1.16.2

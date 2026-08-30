@@ -43,3 +43,11 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+.vercel
+.env*
+/android/build/
+.agents/
+.claude/
+agent/
+skills-lock.json
+apply_munja_background.py

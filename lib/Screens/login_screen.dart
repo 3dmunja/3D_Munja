@@ -65,25 +65,20 @@ class _LoginScreenState extends State<LoginScreen> {
           displayName: displayName,
         );
       } else {
-        await _authService.signInWithEmail(email: email, password: password);
+        await _authService.signInWithEmail(
+          email: email,
+          password: password,
+        );
       }
     } on AuthServiceException catch (error) {
       if (!mounted) return;
-
-      setState(() {
-        _errorMessage = error.message;
-      });
+      setState(() => _errorMessage = error.message);
     } catch (_) {
       if (!mounted) return;
-
-      setState(() {
-        _errorMessage = 'Noget gik galt. Prøv igen.';
-      });
+      setState(() => _errorMessage = 'Noget gik galt. Prøv igen.');
     } finally {
       if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
+        setState(() => _isLoading = false);
       }
     }
   }
@@ -103,21 +98,15 @@ class _LoginScreenState extends State<LoginScreen> {
       await _authService.signInWithGoogle();
     } on AuthServiceException catch (error) {
       if (!mounted) return;
-
-      setState(() {
-        _errorMessage = error.message;
-      });
+      setState(() => _errorMessage = error.message);
     } catch (_) {
       if (!mounted) return;
-
-      setState(() {
-        _errorMessage = 'Google-login kunne ikke gennemføres.';
-      });
+      setState(
+        () => _errorMessage = 'Google-login kunne ikke gennemføres.',
+      );
     } finally {
       if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
+        setState(() => _isLoading = false);
       }
     }
   }
@@ -137,21 +126,15 @@ class _LoginScreenState extends State<LoginScreen> {
       await _authService.signInWithApple();
     } on AuthServiceException catch (error) {
       if (!mounted) return;
-
-      setState(() {
-        _errorMessage = error.message;
-      });
+      setState(() => _errorMessage = error.message);
     } catch (_) {
       if (!mounted) return;
-
-      setState(() {
-        _errorMessage = 'Apple-login kunne ikke gennemføres.';
-      });
+      setState(
+        () => _errorMessage = 'Apple-login kunne ikke gennemføres.',
+      );
     } finally {
       if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
+        setState(() => _isLoading = false);
       }
     }
   }
@@ -190,21 +173,16 @@ class _LoginScreenState extends State<LoginScreen> {
       });
     } on AuthServiceException catch (error) {
       if (!mounted) return;
-
-      setState(() {
-        _errorMessage = error.message;
-      });
+      setState(() => _errorMessage = error.message);
     } catch (_) {
       if (!mounted) return;
-
       setState(() {
-        _errorMessage = 'Nulstilling af adgangskoden kunne ikke gennemføres.';
+        _errorMessage =
+            'Nulstilling af adgangskoden kunne ikke gennemføres.';
       });
     } finally {
       if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
+        setState(() => _isLoading = false);
       }
     }
   }
@@ -224,7 +202,9 @@ class _LoginScreenState extends State<LoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final bottomPadding = MediaQuery.of(context).viewInsets.bottom;
+    final mediaQuery = MediaQuery.of(context);
+    final bottomPadding = mediaQuery.viewInsets.bottom;
+    final screenHeight = mediaQuery.size.height;
 
     final isAppleDevice =
         !kIsWeb && defaultTargetPlatform == TargetPlatform.iOS;
@@ -238,299 +218,293 @@ class _LoginScreenState extends State<LoginScreen> {
         children: [
           const Positioned.fill(child: _LoginBackground()),
           SafeArea(
-            child: SingleChildScrollView(
-              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-              padding: EdgeInsets.fromLTRB(22, 18, 22, 28 + bottomPadding),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
-                children: [
-                  const SizedBox(height: 18),
-                  const _BrandHeader(),
-                  const SizedBox(height: 40),
-                  Text(
-                    _isCreateAccountMode
-                        ? 'Opret din Munja-konto'
-                        : 'Velkommen tilbage',
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontSize: 31,
-                      height: 1.08,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: -0.8,
-                    ),
+            child: LayoutBuilder(
+              builder: (context, constraints) {
+                return SingleChildScrollView(
+                  keyboardDismissBehavior:
+                      ScrollViewKeyboardDismissBehavior.onDrag,
+                  padding: EdgeInsets.fromLTRB(
+                    22,
+                    18,
+                    22,
+                    28 + bottomPadding,
                   ),
-                  const SizedBox(height: 12),
-                  Text(
-                    _isCreateAccountMode
-                        ? 'Din cykel, Digital Twin og dine ture samlet på én konto.'
-                        : 'Log ind og fortsæt med din cykel, dine ture og din Digital Twin.',
-                    textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      color: MunjaColors.textSoft,
-                      fontSize: 15,
-                      height: 1.5,
-                      fontWeight: FontWeight.w500,
+                  child: ConstrainedBox(
+                    constraints: BoxConstraints(
+                      minHeight: constraints.maxHeight - bottomPadding,
                     ),
-                  ),
-                  const SizedBox(height: 30),
-                  Container(
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: MunjaColors.panel.withOpacity(0.88),
-                      borderRadius: BorderRadius.circular(32),
-                      border: Border.all(color: Colors.white.withOpacity(0.07)),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withOpacity(0.32),
-                          blurRadius: 36,
-                          offset: const Offset(0, 20),
-                        ),
-                        BoxShadow(
-                          color: MunjaColors.mint.withOpacity(0.08),
-                          blurRadius: 40,
-                          offset: const Offset(0, 10),
-                        ),
-                      ],
-                    ),
-                    child: AutofillGroup(
+                    child: IntrinsicHeight(
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          if (_isCreateAccountMode) ...[
-                            _LoginTextField(
-                              controller: _nameController,
-                              focusNode: _nameFocusNode,
-                              label: 'Navn',
-                              hintText: 'Dit navn',
-                              icon: Icons.person_outline_rounded,
-                              textInputAction: TextInputAction.next,
-                              autofillHints: const [AutofillHints.name],
-                              onSubmitted: (_) {
-                                _emailFocusNode.requestFocus();
-                              },
+                          SizedBox(height: screenHeight < 760 ? 8 : 18),
+                          const _BrandHeader(),
+                          SizedBox(height: screenHeight < 760 ? 24 : 36),
+                          Text(
+                            _isCreateAccountMode
+                                ? 'Opret din Munja-konto'
+                                : 'Velkommen tilbage',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: screenHeight < 760 ? 29 : 34,
+                              height: 1.04,
+                              fontWeight: FontWeight.w900,
+                              letterSpacing: -1.2,
                             ),
-                            const SizedBox(height: 14),
-                          ],
-                          _LoginTextField(
-                            controller: _emailController,
-                            focusNode: _emailFocusNode,
-                            label: 'E-mail',
-                            hintText: 'navn@email.dk',
-                            icon: Icons.mail_outline_rounded,
-                            keyboardType: TextInputType.emailAddress,
-                            textInputAction: TextInputAction.next,
-                            autofillHints: const [
-                              AutofillHints.email,
-                              AutofillHints.username,
-                            ],
-                            onSubmitted: (_) {
-                              _passwordFocusNode.requestFocus();
-                            },
                           ),
-                          const SizedBox(height: 14),
-                          _LoginTextField(
-                            controller: _passwordController,
-                            focusNode: _passwordFocusNode,
-                            label: 'Adgangskode',
-                            hintText: 'Mindst 6 tegn',
-                            icon: Icons.lock_outline_rounded,
-                            obscureText: _obscurePassword,
-                            textInputAction: TextInputAction.done,
-                            autofillHints: [
-                              _isCreateAccountMode
-                                  ? AutofillHints.newPassword
-                                  : AutofillHints.password,
-                            ],
-                            suffixIcon: IconButton(
-                              onPressed: _isLoading
-                                  ? null
-                                  : () {
-                                      setState(() {
-                                        _obscurePassword = !_obscurePassword;
-                                      });
+                          const SizedBox(height: 12),
+                          Text(
+                            _isCreateAccountMode
+                                ? 'Byg din digitale cykel, forbind dine produkter og saml dine ture ét sted.'
+                                : 'Fortsæt til din cykel, dine ture og din digitale verden.',
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              color: MunjaColors.textSoft,
+                              fontSize: 15,
+                              height: 1.5,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                          SizedBox(height: screenHeight < 760 ? 22 : 28),
+                          _LoginCard(
+                            child: AutofillGroup(
+                              child: Column(
+                                crossAxisAlignment:
+                                    CrossAxisAlignment.stretch,
+                                children: [
+                                  if (_isCreateAccountMode) ...[
+                                    _LoginTextField(
+                                      controller: _nameController,
+                                      focusNode: _nameFocusNode,
+                                      label: 'Navn',
+                                      hintText: 'Dit navn',
+                                      icon: Icons.person_outline_rounded,
+                                      textInputAction: TextInputAction.next,
+                                      autofillHints: const [
+                                        AutofillHints.name,
+                                      ],
+                                      onSubmitted: (_) {
+                                        _emailFocusNode.requestFocus();
+                                      },
+                                    ),
+                                    const SizedBox(height: 14),
+                                  ],
+                                  _LoginTextField(
+                                    controller: _emailController,
+                                    focusNode: _emailFocusNode,
+                                    label: 'E-mail',
+                                    hintText: 'navn@email.dk',
+                                    icon: Icons.mail_outline_rounded,
+                                    keyboardType:
+                                        TextInputType.emailAddress,
+                                    textInputAction: TextInputAction.next,
+                                    autofillHints: const [
+                                      AutofillHints.email,
+                                      AutofillHints.username,
+                                    ],
+                                    onSubmitted: (_) {
+                                      _passwordFocusNode.requestFocus();
                                     },
-                              icon: Icon(
-                                _obscurePassword
-                                    ? Icons.visibility_off_outlined
-                                    : Icons.visibility_outlined,
-                                color: Colors.white54,
-                              ),
-                            ),
-                            onSubmitted: (_) {
-                              _submitEmailForm();
-                            },
-                          ),
-                          if (!_isCreateAccountMode) ...[
-                            const SizedBox(height: 8),
-                            Align(
-                              alignment: Alignment.centerRight,
-                              child: TextButton(
-                                onPressed: _isLoading ? null : _resetPassword,
-                                child: const Text(
-                                  'Glemt adgangskode?',
-                                  style: TextStyle(
-                                    color: MunjaColors.mint,
-                                    fontWeight: FontWeight.w800,
                                   ),
-                                ),
-                              ),
-                            ),
-                          ] else
-                            const SizedBox(height: 18),
-                          if (_errorMessage != null) ...[
-                            _StatusMessage(
-                              message: _errorMessage!,
-                              isError: true,
-                            ),
-                            const SizedBox(height: 14),
-                          ],
-                          if (_successMessage != null) ...[
-                            _StatusMessage(
-                              message: _successMessage!,
-                              isError: false,
-                            ),
-                            const SizedBox(height: 14),
-                          ],
-                          SizedBox(
-                            height: 56,
-                            child: FilledButton(
-                              onPressed: _isLoading ? null : _submitEmailForm,
-                              style: FilledButton.styleFrom(
-                                backgroundColor: MunjaColors.mintStrong,
-                                foregroundColor: const Color(0xFF03130F),
-                                disabledBackgroundColor: MunjaColors.mintStrong
-                                    .withOpacity(0.45),
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(20),
-                                ),
-                              ),
-                              child: _isLoading
-                                  ? const SizedBox(
-                                      width: 23,
-                                      height: 23,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2.4,
-                                        color: Color(0xFF03130F),
-                                      ),
-                                    )
-                                  : Text(
+                                  const SizedBox(height: 14),
+                                  _LoginTextField(
+                                    controller: _passwordController,
+                                    focusNode: _passwordFocusNode,
+                                    label: 'Adgangskode',
+                                    hintText: 'Mindst 6 tegn',
+                                    icon: Icons.lock_outline_rounded,
+                                    obscureText: _obscurePassword,
+                                    textInputAction: TextInputAction.done,
+                                    autofillHints: [
                                       _isCreateAccountMode
-                                          ? 'Opret konto'
-                                          : 'Log ind',
-                                      style: const TextStyle(
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.w900,
+                                          ? AutofillHints.newPassword
+                                          : AutofillHints.password,
+                                    ],
+                                    suffixIcon: IconButton(
+                                      onPressed: _isLoading
+                                          ? null
+                                          : () {
+                                              setState(() {
+                                                _obscurePassword =
+                                                    !_obscurePassword;
+                                              });
+                                            },
+                                      icon: Icon(
+                                        _obscurePassword
+                                            ? Icons
+                                                .visibility_off_outlined
+                                            : Icons.visibility_outlined,
+                                        color: Colors.white54,
                                       ),
                                     ),
+                                    onSubmitted: (_) {
+                                      _submitEmailForm();
+                                    },
+                                  ),
+                                  if (!_isCreateAccountMode) ...[
+                                    const SizedBox(height: 7),
+                                    Align(
+                                      alignment: Alignment.centerRight,
+                                      child: TextButton(
+                                        onPressed: _isLoading
+                                            ? null
+                                            : _resetPassword,
+                                        child: const Text(
+                                          'Glemt adgangskode?',
+                                          style: TextStyle(
+                                            color: MunjaColors.mint,
+                                            fontWeight: FontWeight.w900,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ] else
+                                    const SizedBox(height: 18),
+                                  if (_errorMessage != null) ...[
+                                    _StatusMessage(
+                                      message: _errorMessage!,
+                                      isError: true,
+                                    ),
+                                    const SizedBox(height: 14),
+                                  ],
+                                  if (_successMessage != null) ...[
+                                    _StatusMessage(
+                                      message: _successMessage!,
+                                      isError: false,
+                                    ),
+                                    const SizedBox(height: 14),
+                                  ],
+                                  SizedBox(
+                                    height: 58,
+                                    child: FilledButton(
+                                      onPressed: _isLoading
+                                          ? null
+                                          : _submitEmailForm,
+                                      style: FilledButton.styleFrom(
+                                        backgroundColor:
+                                            MunjaColors.mintStrong,
+                                        foregroundColor:
+                                            const Color(0xFF03130F),
+                                        disabledBackgroundColor:
+                                            MunjaColors.mintStrong
+                                                .withValues(alpha: 0.45),
+                                        elevation: 0,
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius:
+                                              BorderRadius.circular(21),
+                                        ),
+                                      ),
+                                      child: _isLoading
+                                          ? const SizedBox(
+                                              width: 23,
+                                              height: 23,
+                                              child:
+                                                  CircularProgressIndicator(
+                                                strokeWidth: 2.4,
+                                                color:
+                                                    Color(0xFF03130F),
+                                              ),
+                                            )
+                                          : Text(
+                                              _isCreateAccountMode
+                                                  ? 'Opret konto'
+                                                  : 'Log ind',
+                                              style: const TextStyle(
+                                                fontSize: 17,
+                                                fontWeight:
+                                                    FontWeight.w900,
+                                              ),
+                                            ),
+                                    ),
+                                  ),
+                                  if (isAppleDevice ||
+                                      showGoogleLogin) ...[
+                                    const SizedBox(height: 22),
+                                    const _OrDivider(),
+                                    const SizedBox(height: 22),
+                                  ],
+                                  if (isAppleDevice)
+                                    _SocialLoginButton(
+                                      onPressed: _isLoading
+                                          ? null
+                                          : _signInWithApple,
+                                      icon: const Icon(
+                                        Icons.apple,
+                                        size: 25,
+                                        color: Colors.black,
+                                      ),
+                                      label: 'Fortsæt med Apple',
+                                      foregroundColor: Colors.black,
+                                      backgroundColor: Colors.white,
+                                      borderColor: Colors.white,
+                                    ),
+                                  if (isAppleDevice && showGoogleLogin)
+                                    const SizedBox(height: 12),
+                                  if (showGoogleLogin)
+                                    _SocialLoginButton(
+                                      onPressed: _isLoading
+                                          ? null
+                                          : _signInWithGoogle,
+                                      icon: const _GoogleMark(),
+                                      label: 'Fortsæt med Google',
+                                      foregroundColor: Colors.white,
+                                      backgroundColor:
+                                          Colors.white.withValues(
+                                        alpha: 0.045,
+                                      ),
+                                      borderColor:
+                                          Colors.white.withValues(
+                                        alpha: 0.13,
+                                      ),
+                                    ),
+                                ],
+                              ),
                             ),
                           ),
-                          if (isAppleDevice || showGoogleLogin) ...[
-                            const SizedBox(height: 22),
-                            const _OrDivider(),
-                            const SizedBox(height: 22),
-                          ],
-                          if (isAppleDevice)
-                            SizedBox(
-                              height: 56,
-                              child: OutlinedButton.icon(
-                                onPressed:
-                                    _isLoading ? null : _signInWithApple,
-                                style: OutlinedButton.styleFrom(
-                                  foregroundColor: Colors.black,
-                                  backgroundColor: Colors.white,
-                                  disabledBackgroundColor:
-                                      Colors.white.withOpacity(0.55),
-                                  side: const BorderSide(color: Colors.white),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(20),
+                          const SizedBox(height: 22),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Flexible(
+                                child: Text(
+                                  _isCreateAccountMode
+                                      ? 'Har du allerede en konto?'
+                                      : 'Har du ikke en konto?',
+                                  textAlign: TextAlign.right,
+                                  style: const TextStyle(
+                                    color: MunjaColors.textSoft,
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w700,
                                   ),
                                 ),
-                                icon: const Icon(
-                                  Icons.apple,
-                                  size: 25,
-                                  color: Colors.black,
-                                ),
-                                label: const Text(
-                                  'Fortsæt med Apple',
-                                  style: TextStyle(
-                                    fontSize: 15,
+                              ),
+                              const SizedBox(width: 2),
+                              TextButton(
+                                onPressed:
+                                    _isLoading ? null : _toggleMode,
+                                child: Text(
+                                  _isCreateAccountMode
+                                      ? 'Log ind'
+                                      : 'Opret konto',
+                                  style: const TextStyle(
+                                    color: MunjaColors.mint,
+                                    fontSize: 14,
                                     fontWeight: FontWeight.w900,
                                   ),
                                 ),
                               ),
-                            ),
-                          if (showGoogleLogin)
-                            SizedBox(
-                              height: 56,
-                              child: OutlinedButton.icon(
-                                onPressed:
-                                    _isLoading ? null : _signInWithGoogle,
-                                style: OutlinedButton.styleFrom(
-                                  foregroundColor: Colors.white,
-                                  side: BorderSide(
-                                    color: Colors.white.withOpacity(0.13),
-                                  ),
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(20),
-                                  ),
-                                  backgroundColor:
-                                      Colors.white.withOpacity(0.035),
-                                ),
-                                icon: const _GoogleMark(),
-                                label: const Text(
-                                  'Fortsæt med Google',
-                                  style: TextStyle(
-                                    fontSize: 15,
-                                    fontWeight: FontWeight.w800,
-                                  ),
-                                ),
-                              ),
-                            ),
+                            ],
+                          ),
+                          const Spacer(),
+                          const SizedBox(height: 16),
+                          const _FooterBrand(),
                         ],
                       ),
                     ),
                   ),
-                  const SizedBox(height: 24),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text(
-                        _isCreateAccountMode
-                            ? 'Har du allerede en konto?'
-                            : 'Har du ikke en konto?',
-                        style: const TextStyle(
-                          color: MunjaColors.textSoft,
-                          fontSize: 14,
-                          fontWeight: FontWeight.w600,
-                        ),
-                      ),
-                      TextButton(
-                        onPressed: _isLoading ? null : _toggleMode,
-                        child: Text(
-                          _isCreateAccountMode ? 'Log ind' : 'Opret konto',
-                          style: const TextStyle(
-                            color: MunjaColors.mint,
-                            fontSize: 14,
-                            fontWeight: FontWeight.w900,
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Text(
-                    AppText.t('appTitle'),
-                    textAlign: TextAlign.center,
-                    style: TextStyle(
-                      color: Colors.white.withOpacity(0.24),
-                      fontSize: 11,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: 3.2,
-                    ),
-                  ),
-                ],
-              ),
+                );
+              },
             ),
           ),
         ],
@@ -544,44 +518,102 @@ class _BrandHeader extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
+    return Column(
       children: [
         Container(
-          width: 46,
-          height: 46,
+          width: 132,
+          height: 132,
           decoration: BoxDecoration(
-            color: MunjaColors.mint.withOpacity(0.12),
-            borderRadius: BorderRadius.circular(16),
-            border: Border.all(color: MunjaColors.mint.withOpacity(0.32)),
+            borderRadius: BorderRadius.circular(36),
+            gradient: LinearGradient(
+              begin: Alignment.topLeft,
+              end: Alignment.bottomRight,
+              colors: [
+                MunjaColors.mint.withValues(alpha: 0.18),
+                MunjaColors.mint.withValues(alpha: 0.035),
+              ],
+            ),
+            border: Border.all(
+              color: MunjaColors.mint.withValues(alpha: 0.35),
+            ),
+            boxShadow: [
+              BoxShadow(
+                color: MunjaColors.mint.withValues(alpha: 0.18),
+                blurRadius: 36,
+                spreadRadius: 2,
+              ),
+            ],
           ),
           child: Padding(
-            padding: const EdgeInsets.all(6),
+            padding: const EdgeInsets.all(3),
             child: Image.asset(
-              'assets/munja-logo-icon.png',
+              'assets/munja-logo-icon_2.png',
               fit: BoxFit.contain,
               filterQuality: FilterQuality.high,
               errorBuilder: (context, error, stackTrace) {
                 return const Icon(
                   Icons.bolt_rounded,
                   color: MunjaColors.mint,
-                  size: 28,
+                  size: 42,
                 );
               },
             ),
           ),
         ),
-        const SizedBox(width: 14),
+        const SizedBox(height: 17),
         const Text(
           'MUNJA',
           style: TextStyle(
             color: Colors.white,
-            fontSize: 30,
+            fontSize: 31,
             fontWeight: FontWeight.w900,
-            letterSpacing: 6,
+            letterSpacing: 8.5,
+          ),
+        ),
+        const SizedBox(height: 7),
+        Text(
+          'DIGITAL CYCLING PLATFORM',
+          style: TextStyle(
+            color: MunjaColors.mint.withValues(alpha: 0.72),
+            fontSize: 9,
+            fontWeight: FontWeight.w900,
+            letterSpacing: 2.4,
           ),
         ),
       ],
+    );
+  }
+}
+
+class _LoginCard extends StatelessWidget {
+  final Widget child;
+
+  const _LoginCard({required this.child});
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: const Color(0xFF07130F).withValues(alpha: 0.92),
+        borderRadius: BorderRadius.circular(34),
+        border: Border.all(
+          color: Colors.white.withValues(alpha: 0.075),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.42),
+            blurRadius: 44,
+            offset: const Offset(0, 22),
+          ),
+          BoxShadow(
+            color: MunjaColors.mint.withValues(alpha: 0.075),
+            blurRadius: 42,
+            offset: const Offset(0, 10),
+          ),
+        ],
+      ),
+      child: child,
     );
   }
 }
@@ -591,30 +623,58 @@ class _LoginBackground extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final width = MediaQuery.sizeOf(context).width;
+
     return DecoratedBox(
       decoration: const BoxDecoration(
         gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          colors: [Color(0xFF03120F), Color(0xFF020A08), Color(0xFF010504)],
+          colors: [
+            Color(0xFF041610),
+            Color(0xFF020B08),
+            Color(0xFF010504),
+          ],
         ),
       ),
       child: Stack(
+        fit: StackFit.expand,
         children: [
-          Positioned(
-            top: -100,
-            left: -70,
-            child: _GlowOrb(size: 280, opacity: 0.14),
+          const Positioned(
+            top: -110,
+            left: -90,
+            child: _GlowOrb(size: 320, opacity: 0.16),
           ),
-          Positioned(
-            top: 260,
-            right: -110,
-            child: _GlowOrb(size: 260, opacity: 0.10),
+          const Positioned(
+            top: 280,
+            right: -130,
+            child: _GlowOrb(size: 300, opacity: 0.10),
           ),
-          Positioned(
-            bottom: -130,
-            left: 50,
-            child: _GlowOrb(size: 300, opacity: 0.08),
+          const Positioned(
+            bottom: -170,
+            left: 30,
+            child: _GlowOrb(size: 340, opacity: 0.08),
+          ),
+          IgnorePointer(
+            child: Center(
+              child: Opacity(
+                opacity: 0.040,
+                child: Image.asset(
+                  'assets/munja-logo-icon_2.png',
+                  width: width * 1.18,
+                  fit: BoxFit.contain,
+                  filterQuality: FilterQuality.high,
+                  errorBuilder: (context, error, stackTrace) {
+                    return const SizedBox.shrink();
+                  },
+                ),
+              ),
+            ),
+          ),
+          IgnorePointer(
+            child: CustomPaint(
+              painter: const _GridTexturePainter(),
+            ),
           ),
         ],
       ),
@@ -626,7 +686,10 @@ class _GlowOrb extends StatelessWidget {
   final double size;
   final double opacity;
 
-  const _GlowOrb({required this.size, required this.opacity});
+  const _GlowOrb({
+    required this.size,
+    required this.opacity,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -637,12 +700,46 @@ class _GlowOrb extends StatelessWidget {
         shape: BoxShape.circle,
         gradient: RadialGradient(
           colors: [
-            MunjaColors.mint.withOpacity(opacity),
-            MunjaColors.mint.withOpacity(0),
+            MunjaColors.mint.withValues(alpha: opacity),
+            MunjaColors.mint.withValues(alpha: 0),
           ],
         ),
       ),
     );
+  }
+}
+
+class _GridTexturePainter extends CustomPainter {
+  const _GridTexturePainter();
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = Colors.white.withValues(alpha: 0.012)
+      ..strokeWidth = 0.7;
+
+    const spacing = 20.0;
+
+    for (double x = 0; x <= size.width; x += spacing) {
+      canvas.drawLine(
+        Offset(x, 0),
+        Offset(x, size.height),
+        paint,
+      );
+    }
+
+    for (double y = 0; y <= size.height; y += spacing) {
+      canvas.drawLine(
+        Offset(0, y),
+        Offset(size.width, y),
+        paint,
+      );
+    }
+  }
+
+  @override
+  bool shouldRepaint(covariant _GridTexturePainter oldDelegate) {
+    return false;
   }
 }
 
@@ -693,32 +790,90 @@ class _LoginTextField extends StatelessWidget {
       decoration: InputDecoration(
         labelText: label,
         hintText: hintText,
-        prefixIcon: Icon(icon, color: MunjaColors.mint),
+        prefixIcon: Icon(
+          icon,
+          color: MunjaColors.mint,
+          size: 23,
+        ),
         suffixIcon: suffixIcon,
         labelStyle: const TextStyle(
           color: Colors.white60,
           fontWeight: FontWeight.w700,
         ),
-        hintStyle: TextStyle(color: Colors.white.withOpacity(0.25)),
+        hintStyle: TextStyle(
+          color: Colors.white.withValues(alpha: 0.25),
+        ),
         filled: true,
-        fillColor: Colors.white.withOpacity(0.035),
+        fillColor: Colors.white.withValues(alpha: 0.034),
         contentPadding: const EdgeInsets.symmetric(
-          horizontal: 16,
-          vertical: 19,
+          horizontal: 17,
+          vertical: 20,
         ),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(20),
-          borderSide: BorderSide(color: Colors.white.withOpacity(0.08)),
+          borderRadius: BorderRadius.circular(21),
+          borderSide: BorderSide(
+            color: Colors.white.withValues(alpha: 0.08),
+          ),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(20),
-          borderSide: BorderSide(color: Colors.white.withOpacity(0.08)),
+          borderRadius: BorderRadius.circular(21),
+          borderSide: BorderSide(
+            color: Colors.white.withValues(alpha: 0.08),
+          ),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(20),
+          borderRadius: BorderRadius.circular(21),
           borderSide: const BorderSide(
             color: MunjaColors.mintStrong,
             width: 1.4,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _SocialLoginButton extends StatelessWidget {
+  final VoidCallback? onPressed;
+  final Widget icon;
+  final String label;
+  final Color foregroundColor;
+  final Color backgroundColor;
+  final Color borderColor;
+
+  const _SocialLoginButton({
+    required this.onPressed,
+    required this.icon,
+    required this.label,
+    required this.foregroundColor,
+    required this.backgroundColor,
+    required this.borderColor,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 58,
+      child: OutlinedButton.icon(
+        onPressed: onPressed,
+        style: OutlinedButton.styleFrom(
+          foregroundColor: foregroundColor,
+          backgroundColor: backgroundColor,
+          disabledForegroundColor:
+              foregroundColor.withValues(alpha: 0.55),
+          disabledBackgroundColor:
+              backgroundColor.withValues(alpha: 0.55),
+          side: BorderSide(color: borderColor),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(21),
+          ),
+        ),
+        icon: icon,
+        label: Text(
+          label,
+          style: const TextStyle(
+            fontSize: 15,
+            fontWeight: FontWeight.w900,
           ),
         ),
       ),
@@ -730,18 +885,25 @@ class _StatusMessage extends StatelessWidget {
   final String message;
   final bool isError;
 
-  const _StatusMessage({required this.message, required this.isError});
+  const _StatusMessage({
+    required this.message,
+    required this.isError,
+  });
 
   @override
   Widget build(BuildContext context) {
-    final color = isError ? const Color(0xFFFF7D7D) : MunjaColors.mint;
+    final color = isError
+        ? const Color(0xFFFF7D7D)
+        : MunjaColors.mint;
 
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
-        color: color.withOpacity(0.08),
+        color: color.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(color: color.withOpacity(0.25)),
+        border: Border.all(
+          color: color.withValues(alpha: 0.25),
+        ),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -778,7 +940,11 @@ class _OrDivider extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Expanded(child: Divider(color: Colors.white.withOpacity(0.09))),
+        Expanded(
+          child: Divider(
+            color: Colors.white.withValues(alpha: 0.09),
+          ),
+        ),
         const Padding(
           padding: EdgeInsets.symmetric(horizontal: 14),
           child: Text(
@@ -791,7 +957,11 @@ class _OrDivider extends StatelessWidget {
             ),
           ),
         ),
-        Expanded(child: Divider(color: Colors.white.withOpacity(0.09))),
+        Expanded(
+          child: Divider(
+            color: Colors.white.withValues(alpha: 0.09),
+          ),
+        ),
       ],
     );
   }
@@ -803,12 +973,12 @@ class _GoogleMark extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      width: 24,
-      height: 24,
+      width: 25,
+      height: 25,
       alignment: Alignment.center,
       decoration: BoxDecoration(
         color: Colors.white,
-        borderRadius: BorderRadius.circular(7),
+        borderRadius: BorderRadius.circular(8),
       ),
       child: const Text(
         'G',
@@ -818,6 +988,39 @@ class _GoogleMark extends StatelessWidget {
           fontWeight: FontWeight.w900,
         ),
       ),
+    );
+  }
+}
+
+class _FooterBrand extends StatelessWidget {
+  const _FooterBrand();
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Text(
+          AppText.t('appTitle'),
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            color: Colors.white.withValues(alpha: 0.24),
+            fontSize: 11,
+            fontWeight: FontWeight.w900,
+            letterSpacing: 3.2,
+          ),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          'RIDE • CONNECT • EVOLVE',
+          textAlign: TextAlign.center,
+          style: TextStyle(
+            color: MunjaColors.mint.withValues(alpha: 0.34),
+            fontSize: 8,
+            fontWeight: FontWeight.w900,
+            letterSpacing: 1.8,
+          ),
+        ),
+      ],
     );
   }
 }

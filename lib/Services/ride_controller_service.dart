@@ -9,8 +9,10 @@ import 'package:wakelock_plus/wakelock_plus.dart';
 
 import '../models/live_ride_state.dart';
 import '../models/trip.dart';
-import 'live_ride_bus.dart';
+import '../Services/live_ride_bus.dart';
 import 'storage_service.dart';
+import 'crystal_reward_service.dart';
+import 'challenge_service.dart';
 
 class RideControllerService {
   RideControllerService._();
@@ -35,13 +37,44 @@ class RideControllerService {
   double _speedTotal = 0;
   int _speedSamples = 0;
 
-  Future<void> initialize() async {
-    await LiveRideBus.instance.initialize();
-    await _restoreRideState();
+  Future<void>? _initializeFuture;
+  bool _initialized = false;
+
+  Future<void> initialize() {
+    if (_initialized) {
+      return Future<void>.value();
+    }
+
+    final inFlight = _initializeFuture;
+    if (inFlight != null) {
+      return inFlight;
+    }
+
+    final future = _initialize();
+    _initializeFuture = future;
+    return future;
+  }
+
+  Future<void> _initialize() async {
+    try {
+      await LiveRideBus.instance.initialize();
+      await _restoreRideState();
+      _initialized = true;
+    } finally {
+      _initializeFuture = null;
+    }
   }
 
   Future<void> startRide() async {
-    if (isRideActive.value) return;
+    final trackingAlreadyRunning =
+        isRideActive.value &&
+        _positionSub != null &&
+        (_durationTimer?.isActive ?? false);
+
+    if (trackingAlreadyRunning) {
+      debugPrint('Ride start ignored: tracking is already running');
+      return;
+    }
 
     final permission = await _ensurePermission();
     if (!permission) {
@@ -70,7 +103,11 @@ class RideControllerService {
     _publishState();
     await _saveRideState();
 
-    debugPrint('Ride started');
+    debugPrint(
+      'Ride started: '
+      'bus=${LiveRideBus.instance.debugInstanceId} '
+      'active=${LiveRideBus.instance.state.value.isActive}',
+    );
   }
 
   Future<Trip?> stopRide() async {
@@ -93,7 +130,12 @@ class RideControllerService {
     _publishState(isActiveOverride: false, speedOverride: 0);
 
     if (completedTrip != null) {
-      await _saveCompletedTrip(completedTrip);
+      final saved = await _saveCompletedTrip(completedTrip);
+
+      if (saved) {
+        await _syncActiveChallengeProgress(completedTrip);
+        await _grantCompletedRideRewards(completedTrip);
+      }
     }
 
     await _saveRideHistory();
@@ -209,7 +251,7 @@ class RideControllerService {
     );
   }
 
-  Future<void> _saveCompletedTrip(Trip trip) async {
+  Future<bool> _saveCompletedTrip(Trip trip) async {
     final trips = await StorageService.loadTrips();
 
     final duplicate = trips.any(
@@ -218,10 +260,144 @@ class RideControllerService {
           (t.distanceM - trip.distanceM).abs() < 1,
     );
 
-    if (!duplicate) {
-      trips.insert(0, trip);
-      await StorageService.saveTrips(trips);
+    if (duplicate) {
+      debugPrint(
+        'RIDE CONTROLLER SAVE: duplicate skipped '
+        'start=${trip.startedAtMs} distance=${trip.distanceM.toStringAsFixed(1)}m',
+      );
+      return false;
     }
+
+    trips.insert(0, trip);
+    await StorageService.saveTrips(trips);
+
+    debugPrint(
+      'RIDE CONTROLLER SAVE: completed trip saved '
+      'start=${trip.startedAtMs} end=${trip.endedAtMs} '
+      'distance=${trip.distanceM.toStringAsFixed(1)}m',
+    );
+
+    return true;
+  }
+
+  Future<void> _syncActiveChallengeProgress(Trip trip) async {
+    final completedDistanceKm = trip.distanceM / 1000;
+
+    if (completedDistanceKm <= 0) {
+      debugPrint(
+        'CHALLENGE PROGRESS: skipped because completed ride distance is 0 km.',
+      );
+      return;
+    }
+
+    try {
+      final activeChallenges =
+          await ChallengeService.instance.getActiveChallenges();
+
+      if (activeChallenges.isEmpty) {
+        debugPrint(
+          'CHALLENGE PROGRESS: no active challenges for current user.',
+        );
+        return;
+      }
+
+      debugPrint(
+        'CHALLENGE PROGRESS: syncing '
+        '${completedDistanceKm.toStringAsFixed(3)} km '
+        'to ${activeChallenges.length} active challenge(s).',
+      );
+
+      for (final challenge in activeChallenges) {
+        try {
+          final progressBefore = ChallengeService.instance.currentUid == null
+              ? 0.0
+              : challenge.progressFor(
+                  ChallengeService.instance.currentUid!,
+                );
+
+          await ChallengeService.instance.addDistanceProgress(
+            challengeId: challenge.id,
+            distanceKm: completedDistanceKm,
+          );
+
+          debugPrint(
+            'CHALLENGE PROGRESS UPDATED: '
+            'challenge=${challenge.id} '
+            'distanceAdded=${completedDistanceKm.toStringAsFixed(3)}km '
+            'progressBefore=${progressBefore.toStringAsFixed(3)}km '
+            'target=${challenge.targetDistanceKm.toStringAsFixed(1)}km',
+          );
+        } catch (error, stackTrace) {
+          // One broken/expired challenge must not block other active
+          // challenges, Crystal rewards, or the already-saved ride.
+          debugPrint(
+            'CHALLENGE PROGRESS UPDATE ERROR: '
+            'challenge=${challenge.id} -> $error',
+          );
+          debugPrint('$stackTrace');
+        }
+      }
+    } catch (error, stackTrace) {
+      // The Trip has already been saved locally at this point.
+      // Challenge sync is a side effect and must never make stopRide fail.
+      debugPrint('CHALLENGE PROGRESS SYNC ERROR: $error');
+      debugPrint('$stackTrace');
+    }
+  }
+
+  Future<void> _grantCompletedRideRewards(Trip trip) async {
+    final uid = StorageService.currentUserId?.trim();
+
+    if (uid == null || uid.isEmpty) {
+      debugPrint(
+        'CRYSTAL REWARD: skipped because no Firebase user is signed in.',
+      );
+      return;
+    }
+
+    final rideId = _rewardRideId(trip);
+
+    try {
+      final rideReward =
+          await CrystalRewardService.instance.grantRideCompletedReward(
+        uid: uid,
+        rideId: rideId,
+        amount: 2,
+        distanceKm: trip.distanceM / 1000,
+      );
+
+      debugPrint(
+        'CRYSTAL REWARD RIDE: '
+        'status=${rideReward.status} '
+        'ride=$rideId '
+        'amount=${rideReward.amount} '
+        'balance=${rideReward.newBalance}',
+      );
+
+      final firstRideReward =
+          await CrystalRewardService.instance.grantFirstRideReward(
+        uid: uid,
+        rideId: rideId,
+        amount: 20,
+      );
+
+      debugPrint(
+        'CRYSTAL REWARD FIRST RIDE: '
+        'status=${firstRideReward.status} '
+        'ride=$rideId '
+        'amount=${firstRideReward.amount} '
+        'balance=${firstRideReward.newBalance}',
+      );
+    } catch (error, stackTrace) {
+      // The ride has already been saved locally at this point.
+      // Reward failure must never make stopRide fail or lose the completed ride.
+      debugPrint('CRYSTAL REWARD AFTER RIDE ERROR: $error');
+      debugPrint('$stackTrace');
+    }
+  }
+
+  String _rewardRideId(Trip trip) {
+    return '${trip.startedAtMs}_${trip.endedAtMs}';
   }
 
   void _publishState({
@@ -275,68 +451,49 @@ class RideControllerService {
   Future<void> _restoreRideState() async {
     final prefs = await SharedPreferences.getInstance();
 
-    final active = prefs.getBool('ride_active') ?? false;
+    final hadPersistedActiveRide =
+        prefs.getBool('ride_active') ?? false;
+    final persistedDistance =
+        prefs.getDouble('ride_distance') ?? 0.0;
+    final persistedPath =
+        prefs.getStringList('ride_path') ?? const <String>[];
 
-    distanceKm.value = prefs.getDouble('ride_distance') ?? 0;
-    averageSpeedKmh.value = prefs.getDouble('ride_avg_speed') ?? 0;
-    maxSpeedKmh.value = prefs.getDouble('ride_max_speed') ?? 0;
-
-    _speedTotal = prefs.getDouble('ride_speed_total') ?? 0;
-    _speedSamples = prefs.getInt('ride_speed_samples') ?? 0;
-
-    rideDuration.value = Duration(seconds: prefs.getInt('ride_duration') ?? 0);
-
-    final startString = prefs.getString('ride_start');
-    if (startString != null) {
-      _rideStart = DateTime.tryParse(startString);
-    }
-
-    final encodedPath = prefs.getStringList('ride_path') ?? [];
-
-    ridePath.value = encodedPath
-        .map((raw) {
-          final parts = raw.split(',');
-          if (parts.length != 2) return null;
-
-          final lat = double.tryParse(parts[0]);
-          final lng = double.tryParse(parts[1]);
-
-          if (lat == null || lng == null) return null;
-
-          return LatLng(lat, lng);
-        })
-        .whereType<LatLng>()
-        .toList();
-
-    _totalMeters = distanceKm.value * 1000;
-
-    if (ridePath.value.isNotEmpty) {
-      final last = ridePath.value.last;
-
-      _lastPosition = Position(
-        latitude: last.latitude,
-        longitude: last.longitude,
-        timestamp: DateTime.now(),
-        accuracy: 0,
-        altitude: 0,
-        altitudeAccuracy: 0,
-        heading: 0,
-        headingAccuracy: 0,
-        speed: 0,
-        speedAccuracy: 0,
-        isMocked: false,
+    if (hadPersistedActiveRide ||
+        persistedDistance > 0 ||
+        persistedPath.isNotEmpty) {
+      debugPrint(
+        'RIDE CONTROLLER STARTUP: stale persisted ride found '
+        'active=$hadPersistedActiveRide '
+        'distance=${persistedDistance.toStringAsFixed(3)} '
+        'path=${persistedPath.length}. '
+        'Discarding it instead of auto-resuming.',
       );
     }
 
-    isRideActive.value = active;
+    // IMPORTANT:
+    // A new app process must not automatically resurrect a previous ride.
+    //
+    // Previously this service restored ride_active=true, published that state
+    // back into LiveRideBus and then called startRide(). That reactivated Home
+    // navigation even after LiveRideBus itself had already sanitized its own
+    // persisted state.
+    //
+    // For now Munja uses an explicit-session rule:
+    //   - app startup always begins with no active ride;
+    //   - only an explicit user start may activate GPS tracking;
+    //   - stale persisted ride snapshots are cleared on startup.
+    //
+    // Proper crash/interruption recovery can later be implemented as an
+    // explicit "Resume ride?" flow instead of silently restarting a ride.
+    await _clearLiveRide();
 
-    _publishState();
+    isRideActive.value = false;
 
-    if (active) {
-      await startRide();
-    }
-
-    debugPrint('Ride state restored');
+    debugPrint(
+      'Ride state startup sanitized: '
+      'active=${isRideActive.value} '
+      'bus=${LiveRideBus.instance.debugInstanceId}',
+    );
   }
 
   Future<void> _saveRideHistory() async {
@@ -360,6 +517,14 @@ class RideControllerService {
 
   Future<void> _clearLiveRide() async {
     final prefs = await SharedPreferences.getInstance();
+
+    isRideActive.value = false;
+
+    await _positionSub?.cancel();
+    _positionSub = null;
+
+    _durationTimer?.cancel();
+    _durationTimer = null;
 
     await prefs.remove('ride_active');
     await prefs.remove('ride_distance');

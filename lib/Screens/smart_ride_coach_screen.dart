@@ -5,6 +5,8 @@ import '../core/theme/munja_colors.dart';
 import '../models/ride_coach_recommendation.dart';
 import '../models/trip.dart';
 import '../services/storage_service.dart';
+import '../Services/munja_pro_service.dart';
+import 'munja_pro_screen.dart';
 import '../widgets/munja_card.dart';
 import '../widgets/section_title.dart';
 
@@ -28,6 +30,8 @@ class _SmartRideCoachScreenState extends State<SmartRideCoachScreen> {
   }
 
   Future<void> _loadCoach() async {
+    await MunjaProService.instance.initialize();
+
     final loadedTrips = await StorageService.loadTrips();
 
     if (!mounted) return;
@@ -37,6 +41,27 @@ class _SmartRideCoachScreenState extends State<SmartRideCoachScreen> {
       recommendation = RideCoachRecommendation.fromTrips(loadedTrips);
       loading = false;
     });
+  }
+
+  bool get _isProCoach =>
+      MunjaProService.instance.hasFeature(
+        MunjaProFeature.aiRideCoach,
+      );
+
+  Future<void> _openMunjaPro() async {
+    await Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (_) => const MunjaProScreen(),
+      ),
+    );
+
+    if (!mounted) return;
+
+    await MunjaProService.instance.refresh();
+
+    if (!mounted) return;
+
+    setState(() {});
   }
 
   String _lastRideText() {
@@ -86,6 +111,11 @@ class _SmartRideCoachScreenState extends State<SmartRideCoachScreen> {
   }
 
   Future<void> _activateRecommendation() async {
+    if (!_isProCoach) {
+      await _openMunjaPro();
+      return;
+    }
+
     await _loadCoach();
 
     if (!mounted) return;
@@ -116,10 +146,15 @@ class _SmartRideCoachScreenState extends State<SmartRideCoachScreen> {
     final totalKm = _totalKm();
     final totalDuration = _totalDuration();
 
-    return Scaffold(
-      backgroundColor: MunjaColors.bg,
-      body: SafeArea(
-        child: RefreshIndicator(
+    return ValueListenableBuilder<MunjaProState>(
+      valueListenable: MunjaProService.instance.state,
+      builder: (context, proState, _) {
+        final isPro = proState.hasActivePro && _isProCoach;
+
+        return Scaffold(
+          backgroundColor: MunjaColors.bg,
+          body: SafeArea(
+            child: RefreshIndicator(
           onRefresh: _loadCoach,
           color: MunjaColors.mint,
           backgroundColor: const Color(0xFF07110E),
@@ -127,7 +162,7 @@ class _SmartRideCoachScreenState extends State<SmartRideCoachScreen> {
             physics: const AlwaysScrollableScrollPhysics(),
             padding: const EdgeInsets.fromLTRB(18, 14, 18, 300),
             children: [
-              const _TopBar(),
+              _TopBar(isPro: isPro),
 
               const SizedBox(height: 18),
 
@@ -156,55 +191,62 @@ class _SmartRideCoachScreenState extends State<SmartRideCoachScreen> {
 
               const SizedBox(height: 22),
 
-              _CoachHeroCard(recommendation: recommendation),
+              _CoachHeroCard(
+                recommendation: recommendation,
+                isPro: isPro,
+              ),
 
               const SizedBox(height: 18),
 
-              Row(
-                children: [
-                  Expanded(
-                    child: _CoachMetric(
-                      icon: Icons.bolt_rounded,
-                      label: AppText.t('readiness'),
-                      value: '${recommendation.readinessScore}',
-                      unit: '%',
+              if (isPro) ...[
+                Row(
+                  children: [
+                    Expanded(
+                      child: _CoachMetric(
+                        icon: Icons.bolt_rounded,
+                        label: AppText.t('readiness'),
+                        value: '${recommendation.readinessScore}',
+                        unit: '%',
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: _CoachMetric(
-                      icon: Icons.monitor_heart_rounded,
-                      label: AppText.t('fatigue'),
-                      value: '${recommendation.fatigueScore}',
-                      unit: '%',
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: _CoachMetric(
+                        icon: Icons.monitor_heart_rounded,
+                        label: AppText.t('fatigue'),
+                        value: '${recommendation.fatigueScore}',
+                        unit: '%',
+                      ),
                     ),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 10),
-
-              Row(
-                children: [
-                  Expanded(
-                    child: _CoachMetric(
-                      icon: Icons.repeat_rounded,
-                      label: AppText.t('consistency'),
-                      value: '${recommendation.consistencyScore}',
-                      unit: '%',
+                  ],
+                ),
+                const SizedBox(height: 10),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _CoachMetric(
+                        icon: Icons.repeat_rounded,
+                        label: AppText.t('consistency'),
+                        value: '${recommendation.consistencyScore}',
+                        unit: '%',
+                      ),
                     ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: _CoachMetric(
-                      icon: Icons.route_rounded,
-                      label: AppText.t('thisWeek'),
-                      value: weeklyKm.toStringAsFixed(1),
-                      unit: 'km',
+                    const SizedBox(width: 10),
+                    Expanded(
+                      child: _CoachMetric(
+                        icon: Icons.route_rounded,
+                        label: AppText.t('thisWeek'),
+                        value: weeklyKm.toStringAsFixed(1),
+                        unit: 'km',
+                      ),
                     ),
-                  ),
-                ],
-              ),
+                  ],
+                ),
+              ] else ...[
+                _CoachProLockedCard(
+                  onTap: _openMunjaPro,
+                ),
+              ],
 
               const SizedBox(height: 18),
 
@@ -273,80 +315,100 @@ class _SmartRideCoachScreenState extends State<SmartRideCoachScreen> {
 
               const SizedBox(height: 18),
 
-              MunjaCard(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    SectionTitle(
-                      title: AppText.t('coachIntelligence'),
-                      subtitle: AppText.t('whatMunjaNotices'),
-                    ),
-                    const SizedBox(height: 14),
-                    _InsightRow(
-                      icon: Icons.psychology_rounded,
-                      title: AppText.t('adaptiveRecommendation'),
-                      message: AppText.t('adaptiveRecommendationBody'),
-                    ),
-                    const SizedBox(height: 12),
-                    _InsightRow(
-                      icon: Icons.shield_rounded,
-                      title: AppText.t('safetyLayer'),
-                      message: AppText.t('safetyLayerBody'),
-                    ),
-                    const SizedBox(height: 12),
-                    _InsightRow(
-                      icon: Icons.auto_graph_rounded,
-                      title: AppText.t('performanceTrend'),
-                      message: AppText.t('performanceTrendBody'),
-                    ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 18),
-
-              MunjaCard(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    SectionTitle(
-                      title: AppText.t('coachTips'),
-                      subtitle: AppText.t('smallActionsBetterRide'),
-                    ),
-                    const SizedBox(height: 14),
-                    ...recommendation.tips.map(
-                      (tip) => Padding(
-                        padding: const EdgeInsets.only(bottom: 12),
-                        child: _TipRow(tip: tip),
+              if (isPro) ...[
+                MunjaCard(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      SectionTitle(
+                        title: AppText.t('coachIntelligence'),
+                        subtitle: AppText.t('whatMunjaNotices'),
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: 14),
+                      _InsightRow(
+                        icon: Icons.psychology_rounded,
+                        title: AppText.t('adaptiveRecommendation'),
+                        message: AppText.t('adaptiveRecommendationBody'),
+                      ),
+                      const SizedBox(height: 12),
+                      _InsightRow(
+                        icon: Icons.shield_rounded,
+                        title: AppText.t('safetyLayer'),
+                        message: AppText.t('safetyLayerBody'),
+                      ),
+                      const SizedBox(height: 12),
+                      _InsightRow(
+                        icon: Icons.auto_graph_rounded,
+                        title: AppText.t('performanceTrend'),
+                        message: AppText.t('performanceTrendBody'),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
+                const SizedBox(height: 18),
+                MunjaCard(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      SectionTitle(
+                        title: AppText.t('coachTips'),
+                        subtitle: AppText.t('smallActionsBetterRide'),
+                      ),
+                      const SizedBox(height: 14),
+                      ...recommendation.tips.map(
+                        (tip) => Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: _TipRow(tip: tip),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ] else ...[
+                _CoachProPreviewCard(
+                  onTap: _openMunjaPro,
+                ),
+              ],
 
               const SizedBox(height: 20),
 
               SizedBox(
                 height: 56,
                 child: FilledButton.icon(
-                  onPressed: _activateRecommendation,
-                  icon: const Icon(Icons.navigation_rounded),
+                  onPressed: isPro
+                      ? _activateRecommendation
+                      : _openMunjaPro,
+                  icon: Icon(
+                    isPro
+                        ? Icons.navigation_rounded
+                        : Icons.lock_open_rounded,
+                  ),
                   label: Text(
-                    AppText.t('useRecommendation'),
-                    style: const TextStyle(fontWeight: FontWeight.w900),
+                    isPro
+                        ? AppText.t('useRecommendation')
+                        : 'UNLOCK AI COACH WITH MUNJA PRO',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w900,
+                    ),
                   ),
                 ),
               ),
             ],
           ),
         ),
-      ),
+          ),
+        );
+      },
     );
   }
 }
 
 class _TopBar extends StatelessWidget {
-  const _TopBar();
+  const _TopBar({
+    required this.isPro,
+  });
+
+  final bool isPro;
 
   @override
   Widget build(BuildContext context) {
@@ -364,9 +426,9 @@ class _TopBar extends StatelessWidget {
               ),
             ],
           ),
-          child: const Text(
-            'Munja AI',
-            style: TextStyle(
+          child: Text(
+            isPro ? 'Munja AI PRO' : 'Munja AI',
+            style: const TextStyle(
               color: MunjaColors.mint,
               fontSize: 12,
               fontWeight: FontWeight.w900,
@@ -396,8 +458,12 @@ class _TopBar extends StatelessWidget {
 
 class _CoachHeroCard extends StatelessWidget {
   final RideCoachRecommendation recommendation;
+  final bool isPro;
 
-  const _CoachHeroCard({required this.recommendation});
+  const _CoachHeroCard({
+    required this.recommendation,
+    required this.isPro,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -442,6 +508,20 @@ class _CoachHeroCard extends StatelessWidget {
               fontSize: 14,
               height: 1.5,
               fontWeight: FontWeight.w600,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Text(
+            isPro
+                ? 'PRO COACH · Personalized from your riding history'
+                : 'FREE PREVIEW · Basic recommendation',
+            style: TextStyle(
+              color: isPro
+                  ? MunjaColors.mint
+                  : Colors.white38,
+              fontSize: 9.5,
+              fontWeight: FontWeight.w900,
+              letterSpacing: 0.8,
             ),
           ),
           const SizedBox(height: 22),
@@ -502,6 +582,167 @@ class _MiniLabel extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _CoachProLockedCard extends StatelessWidget {
+  const _CoachProLockedCard({
+    required this.onTap,
+  });
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(28),
+        child: Ink(
+          padding: const EdgeInsets.all(17),
+          decoration: BoxDecoration(
+            color: MunjaColors.panel.withOpacity(0.9),
+            borderRadius: BorderRadius.circular(28),
+            border: Border.all(
+              color: MunjaColors.mint.withOpacity(0.18),
+            ),
+          ),
+          child: Row(
+            children: [
+              Container(
+                width: 46,
+                height: 46,
+                decoration: BoxDecoration(
+                  color: MunjaColors.mint.withOpacity(0.10),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: const Icon(
+                  Icons.psychology_alt_rounded,
+                  color: MunjaColors.mint,
+                  size: 22,
+                ),
+              ),
+              const SizedBox(width: 12),
+              const Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'AI COACH PRO',
+                      style: TextStyle(
+                        color: MunjaColors.mint,
+                        fontSize: 9,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 1.0,
+                      ),
+                    ),
+                    SizedBox(height: 4),
+                    Text(
+                      'Readiness, fatigue and consistency are personalized Pro insights.',
+                      style: TextStyle(
+                        color: Colors.white,
+                        fontSize: 12.5,
+                        height: 1.3,
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    SizedBox(height: 5),
+                    Text(
+                      'UNLOCK WITH MUNJA PRO',
+                      style: TextStyle(
+                        color: MunjaColors.mint,
+                        fontSize: 9,
+                        fontWeight: FontWeight.w900,
+                        letterSpacing: 0.8,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(width: 8),
+              const Icon(
+                Icons.chevron_right_rounded,
+                color: MunjaColors.mint,
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+class _CoachProPreviewCard extends StatelessWidget {
+  const _CoachProPreviewCard({
+    required this.onTap,
+  });
+
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return Material(
+      color: Colors.transparent,
+      child: InkWell(
+        onTap: onTap,
+        borderRadius: BorderRadius.circular(28),
+        child: Ink(
+          padding: const EdgeInsets.all(18),
+          decoration: BoxDecoration(
+            color: MunjaColors.panel.withOpacity(0.9),
+            borderRadius: BorderRadius.circular(28),
+            border: Border.all(
+              color: MunjaColors.mint.withOpacity(0.16),
+            ),
+          ),
+          child: const Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    Icons.auto_awesome_rounded,
+                    color: MunjaColors.mint,
+                    size: 20,
+                  ),
+                  SizedBox(width: 8),
+                  Text(
+                    'PERSONAL COACHING',
+                    style: TextStyle(
+                      color: MunjaColors.mint,
+                      fontSize: 9.5,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: 1.0,
+                    ),
+                  ),
+                ],
+              ),
+              SizedBox(height: 12),
+              Text(
+                'Munja Pro learns from your ride history to unlock adaptive recommendations, performance trends and deeper coach tips.',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 13,
+                  height: 1.45,
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              SizedBox(height: 10),
+              Text(
+                'TAP TO OPEN MUNJA PRO',
+                style: TextStyle(
+                  color: MunjaColors.mint,
+                  fontSize: 9,
+                  fontWeight: FontWeight.w900,
+                  letterSpacing: 0.8,
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
     );
   }
 }
