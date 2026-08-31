@@ -1,6 +1,35 @@
 const Map<String, String> bs = {
   'appTitle': 'Munja',
 
+  // Login / authentication
+  'authGenericError': 'Nešto je pošlo po zlu. Pokušaj ponovo.',
+  'googleLoginFailed': 'Google prijava nije mogla biti završena.',
+  'appleLoginFailed': 'Apple prijava nije mogla biti završena.',
+  'enterEmailFirst': 'Prvo unesi svoju e-mail adresu.',
+  'resetPasswordSent': 'Poslali smo ti link za promjenu lozinke.',
+  'resetPasswordFailed': 'Promjena lozinke nije mogla biti završena.',
+  'createMunjaAccount': 'Kreiraj svoj Munja račun',
+  'welcomeBack': 'Dobrodošao nazad',
+  'createAccountSubtitle':
+      'Napravi svoj digitalni bicikl, poveži proizvode i sačuvaj vožnje na jednom mjestu.',
+  'loginSubtitle': 'Nastavi do svog bicikla, vožnji i digitalnog svijeta.',
+  'yourName': 'Tvoje ime',
+  'email': 'E-mail',
+  'emailHint': 'ime@email.com',
+  'password': 'Lozinka',
+  'passwordHint': 'Najmanje 6 znakova',
+  'forgotPassword': 'Zaboravljena lozinka?',
+  'createAccount': 'Kreiraj račun',
+  'signIn': 'Prijavi se',
+  'continueApple': 'Nastavi s Appleom',
+  'continueGoogle': 'Nastavi s Googleom',
+  'alreadyAccount': 'Već imaš račun?',
+  'noAccount': 'Nemaš račun?',
+  'or': 'ILI',
+  'digitalCyclingPlatform': 'DIGITALNA BICIKLISTIČKA PLATFORMA',
+  'rideConnectEvolve': 'VOZI • POVEŽI • NAPREDUJ',
+  'language': 'Jezik',
+
   'welcome': 'Dobrodošli',
   'welcomeToMunja': 'Dobrodošli u Munju',
   'howToUseApp': 'Kako koristiti aplikaciju',
@@ -293,27 +322,35 @@ const Map<String, String> bs = {
   'munjaCrystals': 'Munja Crystals',
   'munjaPro': 'Munja Pro',
   'proExclusive': 'Samo za Pro',
-  'crystalSkinDescription': 'Ovaj skin se može otključati pomoću Munja Crystals. Kupovina će biti povezana u sljedećem velikom koraku.',
-  'proSkinDescription': 'Ovaj skin će biti dio Munja Pro. Pretplata će biti povezana kasnije.',
+  'crystalSkinDescription':
+      'Ovaj skin se može otključati pomoću Munja Crystals. Kupovina će biti povezana u sljedećem velikom koraku.',
+  'proSkinDescription':
+      'Ovaj skin će biti dio Munja Pro. Pretplata će biti povezana kasnije.',
   'challengeReward': 'Nagrada za challenge',
-  'rewardSkinDescription': 'Ovaj skin se otključava kroz challenge ili achievement.',
+  'rewardSkinDescription':
+      'Ovaj skin se otključava kroz challenge ili achievement.',
   'gotIt': 'Razumijem',
   'comingNext': 'Dolazi sljedeće',
-  'freeFrameColorActive': 'Besplatna boja okvira je aktivna. Premium skin je isključen.',
-  'frameColorSyncFailed': 'Boju okvira nije moguće sinhronizovati. Pokušaj ponovo.',
+  'freeFrameColorActive':
+      'Besplatna boja okvira je aktivna. Premium skin je isključen.',
+  'frameColorSyncFailed':
+      'Boju okvira nije moguće sinhronizovati. Pokušaj ponovo.',
   'frameChangeFailed': 'Okvir nije moguće promijeniti. Pokušaj ponovo.',
   'livePremiumPreview': 'Premium pregled uživo',
   'materialPending': 'materijal se priprema',
   'activeAndSynced': 'Aktivno i sinhronizovano',
   'skinActivationFailed': 'Skin nije moguće aktivirati. Pokušaj ponovo.',
-  'skinsSectionSubtitle': 'Premium materijali se prikazuju direktno na tvom 3D biciklu · besplatne boje su pod Okvir.',
+  'skinsSectionSubtitle':
+      'Premium materijali se prikazuju direktno na tvom 3D biciklu · besplatne boje su pod Okvir.',
   'livePremiumPreviews': 'Premium pregledi uživo',
-  'skinStoreComingSoonMessage': 'Skin Store katalog je spreman. Kupovina i otključavanje biće povezani u sljedećem koraku.',
+  'skinStoreComingSoonMessage':
+      'Skin Store katalog je spreman. Kupovina i otključavanje biće povezani u sljedećem koraku.',
   'munjaSkinStore': 'Munja Skin Store',
   'premiumProRewardSkins': 'Premium, Pro i reward skinovi',
   'equipped': 'Aktivirano',
   'proOnly': 'Samo Pro',
-  'frameSectionSubtitle': 'Odaberi geometriju i završnu obradu bez napuštanja showrooma.',
+  'frameSectionSubtitle':
+      'Odaberi geometriju i završnu obradu bez napuštanja showrooma.',
   'frameFinish': 'Završna obrada',
   'comingSoon': 'Uskoro',
 
@@ -326,20 +363,26 @@ const Map<String, String> bs = {
   'rideSetupCreateRoundTripButton': 'Napravi kružnu vožnju',
   'rideSetupShowSuggestions': 'Prikaži prijedloge ruta',
   'rideSetupUseSelectedSuggestion': 'Koristi odabrani prijedlog',
-  'rideSetupAddressSuggestionsUnavailable': 'Prijedlozi adresa trenutno nisu dostupni.',
-  'rideSetupGooglePlacesLocalFallback': 'Google Places nije dostupan – prikazujem lokalne prijedloge.',
+  'rideSetupAddressSuggestionsUnavailable':
+      'Prijedlozi adresa trenutno nisu dostupni.',
+  'rideSetupGooglePlacesLocalFallback':
+      'Google Places nije dostupan – prikazujem lokalne prijedloge.',
   'rideSetupShowingLocalSuggestions': 'Prikazujem lokalne prijedloge.',
-  'rideSetupGpsUnavailable': 'Munja nije mogla pronaći tvoju GPS lokaciju. Provjeri dozvolu za lokaciju i pokušaj ponovo.',
-  'rideSetupNoGoodSuggestions': 'Munja nije pronašla odgovarajuće rute u području.',
+  'rideSetupGpsUnavailable':
+      'Munja nije mogla pronaći tvoju GPS lokaciju. Provjeri dozvolu za lokaciju i pokušaj ponovo.',
+  'rideSetupNoGoodSuggestions':
+      'Munja nije pronašla odgovarajuće rute u području.',
   'rideSetupChooseBestRoute': 'Odaberi rutu koja ti najbolje odgovara.',
   'rideSetupSuggestionsLoadFailed': 'Prijedloge ruta nije moguće učitati.',
-  'rideSetupSuggestionsLoadFailedRetry': 'Prijedloge ruta nije moguće učitati. Pokušaj ponovo.',
+  'rideSetupSuggestionsLoadFailedRetry':
+      'Prijedloge ruta nije moguće učitati. Pokušaj ponovo.',
   'rideSetupChooseSuggestionFirst': 'Prvo odaberi prijedlog rute.',
   'rideSetupEnterAndChooseDestination': 'Unesi i odaberi odredište.',
   'rideSetupChooseAddressFromSuggestions': 'Odaberi adresu iz prijedloga.',
   'rideSetupTitle': 'Vožnja',
   'rideSetupHowRide': 'Kako želiš voziti?',
-  'rideSetupChooseOneOption': 'Odaberi jednu opciju. Munja prikazuje samo izbore koji su ti potrebni.',
+  'rideSetupChooseOneOption':
+      'Odaberi jednu opciju. Munja prikazuje samo izbore koji su ti potrebni.',
   'rideSetupHowFar': 'Koliko daleko?',
   'rideSetupChooseApproxDistance': 'Odaberi približnu dužinu vožnje.',
   'rideSetupHowRouteFeel': 'Kakav osjećaj želiš na ruti?',
@@ -349,7 +392,8 @@ const Map<String, String> bs = {
   'rideSetupProPlannerActive': 'MUNJA PRO · Napredni planer ruta aktivan',
   'rideSetupProRequired': 'Ova vrsta rute zahtijeva MUNJA PRO',
   'rideSetupIntroTitle': 'Kako želiš voziti danas?',
-  'rideSetupIntroSubtitle': 'Odaberi vrstu vožnje. Ostale opcije se prikazuju tek kada su potrebne.',
+  'rideSetupIntroSubtitle':
+      'Odaberi vrstu vožnje. Ostale opcije se prikazuju tek kada su potrebne.',
   'rideSetupDestination': 'Odredište',
   'rideSetupDestinationSubtitle': 'Odaberi gdje želiš ići',
   'rideSetupRoundTrip': 'Kružna vožnja',
@@ -362,7 +406,8 @@ const Map<String, String> bs = {
   'rideSetupWhereTo': 'Gdje želiš ići?',
   'rideSetupSearchAddressOrDestination': 'Pretraži adresu ili odredište.',
   'rideSetupFreeHeroTitle': 'Bez rute. Samo vozi.',
-  'rideSetupFreeHeroBody': 'Munja i dalje bilježi tvoju vožnju, udaljenost i vrijeme.',
+  'rideSetupFreeHeroBody':
+      'Munja i dalje bilježi tvoju vožnju, udaljenost i vrijeme.',
   'rideSetupChooseRideTypeContinue': 'Odaberi vrstu vožnje za nastavak',
   'rideSetupWheelReadyFree': 'Točak je spreman za slobodnu vožnju',
   'rideSetupWheelReadyPlanning': 'Točak ostaje spreman dok planiraš',
@@ -374,14 +419,16 @@ const Map<String, String> bs = {
   'rideSetupRequiresPro': 'Zahtijeva Munja Pro',
   'rideSetupAddressHint': 'Unesi adresu ili odredište',
   'rideSetupClear': 'Obriši',
-  'rideSetupLocalTestMode': 'Test način: lokalni prijedlozi adresa. Dodaj GOOGLE_MAPS_API_KEY za Google prijedloge.',
+  'rideSetupLocalTestMode':
+      'Test način: lokalni prijedlozi adresa. Dodaj GOOGLE_MAPS_API_KEY za Google prijedloge.',
   'rideSetupNoAddresses': 'Nema pronađenih adresa.',
   'rideSetupNoLocalAddresses': 'Nema pronađenih lokalnih test adresa.',
   'rideSetupChooseDestination': 'Odaberi odredište',
   'rideSetupEnterAddressRoute': 'Unesi adresu kako bi pronašao rutu.',
   'rideSetupAutomaticRoundTrip': 'Automatska kružna vožnja',
   'rideSetupRoundTripInfo': 'Munja čuva odabranu udaljenost i vrstu rute.',
-  'rideSetupSuggestionsInfo': 'Munja pronalazi više biciklističkih ruta oko tebe i usklađuje ih sa željenom udaljenošću.',
+  'rideSetupSuggestionsInfo':
+      'Munja pronalazi više biciklističkih ruta oko tebe i usklađuje ih sa željenom udaljenošću.',
   'rideSetupFreeRideInfo': 'Pokreni praćenje vožnje bez fiksnog odredišta.',
   'rideSetupAround': 'Oko',
   'rideSetupFindNewSuggestions': 'Pronađi nove prijedloge',
@@ -398,8 +445,10 @@ const Map<String, String> bs = {
 
   // Ride Summary + Auto Ride
   'rideSummaryAiAnalysis': 'AI analiza vožnje',
-  'rideSummaryAiProSubtitle': 'Personalizovana Pro analiza na osnovu ove vožnje i tvoje historije.',
-  'rideSummaryAiFreeSubtitle': 'Jednostavan pregled vožnje. MUNJA PRO dodaje ličnu historiju i dublje preporuke.',
+  'rideSummaryAiProSubtitle':
+      'Personalizovana Pro analiza na osnovu ove vožnje i tvoje historije.',
+  'rideSummaryAiFreeSubtitle':
+      'Jednostavan pregled vožnje. MUNJA PRO dodaje ličnu historiju i dublje preporuke.',
   'rideSummaryAnalyzing': 'Analiziram tvoju vožnju...',
   'rideSummaryAnalysisUnavailable': 'Analiza vožnje trenutno nije dostupna.',
   'rideSummaryProAnalysis': 'MUNJA PRO ANALIZA',
@@ -439,16 +488,22 @@ const Map<String, String> bs = {
   'autoRideNavigationActive': 'Navigacija aktivna',
   'autoRideSpeed': 'BRZINA',
   'autoRideRide': 'VOŽNJA',
-  'autoRideArrivalBody': 'Odredište je dostignuto. Vožnja će se završiti i automatski sačuvati.',
-  'autoRideConfirmArrivalBody': 'Ostani blizu odredišta dok Munja potvrđuje dolazak.',
-  'autoRideReroutingBody': 'Munja izračunava novu biciklističku rutu od tvoje trenutne pozicije.',
+  'autoRideArrivalBody':
+      'Odredište je dostignuto. Vožnja će se završiti i automatski sačuvati.',
+  'autoRideConfirmArrivalBody':
+      'Ostani blizu odredišta dok Munja potvrđuje dolazak.',
+  'autoRideReroutingBody':
+      'Munja izračunava novu biciklističku rutu od tvoje trenutne pozicije.',
   'autoRideCheckingDeviationBody': 'Van si rute. Munja potvrđuje odstupanje.',
   'autoRideRerouteSuccessBody': 'Nova ruta, ETA i navigacija su ažurirani.',
-  'autoRideRerouteFailedBody': 'Provjeri internet vezu. Munja će pokušati ponovo pri sljedećem trajnom odstupanju.',
+  'autoRideRerouteFailedBody':
+      'Provjeri internet vezu. Munja će pokušati ponovo pri sljedećem trajnom odstupanju.',
   'autoRideOffRouteBody': 'Skrenuo si s rute.',
-  'autoRideRouteCalculatedBody': 'Biciklistička ruta je izračunata i prikazana na karti.',
+  'autoRideRouteCalculatedBody':
+      'Biciklistička ruta je izračunata i prikazana na karti.',
   'autoRideRouteProgress': 'Napredak rute',
-  'autoRideDestinationNotSaved': 'Odredište je odabrano, ali biciklistička ruta još nije sačuvana.',
+  'autoRideDestinationNotSaved':
+      'Odredište je odabrano, ali biciklistička ruta još nije sačuvana.',
   'altitudeShort': 'VISINA',
   'showFullRoute': 'Prikaži cijelu rutu',
   'routeStartedFromWheel': 'Ruta je pokrenuta s točka',
@@ -457,7 +512,8 @@ const Map<String, String> bs = {
   // Home + Profile
   'homeBikeLoadFailed': 'Bicikl nije moguće učitati.',
   'homeNoActiveBike': 'Nema aktivnog bicikla',
-  'homeNoActiveBikeBody': 'Kreiraj ili odaberi bicikl u Opremi kako bi aktivirao svoj Digital Twin.',
+  'homeNoActiveBikeBody':
+      'Kreiraj ili odaberi bicikl u Opremi kako bi aktivirao svoj Digital Twin.',
   'homeOpenGear': 'Otvori Opremu',
   'homeOpeningGear': 'OTVARAM OPREMU',
   'homeActiveChallenge': 'AKTIVNI IZAZOV',
@@ -482,17 +538,22 @@ const Map<String, String> bs = {
   'profileChallenges': 'Izazovi',
   'profileChallengeHub': 'Centar izazova',
   'profileFindRiders': 'Pronađi vozače',
-  'profileFindRidersBody': 'Pronađi Munja vozače, izgradi svoju ekipu i izazivajte jedni druge.',
-  'profileFindAnotherRider': 'Pronađi drugog Munja vozača i izgradi svoju ekipu.',
+  'profileFindRidersBody':
+      'Pronađi Munja vozače, izgradi svoju ekipu i izazivajte jedni druge.',
+  'profileFindAnotherRider':
+      'Pronađi drugog Munja vozača i izgradi svoju ekipu.',
   'profileNoFriendsYet': 'Još nema prijatelja',
   'profileViewAll': 'Prikaži sve',
   'profileViewAllFriends': 'Prikaži sve prijatelje',
   'profileNewChallenge': 'Novi izazov',
-  'profileChallengeHubBody': 'Takmiči se s prijateljima, gradi napredak i pripremi se za Munja Monthly Specials.',
-  'profileChallengeInfo': 'Počni s 1 na 1 distancom. Više vrsta izazova, Crystal nagrade i Monthly Specials su sljedeći nivo razvoja.',
+  'profileChallengeHubBody':
+      'Takmiči se s prijateljima, gradi napredak i pripremi se za Munja Monthly Specials.',
+  'profileChallengeInfo':
+      'Počni s 1 na 1 distancom. Više vrsta izazova, Crystal nagrade i Monthly Specials su sljedeći nivo razvoja.',
   'profileAchievements': 'Postignuća',
   'profileAchievementsCaps': 'POSTIGNUĆA',
-  'profileMilestonesBody': 'Prekretnice osvojene kroz tvoju stvarnu historiju vožnji.',
+  'profileMilestonesBody':
+      'Prekretnice osvojene kroz tvoju stvarnu historiju vožnji.',
   'profileFirstRide': 'Prva vožnja',
   'profileThreeDayStreak': 'Niz od 3 dana',
   'profileComingSoon': 'dolazi u sljedećem Munja koraku.',
@@ -503,34 +564,46 @@ const Map<String, String> bs = {
   'profileTotalXp': 'UKUPNO XP',
 
   // MUNJA PRO + Challenges
-  'proPurchaseFailed': 'Kupovinu MUNJA PRO nije moguće pokrenuti. Pokušaj ponovo.',
+  'proPurchaseFailed':
+      'Kupovinu MUNJA PRO nije moguće pokrenuti. Pokušaj ponovo.',
   'proRestoreFailed': 'MUNJA PRO nije moguće vratiti. Pokušaj ponovo.',
   'proExperience': 'TVOJE MUNJA ISKUSTVO',
   'proAdvancedAnalytics': 'Napredna analitika',
-  'proAdvancedAnalyticsDesc': 'Dublji trendovi performansi, uvidi u vožnje i dugoročni napredak.',
+  'proAdvancedAnalyticsDesc':
+      'Dublji trendovi performansi, uvidi u vožnje i dugoročni napredak.',
   'proAiRideAnalysis': 'AI analiza vožnje',
-  'proAiRideAnalysisDesc': 'Pretvori podatke vožnje u korisne povratne informacije i lične uvide.',
+  'proAiRideAnalysisDesc':
+      'Pretvori podatke vožnje u korisne povratne informacije i lične uvide.',
   'proAiCoach': 'AI trener vožnje',
-  'proAiCoachDesc': 'Lični coaching na osnovu tvoje vožnje, ciljeva i napretka.',
+  'proAiCoachDesc':
+      'Lični coaching na osnovu tvoje vožnje, ciljeva i napretka.',
   'proRoutePlanner': 'Napredni planer ruta',
-  'proRoutePlannerDesc': 'Pametniji alati za rute prilagođeni načinu na koji voziš.',
+  'proRoutePlannerDesc':
+      'Pametniji alati za rute prilagođeni načinu na koji voziš.',
   'proChallenges': 'Pro izazovi',
-  'proChallengesDesc': 'Posebni izazovi, dublji ciljevi i odabrani mjesečni događaji.',
+  'proChallengesDesc':
+      'Posebni izazovi, dublji ciljevi i odabrani mjesečni događaji.',
   'proSkinsFrames': 'Ekskluzivni skinovi i okviri',
-  'proSkinsFramesDesc': 'Pristupi odabranim Pro kozmetičkim opcijama dok Crystals ostaju zasebna ekonomija.',
-  'proLinkedActive': 'MUNJA PRO je povezan s tvojim računom i automatski se ažurira.',
-  'proLinkedSecure': 'Tvoj MUNJA PRO status je sigurno povezan s Munja računom.',
+  'proSkinsFramesDesc':
+      'Pristupi odabranim Pro kozmetičkim opcijama dok Crystals ostaju zasebna ekonomija.',
+  'proLinkedActive':
+      'MUNJA PRO je povezan s tvojim računom i automatski se ažurira.',
+  'proLinkedSecure':
+      'Tvoj MUNJA PRO status je sigurno povezan s Munja računom.',
   'proYouArePro': 'TI IMAŠ MUNJA PRO',
   'proUnlockMore': 'OTKLJUČAJ VIŠE MUNJE',
   'proFeaturesActive': 'Tvoje Pro funkcije su aktivne na ovom računu.',
-  'proMoreInsight': 'Više uvida. Više inteligencije. Više načina da izazoveš sebe.',
+  'proMoreInsight':
+      'Više uvida. Više inteligencije. Više načina da izazoveš sebe.',
   'monthlyCompletedClaimed': 'ZAVRŠENO · NAGRADA PREUZETA',
   'monthlyCompletedReady': 'ZAVRŠENO · NAGRADA SPREMNA',
   'expired': 'ISTEKLO',
   'monthlyLoading': 'Učitavam Monthly Special...',
   'monthlySpecial': 'MONTHLY SPECIAL',
-  'monthlyStartsWithPro': 'Tvoj 30-dnevni Monthly Special počinje automatski uz MUNJA PRO.',
-  'monthlyActivatePro': 'Aktiviraj MUNJA PRO da automatski pokreneš ovaj 30-dnevni Monthly Special.',
+  'monthlyStartsWithPro':
+      'Tvoj 30-dnevni Monthly Special počinje automatski uz MUNJA PRO.',
+  'monthlyActivatePro':
+      'Aktiviraj MUNJA PRO da automatski pokreneš ovaj 30-dnevni Monthly Special.',
   'monthlyActivating': 'Aktiviram tvoj Monthly Special...',
   'refresh': 'OSVJEŽI',
   'claiming': 'PREUZIMAM...',
@@ -540,8 +613,10 @@ const Map<String, String> bs = {
   'monthlySubscription': 'Mjesečna pretplata',
   'premiumExperience': 'Premium Munja iskustvo',
   'freeCaps': 'BESPLATNO',
-  'membershipSync': 'Status članstva se automatski sinhronizuje s tvojim Munja računom.',
-  'autoRenewing': 'Mjesečna pretplata s automatskim obnavljanjem. Otkaži bilo kada putem Google Play.',
+  'membershipSync':
+      'Status članstva se automatski sinhronizuje s tvojim Munja računom.',
+  'autoRenewing':
+      'Mjesečna pretplata s automatskim obnavljanjem. Otkaži bilo kada putem Google Play.',
   'connectingStore': 'POVEZUJEM S GOOGLE PLAY...',
   'getPro': 'UZMI MUNJA PRO',
   'restoring': 'VRAĆAM...',
@@ -574,15 +649,18 @@ const Map<String, String> bs = {
   'rideTime': 'Vrijeme vožnje',
   'rideTimeDesc': 'Takmiči se u ukupnom aktivnom vremenu vožnje.',
   'streakDesc': 'Izgradi najduži niz redovnih vožnji.',
-  'friendsLoadFailed': 'Tvoje Munja prijatelje nije moguće učitati. Pokušaj ponovo.',
+  'friendsLoadFailed':
+      'Tvoje Munja prijatelje nije moguće učitati. Pokušaj ponovo.',
   'newChallenge': 'Novi izazov',
   'challengeType': 'VRSTA IZAZOVA',
   'chooseRider': 'ODABERI VOZAČA',
   'sending': 'Šaljem...',
   'sendChallenge': 'Pošalji izazov',
-  'challengeRewardsBalanced': 'Nagrade izazova su balansirane kako bi Crystals ostali vrijedni.',
+  'challengeRewardsBalanced':
+      'Nagrade izazova su balansirane kako bi Crystals ostali vrijedni.',
   'challengeARider': 'Izazovi vozača',
-  'challengeIntro': 'Takmiči se, gradi XP i radi prema Munja Crystal nagradama.',
+  'challengeIntro':
+      'Takmiči se, gradi XP i radi prema Munja Crystal nagradama.',
   'monthlyLoadFailed': 'Monthly Special nije moguće učitati.',
   'rewardAlreadyClaimed': 'Ova Monthly Special nagrada je već preuzeta.',
   'completeBeforeClaim': 'Završi Monthly Special prije preuzimanja nagrade.',
@@ -596,8 +674,10 @@ const Map<String, String> bs = {
   'proCaps': 'PRO',
   'claimed': 'PREUZETO',
   'claim': 'PREUZMI',
-  'monthlyTimerInfo': 'Tvoj 30-dnevni timer počeo je kada si aktivirao ovaj Special. Promjena kalendarskog mjeseca ga ne skraćuje.',
-  'monthlyActivateInfo': 'Aktiviraj ovaj Special kada budeš spreman. Tvoj lični 30-dnevni timer počinje tek kada pritisneš START.',
+  'monthlyTimerInfo':
+      'Tvoj 30-dnevni timer počeo je kada si aktivirao ovaj Special. Promjena kalendarskog mjeseca ga ne skraćuje.',
+  'monthlyActivateInfo':
+      'Aktiviraj ovaj Special kada budeš spreman. Tvoj lični 30-dnevni timer počinje tek kada pritisneš START.',
   'unlockPro': 'OTKLJUČAJ MUNJA PRO',
   'rewardClaimedCaps': 'NAGRADA PREUZETA',
   'specialActive': 'SPECIAL AKTIVAN',
@@ -611,8 +691,10 @@ const Map<String, String> bs = {
   'couldNotCreate': 'Nije moguće kreirati izazov',
   'tryAgain': 'Pokušaj ponovo',
   'noFriendsChallenge': 'Nema prijatelja za izazov',
-  'addFriendFirst': 'Prvo dodaj Munja prijatelja. Zatim možeš pokrenuti 1 na 1 izazov.',
-  'requestsLoadFailed': 'Zahtjeve za izazove nije moguće učitati. Pokušaj ponovo.',
+  'addFriendFirst':
+      'Prvo dodaj Munja prijatelja. Zatim možeš pokrenuti 1 na 1 izazov.',
+  'requestsLoadFailed':
+      'Zahtjeve za izazove nije moguće učitati. Pokušaj ponovo.',
   'acceptFailed': 'Izazov nije moguće prihvatiti. Pokušaj ponovo.',
   'declineFailed': 'Izazov nije moguće odbiti. Pokušaj ponovo.',
   'declineChallengeQ': 'Odbiti izazov?',
@@ -641,7 +723,8 @@ const Map<String, String> bs = {
   'activeBike': 'Aktivni bicikl',
   'addAnotherProduct': 'Dodaj još jedan proizvod',
   'addBike': 'Dodaj bicikl',
-  'addFirstBikeSync': 'Dodaj svoj prvi bicikl da pokreneš sinhronizaciju Digital Twina.',
+  'addFirstBikeSync':
+      'Dodaj svoj prvi bicikl da pokreneš sinhronizaciju Digital Twina.',
   'addImageCameraGallery': 'Dodaj sliku iz kamere ili galerije.',
   'addProduct': 'Dodaj proizvod',
   'appWorksWithoutHardware': 'Munja radi i bez hardvera.',
@@ -652,20 +735,26 @@ const Map<String, String> bs = {
   'bikeCouldNotSave': 'Bicikl nije moguće sačuvati.',
   'bikeCreated': 'Bicikl kreiran.',
   'bikeDeleted': 'Bicikl izbrisan.',
-  'bikeFirebaseSyncInfo': 'Tvoj bicikl je sinhronizovan s Firebaseom i tvojim Digital Twinom.',
+  'bikeFirebaseSyncInfo':
+      'Tvoj bicikl je sinhronizovan s Firebaseom i tvojim Digital Twinom.',
   'bikeInfo': 'Informacije o biciklu',
   'bikeName': 'Naziv bicikla',
-  'bikeSavedFileProcessFailed': 'Bicikl je sačuvan, ali odabranu datoteku nije moguće obraditi.',
+  'bikeSavedFileProcessFailed':
+      'Bicikl je sačuvan, ali odabranu datoteku nije moguće obraditi.',
   'bikeUpdated': 'Bicikl ažuriran.',
   'bikes': 'Bicikli',
   'bleUuidMissing': 'Nedostaje BLE UUID.',
-  'brakeLightAlreadyMounted': 'Munja Smart Brake Light je već montiran na ovaj bicikl.',
+  'brakeLightAlreadyMounted':
+      'Munja Smart Brake Light je već montiran na ovaj bicikl.',
   'brakeLightDashboard': 'Kontrola kočionog svjetla',
-  'brakeLightDashboardSubtitle': 'Status uživo i kontrole za tvoj Munja Smart Brake Light.',
-  'brakeLightMountedTwin': 'Munja Smart Brake Light je montiran na tvoj Digital Twin.',
+  'brakeLightDashboardSubtitle':
+      'Status uživo i kontrole za tvoj Munja Smart Brake Light.',
+  'brakeLightMountedTwin':
+      'Munja Smart Brake Light je montiran na tvoj Digital Twin.',
   'brakeMountedOnBike': 'Smart Brake Light montiran na bicikl',
   'brakeMountedReady': 'Montiran i spreman na tvom biciklu.',
-  'brakeProductSubtitle': 'Pametno zadnje svjetlo s automatskim kočionim svjetlom i Bluetoothom.',
+  'brakeProductSubtitle':
+      'Pametno zadnje svjetlo s automatskim kočionim svjetlom i Bluetoothom.',
   'brakeReady': 'Kočiono svjetlo spremno',
   'brakingNow': 'Kočenje sada',
   'brand': 'Marka',
@@ -686,7 +775,8 @@ const Map<String, String> bs = {
   'connectedDevicesSubtitle': 'Veze povezane s Digital Twinom ovog bicikla.',
   'connection': 'Veza',
   'connectionStatus': 'Status veze',
-  'connectionStatusSubtitle': 'Bluetooth, Digital Twin i firmware na jednom mjestu.',
+  'connectionStatusSubtitle':
+      'Bluetooth, Digital Twin i firmware na jednom mjestu.',
   'createBike': 'Kreiraj bicikl',
   'creating': 'Kreiram...',
   'customizeDigitalTwinCaps': 'PRILAGODI DIGITAL TWIN',
@@ -733,13 +823,15 @@ const Map<String, String> bs = {
   'mountProduct': 'Montiraj proizvod',
   'mountProductFirst': 'Prvo montiraj proizvod',
   'mounted': 'Montirano',
-  'mountedNoActiveConnections': 'Proizvodi su montirani, ali nema aktivnih veza s uređajima.',
+  'mountedNoActiveConnections':
+      'Proizvodi su montirani, ali nema aktivnih veza s uređajima.',
   'mountedOnBike': 'Montirano na biciklu',
   'mountedOnBikeSubtitle': 'Proizvodi trenutno montirani na tvom biciklu.',
   'mountedOnDigitalTwin': 'Montirano na Digital Twin',
   'mountedProducts': 'Montirani proizvodi',
   'mountedProductsSubtitle': 'Munja proizvodi montirani na ovaj bicikl.',
-  'munjaKeepsStatusTogether': 'Munja drži status veze, firmwarea i Digital Twina na jednom mjestu.',
+  'munjaKeepsStatusTogether':
+      'Munja drži status veze, firmwarea i Digital Twina na jednom mjestu.',
   'myBikes': 'Moji bicikli',
   'newFrame': 'Novi okvir',
   'newImageReadyUpload': 'Nova slika spremna za upload',
@@ -754,7 +846,8 @@ const Map<String, String> bs = {
   'notes': 'Bilješke',
   'off': 'Isključeno',
   'openCustomizeCaps': 'OTVORI PRILAGODBU',
-  'physicalDeviceConnectsProduct': 'Fizički uređaj se povezuje s konkretnim Munja proizvodom.',
+  'physicalDeviceConnectsProduct':
+      'Fizički uređaj se povezuje s konkretnim Munja proizvodom.',
   'physicalDeviceLinked': 'Fizički uređaj povezan s proizvodom',
   'product': 'Proizvod',
   'productStatus': 'Status proizvoda',
@@ -762,24 +855,29 @@ const Map<String, String> bs = {
   'qrActivationComingSoon': 'QR aktivacija dolazi uskoro.',
   'readyToMount': 'Spremno za montažu',
   'rear': 'Nazad',
-  'rideSensorCatalogSubtitle': 'Budući senzor vožnje za kadencu, kretanje i podatke bicikla.',
+  'rideSensorCatalogSubtitle':
+      'Budući senzor vožnje za kadencu, kretanje i podatke bicikla.',
   'rssi': 'RSSI',
   'saveChanges': 'Sačuvaj promjene',
   'savedProductsAppearHere': 'Sačuvani proizvodi će se pojaviti ovdje.',
   'scan': 'Skeniraj',
   'scanAgain': 'Skeniraj ponovo',
   'scanAndMountProducts': 'Skeniraj i montiraj Munja proizvode na svoj bicikl.',
-  'scanBleQrLater': 'Skeniraj putem Bluetootha sada. QR aktivacija dolazi kasnije.',
+  'scanBleQrLater':
+      'Skeniraj putem Bluetootha sada. QR aktivacija dolazi kasnije.',
   'scanForProducts': 'Skeniraj proizvode',
   'scanMountProduct': 'Skeniraj i montiraj proizvod',
-  'scanMountProductsTwin': 'Skeniraj i montiraj Munja proizvode na svoj Digital Twin.',
+  'scanMountProductsTwin':
+      'Skeniraj i montiraj Munja proizvode na svoj Digital Twin.',
   'scanningMunjaProducts': 'Skeniram Munja proizvode...',
   'sensitivity': 'Osjetljivost',
   'showroomDrag360Caps': 'SHOWROOM · POVUCI 360°',
   'signal': 'Signal',
   'skinsQuickTestCaps': 'SKINOVI · BRZI TEST',
-  'smartBrakeLightCatalogSubtitle': 'Pametno zadnje svjetlo s automatskom detekcijom kočenja i Bluetooth vezom.',
-  'smartBrakeLightDescription': 'Pametno zadnje svjetlo s automatskim kočionim svjetlom i Bluetooth vezom.',
+  'smartBrakeLightCatalogSubtitle':
+      'Pametno zadnje svjetlo s automatskom detekcijom kočenja i Bluetooth vezom.',
+  'smartBrakeLightDescription':
+      'Pametno zadnje svjetlo s automatskim kočionim svjetlom i Bluetooth vezom.',
   'supportsGlbGltf': 'Podržava GLB i GLTF.',
   'takePhoto': 'Fotografiši',
   'tapScanConnect': 'Dodirni montirani proizvod za skeniranje i povezivanje.',

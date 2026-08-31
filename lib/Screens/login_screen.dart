@@ -30,7 +30,22 @@ class _LoginScreenState extends State<LoginScreen> {
   String? _successMessage;
 
   @override
+  void initState() {
+    super.initState();
+    AppText.localeNotifier.addListener(_handleLocaleChanged);
+  }
+
+  void _handleLocaleChanged() {
+    if (!mounted) return;
+    setState(() {
+      // Rebuild the complete login screen immediately so every translated
+      // label, button and heading follows the selected language.
+    });
+  }
+
+  @override
   void dispose() {
+    AppText.localeNotifier.removeListener(_handleLocaleChanged);
     _nameController.dispose();
     _emailController.dispose();
     _passwordController.dispose();
@@ -65,17 +80,14 @@ class _LoginScreenState extends State<LoginScreen> {
           displayName: displayName,
         );
       } else {
-        await _authService.signInWithEmail(
-          email: email,
-          password: password,
-        );
+        await _authService.signInWithEmail(email: email, password: password);
       }
     } on AuthServiceException catch (error) {
       if (!mounted) return;
       setState(() => _errorMessage = error.message);
     } catch (_) {
       if (!mounted) return;
-      setState(() => _errorMessage = 'Noget gik galt. Prøv igen.');
+      setState(() => _errorMessage = AppText.t('authGenericError'));
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
@@ -101,9 +113,7 @@ class _LoginScreenState extends State<LoginScreen> {
       setState(() => _errorMessage = error.message);
     } catch (_) {
       if (!mounted) return;
-      setState(
-        () => _errorMessage = 'Google-login kunne ikke gennemføres.',
-      );
+      setState(() => _errorMessage = AppText.t('googleLoginFailed'));
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
@@ -129,9 +139,7 @@ class _LoginScreenState extends State<LoginScreen> {
       setState(() => _errorMessage = error.message);
     } catch (_) {
       if (!mounted) return;
-      setState(
-        () => _errorMessage = 'Apple-login kunne ikke gennemføres.',
-      );
+      setState(() => _errorMessage = AppText.t('appleLoginFailed'));
     } finally {
       if (mounted) {
         setState(() => _isLoading = false);
@@ -146,7 +154,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
     if (email.isEmpty) {
       setState(() {
-        _errorMessage = 'Indtast din e-mailadresse først.';
+        _errorMessage = AppText.t('enterEmailFirst');
         _successMessage = null;
       });
 
@@ -168,8 +176,7 @@ class _LoginScreenState extends State<LoginScreen> {
       if (!mounted) return;
 
       setState(() {
-        _successMessage =
-            'Vi har sendt et link til nulstilling af adgangskoden.';
+        _successMessage = AppText.t('resetPasswordSent');
       });
     } on AuthServiceException catch (error) {
       if (!mounted) return;
@@ -177,8 +184,7 @@ class _LoginScreenState extends State<LoginScreen> {
     } catch (_) {
       if (!mounted) return;
       setState(() {
-        _errorMessage =
-            'Nulstilling af adgangskoden kunne ikke gennemføres.';
+        _errorMessage = AppText.t('resetPasswordFailed');
       });
     } finally {
       if (mounted) {
@@ -223,12 +229,7 @@ class _LoginScreenState extends State<LoginScreen> {
                 return SingleChildScrollView(
                   keyboardDismissBehavior:
                       ScrollViewKeyboardDismissBehavior.onDrag,
-                  padding: EdgeInsets.fromLTRB(
-                    22,
-                    18,
-                    22,
-                    28 + bottomPadding,
-                  ),
+                  padding: EdgeInsets.fromLTRB(22, 18, 22, 28 + bottomPadding),
                   child: ConstrainedBox(
                     constraints: BoxConstraints(
                       minHeight: constraints.maxHeight - bottomPadding,
@@ -238,12 +239,14 @@ class _LoginScreenState extends State<LoginScreen> {
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
                           SizedBox(height: screenHeight < 760 ? 8 : 18),
-                          const _BrandHeader(),
-                          SizedBox(height: screenHeight < 760 ? 24 : 36),
+                          _BrandHeader(),
+                          SizedBox(height: screenHeight < 760 ? 14 : 18),
+                          const _LoginLanguageSelector(),
+                          SizedBox(height: screenHeight < 760 ? 20 : 28),
                           Text(
                             _isCreateAccountMode
-                                ? 'Opret din Munja-konto'
-                                : 'Velkommen tilbage',
+                                ? AppText.t('createMunjaAccount')
+                                : AppText.t('welcomeBack'),
                             textAlign: TextAlign.center,
                             style: TextStyle(
                               color: Colors.white,
@@ -256,8 +259,8 @@ class _LoginScreenState extends State<LoginScreen> {
                           const SizedBox(height: 12),
                           Text(
                             _isCreateAccountMode
-                                ? 'Byg din digitale cykel, forbind dine produkter og saml dine ture ét sted.'
-                                : 'Fortsæt til din cykel, dine ture og din digitale verden.',
+                                ? AppText.t('createAccountSubtitle')
+                                : AppText.t('loginSubtitle'),
                             textAlign: TextAlign.center,
                             style: const TextStyle(
                               color: MunjaColors.textSoft,
@@ -270,20 +273,17 @@ class _LoginScreenState extends State<LoginScreen> {
                           _LoginCard(
                             child: AutofillGroup(
                               child: Column(
-                                crossAxisAlignment:
-                                    CrossAxisAlignment.stretch,
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
                                 children: [
                                   if (_isCreateAccountMode) ...[
                                     _LoginTextField(
                                       controller: _nameController,
                                       focusNode: _nameFocusNode,
-                                      label: 'Navn',
-                                      hintText: 'Dit navn',
+                                      label: AppText.t('name'),
+                                      hintText: AppText.t('yourName'),
                                       icon: Icons.person_outline_rounded,
                                       textInputAction: TextInputAction.next,
-                                      autofillHints: const [
-                                        AutofillHints.name,
-                                      ],
+                                      autofillHints: const [AutofillHints.name],
                                       onSubmitted: (_) {
                                         _emailFocusNode.requestFocus();
                                       },
@@ -293,11 +293,10 @@ class _LoginScreenState extends State<LoginScreen> {
                                   _LoginTextField(
                                     controller: _emailController,
                                     focusNode: _emailFocusNode,
-                                    label: 'E-mail',
-                                    hintText: 'navn@email.dk',
+                                    label: AppText.t('email'),
+                                    hintText: AppText.t('emailHint'),
                                     icon: Icons.mail_outline_rounded,
-                                    keyboardType:
-                                        TextInputType.emailAddress,
+                                    keyboardType: TextInputType.emailAddress,
                                     textInputAction: TextInputAction.next,
                                     autofillHints: const [
                                       AutofillHints.email,
@@ -311,8 +310,8 @@ class _LoginScreenState extends State<LoginScreen> {
                                   _LoginTextField(
                                     controller: _passwordController,
                                     focusNode: _passwordFocusNode,
-                                    label: 'Adgangskode',
-                                    hintText: 'Mindst 6 tegn',
+                                    label: AppText.t('password'),
+                                    hintText: AppText.t('passwordHint'),
                                     icon: Icons.lock_outline_rounded,
                                     obscureText: _obscurePassword,
                                     textInputAction: TextInputAction.done,
@@ -332,8 +331,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                             },
                                       icon: Icon(
                                         _obscurePassword
-                                            ? Icons
-                                                .visibility_off_outlined
+                                            ? Icons.visibility_off_outlined
                                             : Icons.visibility_outlined,
                                         color: Colors.white54,
                                       ),
@@ -350,9 +348,9 @@ class _LoginScreenState extends State<LoginScreen> {
                                         onPressed: _isLoading
                                             ? null
                                             : _resetPassword,
-                                        child: const Text(
-                                          'Glemt adgangskode?',
-                                          style: TextStyle(
+                                        child: Text(
+                                          AppText.t('forgotPassword'),
+                                          style: const TextStyle(
                                             color: MunjaColors.mint,
                                             fontWeight: FontWeight.w900,
                                           ),
@@ -382,44 +380,41 @@ class _LoginScreenState extends State<LoginScreen> {
                                           ? null
                                           : _submitEmailForm,
                                       style: FilledButton.styleFrom(
-                                        backgroundColor:
-                                            MunjaColors.mintStrong,
-                                        foregroundColor:
-                                            const Color(0xFF03130F),
-                                        disabledBackgroundColor:
-                                            MunjaColors.mintStrong
-                                                .withValues(alpha: 0.45),
+                                        backgroundColor: MunjaColors.mintStrong,
+                                        foregroundColor: const Color(
+                                          0xFF03130F,
+                                        ),
+                                        disabledBackgroundColor: MunjaColors
+                                            .mintStrong
+                                            .withValues(alpha: 0.45),
                                         elevation: 0,
                                         shape: RoundedRectangleBorder(
-                                          borderRadius:
-                                              BorderRadius.circular(21),
+                                          borderRadius: BorderRadius.circular(
+                                            21,
+                                          ),
                                         ),
                                       ),
                                       child: _isLoading
                                           ? const SizedBox(
                                               width: 23,
                                               height: 23,
-                                              child:
-                                                  CircularProgressIndicator(
+                                              child: CircularProgressIndicator(
                                                 strokeWidth: 2.4,
-                                                color:
-                                                    Color(0xFF03130F),
+                                                color: Color(0xFF03130F),
                                               ),
                                             )
                                           : Text(
                                               _isCreateAccountMode
-                                                  ? 'Opret konto'
-                                                  : 'Log ind',
+                                                  ? AppText.t('createAccount')
+                                                  : AppText.t('signIn'),
                                               style: const TextStyle(
                                                 fontSize: 17,
-                                                fontWeight:
-                                                    FontWeight.w900,
+                                                fontWeight: FontWeight.w900,
                                               ),
                                             ),
                                     ),
                                   ),
-                                  if (isAppleDevice ||
-                                      showGoogleLogin) ...[
+                                  if (isAppleDevice || showGoogleLogin) ...[
                                     const SizedBox(height: 22),
                                     const _OrDivider(),
                                     const SizedBox(height: 22),
@@ -434,7 +429,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                         size: 25,
                                         color: Colors.black,
                                       ),
-                                      label: 'Fortsæt med Apple',
+                                      label: AppText.t('continueApple'),
                                       foregroundColor: Colors.black,
                                       backgroundColor: Colors.white,
                                       borderColor: Colors.white,
@@ -447,14 +442,12 @@ class _LoginScreenState extends State<LoginScreen> {
                                           ? null
                                           : _signInWithGoogle,
                                       icon: const _GoogleMark(),
-                                      label: 'Fortsæt med Google',
+                                      label: AppText.t('continueGoogle'),
                                       foregroundColor: Colors.white,
-                                      backgroundColor:
-                                          Colors.white.withValues(
+                                      backgroundColor: Colors.white.withValues(
                                         alpha: 0.045,
                                       ),
-                                      borderColor:
-                                          Colors.white.withValues(
+                                      borderColor: Colors.white.withValues(
                                         alpha: 0.13,
                                       ),
                                     ),
@@ -469,8 +462,8 @@ class _LoginScreenState extends State<LoginScreen> {
                               Flexible(
                                 child: Text(
                                   _isCreateAccountMode
-                                      ? 'Har du allerede en konto?'
-                                      : 'Har du ikke en konto?',
+                                      ? AppText.t('alreadyAccount')
+                                      : AppText.t('noAccount'),
                                   textAlign: TextAlign.right,
                                   style: const TextStyle(
                                     color: MunjaColors.textSoft,
@@ -481,12 +474,11 @@ class _LoginScreenState extends State<LoginScreen> {
                               ),
                               const SizedBox(width: 2),
                               TextButton(
-                                onPressed:
-                                    _isLoading ? null : _toggleMode,
+                                onPressed: _isLoading ? null : _toggleMode,
                                 child: Text(
                                   _isCreateAccountMode
-                                      ? 'Log ind'
-                                      : 'Opret konto',
+                                      ? AppText.t('signIn')
+                                      : AppText.t('createAccount'),
                                   style: const TextStyle(
                                     color: MunjaColors.mint,
                                     fontSize: 14,
@@ -498,7 +490,7 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                           const Spacer(),
                           const SizedBox(height: 16),
-                          const _FooterBrand(),
+                          _FooterBrand(),
                         ],
                       ),
                     ),
@@ -533,9 +525,7 @@ class _BrandHeader extends StatelessWidget {
                 MunjaColors.mint.withValues(alpha: 0.035),
               ],
             ),
-            border: Border.all(
-              color: MunjaColors.mint.withValues(alpha: 0.35),
-            ),
+            border: Border.all(color: MunjaColors.mint.withValues(alpha: 0.35)),
             boxShadow: [
               BoxShadow(
                 color: MunjaColors.mint.withValues(alpha: 0.18),
@@ -572,7 +562,7 @@ class _BrandHeader extends StatelessWidget {
         ),
         const SizedBox(height: 7),
         Text(
-          'DIGITAL CYCLING PLATFORM',
+          AppText.t('digitalCyclingPlatform'),
           style: TextStyle(
             color: MunjaColors.mint.withValues(alpha: 0.72),
             fontSize: 9,
@@ -581,6 +571,143 @@ class _BrandHeader extends StatelessWidget {
           ),
         ),
       ],
+    );
+  }
+}
+
+class _LoginLanguageSelector extends StatefulWidget {
+  const _LoginLanguageSelector();
+
+  @override
+  State<_LoginLanguageSelector> createState() => _LoginLanguageSelectorState();
+}
+
+class _LoginLanguageSelectorState extends State<_LoginLanguageSelector> {
+  late String _selectedLanguageCode;
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedLanguageCode = AppText.currentLanguageCode;
+    AppText.localeNotifier.addListener(_syncSelectedLanguage);
+  }
+
+  @override
+  void dispose() {
+    AppText.localeNotifier.removeListener(_syncSelectedLanguage);
+    super.dispose();
+  }
+
+  void _syncSelectedLanguage() {
+    if (!mounted) return;
+
+    final code = AppText.currentLanguageCode;
+    if (code == _selectedLanguageCode) return;
+
+    setState(() {
+      _selectedLanguageCode = code;
+    });
+  }
+
+  Future<void> _selectLanguage(Locale locale) async {
+    final code = locale.languageCode;
+    if (code == _selectedLanguageCode) return;
+
+    FocusScope.of(context).unfocus();
+
+    // Change the visual indicator immediately on tap.
+    setState(() {
+      _selectedLanguageCode = code;
+    });
+
+    // Persist the language and notify the rest of the app.
+    await AppText.setLocale(locale);
+
+    // Keep the local indicator synchronized with the actual locale.
+    if (!mounted) return;
+    final actualCode = AppText.currentLanguageCode;
+    if (actualCode != _selectedLanguageCode) {
+      setState(() {
+        _selectedLanguageCode = actualCode;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Semantics(
+      label: AppText.t('language'),
+      child: Center(
+        child: Container(
+          padding: const EdgeInsets.all(5),
+          decoration: BoxDecoration(
+            color: Colors.black.withValues(alpha: 0.24),
+            borderRadius: BorderRadius.circular(999),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.08)),
+          ),
+          child: Row(
+            mainAxisSize: MainAxisSize.min,
+            children: AppText.supportedLocales.map((locale) {
+              final selected = locale.languageCode == _selectedLanguageCode;
+
+              return Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 2),
+                child: InkWell(
+                  onTap: selected ? null : () => _selectLanguage(locale),
+                  borderRadius: BorderRadius.circular(999),
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 180),
+                    curve: Curves.easeOutCubic,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 11,
+                      vertical: 8,
+                    ),
+                    decoration: BoxDecoration(
+                      color: selected
+                          ? MunjaColors.mint.withValues(alpha: 0.16)
+                          : Colors.transparent,
+                      borderRadius: BorderRadius.circular(999),
+                      border: Border.all(
+                        color: selected
+                            ? MunjaColors.mint.withValues(alpha: 0.42)
+                            : Colors.transparent,
+                      ),
+                      boxShadow: selected
+                          ? [
+                              BoxShadow(
+                                color: MunjaColors.mint.withValues(alpha: 0.10),
+                                blurRadius: 12,
+                                spreadRadius: 1,
+                              ),
+                            ]
+                          : null,
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          AppText.languageFlag(locale),
+                          style: const TextStyle(fontSize: 16),
+                        ),
+                        const SizedBox(width: 6),
+                        Text(
+                          locale.languageCode.toUpperCase(),
+                          style: TextStyle(
+                            color: selected ? MunjaColors.mint : Colors.white54,
+                            fontSize: 11,
+                            fontWeight: FontWeight.w900,
+                            letterSpacing: 0.7,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              );
+            }).toList(),
+          ),
+        ),
+      ),
     );
   }
 }
@@ -597,9 +724,7 @@ class _LoginCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: const Color(0xFF07130F).withValues(alpha: 0.92),
         borderRadius: BorderRadius.circular(34),
-        border: Border.all(
-          color: Colors.white.withValues(alpha: 0.075),
-        ),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.075)),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withValues(alpha: 0.42),
@@ -630,11 +755,7 @@ class _LoginBackground extends StatelessWidget {
         gradient: LinearGradient(
           begin: Alignment.topCenter,
           end: Alignment.bottomCenter,
-          colors: [
-            Color(0xFF041610),
-            Color(0xFF020B08),
-            Color(0xFF010504),
-          ],
+          colors: [Color(0xFF041610), Color(0xFF020B08), Color(0xFF010504)],
         ),
       ),
       child: Stack(
@@ -672,9 +793,7 @@ class _LoginBackground extends StatelessWidget {
             ),
           ),
           IgnorePointer(
-            child: CustomPaint(
-              painter: const _GridTexturePainter(),
-            ),
+            child: CustomPaint(painter: const _GridTexturePainter()),
           ),
         ],
       ),
@@ -686,10 +805,7 @@ class _GlowOrb extends StatelessWidget {
   final double size;
   final double opacity;
 
-  const _GlowOrb({
-    required this.size,
-    required this.opacity,
-  });
+  const _GlowOrb({required this.size, required this.opacity});
 
   @override
   Widget build(BuildContext context) {
@@ -721,19 +837,11 @@ class _GridTexturePainter extends CustomPainter {
     const spacing = 20.0;
 
     for (double x = 0; x <= size.width; x += spacing) {
-      canvas.drawLine(
-        Offset(x, 0),
-        Offset(x, size.height),
-        paint,
-      );
+      canvas.drawLine(Offset(x, 0), Offset(x, size.height), paint);
     }
 
     for (double y = 0; y <= size.height; y += spacing) {
-      canvas.drawLine(
-        Offset(0, y),
-        Offset(size.width, y),
-        paint,
-      );
+      canvas.drawLine(Offset(0, y), Offset(size.width, y), paint);
     }
   }
 
@@ -790,19 +898,13 @@ class _LoginTextField extends StatelessWidget {
       decoration: InputDecoration(
         labelText: label,
         hintText: hintText,
-        prefixIcon: Icon(
-          icon,
-          color: MunjaColors.mint,
-          size: 23,
-        ),
+        prefixIcon: Icon(icon, color: MunjaColors.mint, size: 23),
         suffixIcon: suffixIcon,
         labelStyle: const TextStyle(
           color: Colors.white60,
           fontWeight: FontWeight.w700,
         ),
-        hintStyle: TextStyle(
-          color: Colors.white.withValues(alpha: 0.25),
-        ),
+        hintStyle: TextStyle(color: Colors.white.withValues(alpha: 0.25)),
         filled: true,
         fillColor: Colors.white.withValues(alpha: 0.034),
         contentPadding: const EdgeInsets.symmetric(
@@ -811,15 +913,11 @@ class _LoginTextField extends StatelessWidget {
         ),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(21),
-          borderSide: BorderSide(
-            color: Colors.white.withValues(alpha: 0.08),
-          ),
+          borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.08)),
         ),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(21),
-          borderSide: BorderSide(
-            color: Colors.white.withValues(alpha: 0.08),
-          ),
+          borderSide: BorderSide(color: Colors.white.withValues(alpha: 0.08)),
         ),
         focusedBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(21),
@@ -859,10 +957,8 @@ class _SocialLoginButton extends StatelessWidget {
         style: OutlinedButton.styleFrom(
           foregroundColor: foregroundColor,
           backgroundColor: backgroundColor,
-          disabledForegroundColor:
-              foregroundColor.withValues(alpha: 0.55),
-          disabledBackgroundColor:
-              backgroundColor.withValues(alpha: 0.55),
+          disabledForegroundColor: foregroundColor.withValues(alpha: 0.55),
+          disabledBackgroundColor: backgroundColor.withValues(alpha: 0.55),
           side: BorderSide(color: borderColor),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(21),
@@ -871,10 +967,7 @@ class _SocialLoginButton extends StatelessWidget {
         icon: icon,
         label: Text(
           label,
-          style: const TextStyle(
-            fontSize: 15,
-            fontWeight: FontWeight.w900,
-          ),
+          style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w900),
         ),
       ),
     );
@@ -885,25 +978,18 @@ class _StatusMessage extends StatelessWidget {
   final String message;
   final bool isError;
 
-  const _StatusMessage({
-    required this.message,
-    required this.isError,
-  });
+  const _StatusMessage({required this.message, required this.isError});
 
   @override
   Widget build(BuildContext context) {
-    final color = isError
-        ? const Color(0xFFFF7D7D)
-        : MunjaColors.mint;
+    final color = isError ? const Color(0xFFFF7D7D) : MunjaColors.mint;
 
     return Container(
       padding: const EdgeInsets.all(14),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.08),
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(
-          color: color.withValues(alpha: 0.25),
-        ),
+        border: Border.all(color: color.withValues(alpha: 0.25)),
       ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -940,16 +1026,12 @@ class _OrDivider extends StatelessWidget {
   Widget build(BuildContext context) {
     return Row(
       children: [
-        Expanded(
-          child: Divider(
-            color: Colors.white.withValues(alpha: 0.09),
-          ),
-        ),
-        const Padding(
-          padding: EdgeInsets.symmetric(horizontal: 14),
+        Expanded(child: Divider(color: Colors.white.withValues(alpha: 0.09))),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 14),
           child: Text(
-            'ELLER',
-            style: TextStyle(
+            AppText.t('or'),
+            style: const TextStyle(
               color: Colors.white38,
               fontSize: 10,
               fontWeight: FontWeight.w900,
@@ -957,11 +1039,7 @@ class _OrDivider extends StatelessWidget {
             ),
           ),
         ),
-        Expanded(
-          child: Divider(
-            color: Colors.white.withValues(alpha: 0.09),
-          ),
-        ),
+        Expanded(child: Divider(color: Colors.white.withValues(alpha: 0.09))),
       ],
     );
   }
@@ -1011,7 +1089,7 @@ class _FooterBrand extends StatelessWidget {
         ),
         const SizedBox(height: 6),
         Text(
-          'RIDE • CONNECT • EVOLVE',
+          AppText.t('rideConnectEvolve'),
           textAlign: TextAlign.center,
           style: TextStyle(
             color: MunjaColors.mint.withValues(alpha: 0.34),

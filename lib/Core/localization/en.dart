@@ -1,6 +1,35 @@
 const Map<String, String> en = {
   'appTitle': 'Munja',
 
+  // Login / authentication
+  'authGenericError': 'Something went wrong. Please try again.',
+  'googleLoginFailed': 'Google sign-in could not be completed.',
+  'appleLoginFailed': 'Apple sign-in could not be completed.',
+  'enterEmailFirst': 'Enter your email address first.',
+  'resetPasswordSent': 'We sent you a password reset link.',
+  'resetPasswordFailed': 'The password reset could not be completed.',
+  'createMunjaAccount': 'Create your Munja account',
+  'welcomeBack': 'Welcome back',
+  'createAccountSubtitle':
+      'Build your digital bike, connect your products and keep your rides in one place.',
+  'loginSubtitle': 'Continue to your bike, your rides and your digital world.',
+  'yourName': 'Your name',
+  'email': 'Email',
+  'emailHint': 'name@email.com',
+  'password': 'Password',
+  'passwordHint': 'At least 6 characters',
+  'forgotPassword': 'Forgot password?',
+  'createAccount': 'Create account',
+  'signIn': 'Sign in',
+  'continueApple': 'Continue with Apple',
+  'continueGoogle': 'Continue with Google',
+  'alreadyAccount': 'Already have an account?',
+  'noAccount': 'Don’t have an account?',
+  'or': 'OR',
+  'digitalCyclingPlatform': 'DIGITAL CYCLING PLATFORM',
+  'rideConnectEvolve': 'RIDE • CONNECT • EVOLVE',
+  'language': 'Language',
+
   'welcome': 'Welcome',
   'welcomeToMunja': 'Welcome to Munja',
   'howToUseApp': 'How to use the app',
@@ -293,27 +322,34 @@ const Map<String, String> en = {
   'munjaCrystals': 'Munja Crystals',
   'munjaPro': 'Munja Pro',
   'proExclusive': 'Pro exclusive',
-  'crystalSkinDescription': 'This skin can be unlocked with Munja Crystals. The purchase flow will be connected in the next major step.',
-  'proSkinDescription': 'This skin will be part of Munja Pro. The subscription flow will be connected later.',
+  'crystalSkinDescription':
+      'This skin can be unlocked with Munja Crystals. The purchase flow will be connected in the next major step.',
+  'proSkinDescription':
+      'This skin will be part of Munja Pro. The subscription flow will be connected later.',
   'challengeReward': 'Challenge reward',
-  'rewardSkinDescription': 'This skin is unlocked through a challenge or achievement.',
+  'rewardSkinDescription':
+      'This skin is unlocked through a challenge or achievement.',
   'gotIt': 'Got it',
   'comingNext': 'Coming next',
-  'freeFrameColorActive': 'Free frame color active. Premium skin has been disabled.',
+  'freeFrameColorActive':
+      'Free frame color active. Premium skin has been disabled.',
   'frameColorSyncFailed': 'The frame color could not be synced. Try again.',
   'frameChangeFailed': 'The frame could not be changed. Try again.',
   'livePremiumPreview': 'Live premium preview',
   'materialPending': 'material pending',
   'activeAndSynced': 'Active and synced',
   'skinActivationFailed': 'The skin could not be activated. Try again.',
-  'skinsSectionSubtitle': 'Premium materials live on your 3D bike · free colors stay under Frame.',
+  'skinsSectionSubtitle':
+      'Premium materials live on your 3D bike · free colors stay under Frame.',
   'livePremiumPreviews': 'Live premium previews',
-  'skinStoreComingSoonMessage': 'The Skin Store catalog is ready. Purchase and unlock will be connected in the next step.',
+  'skinStoreComingSoonMessage':
+      'The Skin Store catalog is ready. Purchase and unlock will be connected in the next step.',
   'munjaSkinStore': 'Munja Skin Store',
   'premiumProRewardSkins': 'Premium, Pro & reward skins',
   'equipped': 'Equipped',
   'proOnly': 'Pro only',
-  'frameSectionSubtitle': 'Choose geometry and finish without leaving the showroom.',
+  'frameSectionSubtitle':
+      'Choose geometry and finish without leaving the showroom.',
   'frameFinish': 'Finish',
   'comingSoon': 'Coming soon',
 
@@ -326,22 +362,29 @@ const Map<String, String> en = {
   'rideSetupCreateRoundTripButton': 'Create round trip',
   'rideSetupShowSuggestions': 'Show route suggestions',
   'rideSetupUseSelectedSuggestion': 'Use selected suggestion',
-  'rideSetupAddressSuggestionsUnavailable': 'Address suggestions are unavailable right now.',
-  'rideSetupGooglePlacesLocalFallback': 'Google Places could not be reached – showing local suggestions.',
+  'rideSetupAddressSuggestionsUnavailable':
+      'Address suggestions are unavailable right now.',
+  'rideSetupGooglePlacesLocalFallback':
+      'Google Places could not be reached – showing local suggestions.',
   'rideSetupShowingLocalSuggestions': 'Showing local suggestions.',
-  'rideSetupGpsUnavailable': 'Munja could not find your GPS position. Check location permission and try again.',
+  'rideSetupGpsUnavailable':
+      'Munja could not find your GPS position. Check location permission and try again.',
   'rideSetupNoGoodSuggestions': 'Munja found no suitable routes in the area.',
   'rideSetupChooseBestRoute': 'Choose the route that suits you best.',
   'rideSetupSuggestionsLoadFailed': 'Route suggestions could not be loaded.',
-  'rideSetupSuggestionsLoadFailedRetry': 'Route suggestions could not be loaded. Try again.',
+  'rideSetupSuggestionsLoadFailedRetry':
+      'Route suggestions could not be loaded. Try again.',
   'rideSetupChooseSuggestionFirst': 'Choose a route suggestion first.',
   'rideSetupEnterAndChooseDestination': 'Enter and choose a destination.',
-  'rideSetupChooseAddressFromSuggestions': 'Choose an address from the suggestions.',
+  'rideSetupChooseAddressFromSuggestions':
+      'Choose an address from the suggestions.',
   'rideSetupTitle': 'Ride',
   'rideSetupHowRide': 'How do you want to ride?',
-  'rideSetupChooseOneOption': 'Choose one option. Munja only shows the choices you need.',
+  'rideSetupChooseOneOption':
+      'Choose one option. Munja only shows the choices you need.',
   'rideSetupHowFar': 'How far?',
-  'rideSetupChooseApproxDistance': 'Choose approximately how long the ride should be.',
+  'rideSetupChooseApproxDistance':
+      'Choose approximately how long the ride should be.',
   'rideSetupHowRouteFeel': 'How should the route feel?',
   'rideSetupRouteStyleSubtitle': 'Munja adapts the route to your style.',
   'rideSetupFindingSuggestions': 'Finding suggestions...',
@@ -349,7 +392,8 @@ const Map<String, String> en = {
   'rideSetupProPlannerActive': 'MUNJA PRO · Advanced Route Planner active',
   'rideSetupProRequired': 'This route type requires MUNJA PRO',
   'rideSetupIntroTitle': 'How do you want to ride today?',
-  'rideSetupIntroSubtitle': 'Choose a ride type. The rest appears only when it is relevant.',
+  'rideSetupIntroSubtitle':
+      'Choose a ride type. The rest appears only when it is relevant.',
   'rideSetupDestination': 'Destination',
   'rideSetupDestinationSubtitle': 'Choose where you want to go',
   'rideSetupRoundTrip': 'Round trip',
@@ -360,7 +404,8 @@ const Map<String, String> en = {
   'rideSetupFreeRideSubtitle': 'No plan. Just ride.',
   'rideSetupChange': 'CHANGE',
   'rideSetupWhereTo': 'Where do you want to go?',
-  'rideSetupSearchAddressOrDestination': 'Search for an address or destination.',
+  'rideSetupSearchAddressOrDestination':
+      'Search for an address or destination.',
   'rideSetupFreeHeroTitle': 'No route. Just ride.',
   'rideSetupFreeHeroBody': 'Munja still records your ride, distance and time.',
   'rideSetupChooseRideTypeContinue': 'Choose a ride type to continue',
@@ -374,14 +419,17 @@ const Map<String, String> en = {
   'rideSetupRequiresPro': 'Requires Munja Pro',
   'rideSetupAddressHint': 'Enter address or destination',
   'rideSetupClear': 'Clear',
-  'rideSetupLocalTestMode': 'Test mode: local address suggestions. Add GOOGLE_MAPS_API_KEY for Google suggestions.',
+  'rideSetupLocalTestMode':
+      'Test mode: local address suggestions. Add GOOGLE_MAPS_API_KEY for Google suggestions.',
   'rideSetupNoAddresses': 'No addresses found.',
   'rideSetupNoLocalAddresses': 'No local test addresses found.',
   'rideSetupChooseDestination': 'Choose destination',
   'rideSetupEnterAddressRoute': 'Enter an address to find a route.',
   'rideSetupAutomaticRoundTrip': 'Automatic round trip',
-  'rideSetupRoundTripInfo': 'Munja keeps your selected distance and route type.',
-  'rideSetupSuggestionsInfo': 'Munja finds several bicycle routes around you and matches them to your preferred distance.',
+  'rideSetupRoundTripInfo':
+      'Munja keeps your selected distance and route type.',
+  'rideSetupSuggestionsInfo':
+      'Munja finds several bicycle routes around you and matches them to your preferred distance.',
   'rideSetupFreeRideInfo': 'Start ride tracking without a fixed destination.',
   'rideSetupAround': 'Around',
   'rideSetupFindNewSuggestions': 'Find new suggestions',
@@ -398,8 +446,10 @@ const Map<String, String> en = {
 
   // Ride Summary + Auto Ride
   'rideSummaryAiAnalysis': 'AI Ride Analysis',
-  'rideSummaryAiProSubtitle': 'Personalized Pro analysis based on this ride and your history.',
-  'rideSummaryAiFreeSubtitle': 'A simple ride recap. MUNJA PRO adds personal history and deeper recommendations.',
+  'rideSummaryAiProSubtitle':
+      'Personalized Pro analysis based on this ride and your history.',
+  'rideSummaryAiFreeSubtitle':
+      'A simple ride recap. MUNJA PRO adds personal history and deeper recommendations.',
   'rideSummaryAnalyzing': 'Analyzing your ride...',
   'rideSummaryAnalysisUnavailable': 'Ride analysis is not available right now.',
   'rideSummaryProAnalysis': 'MUNJA PRO ANALYSIS',
@@ -439,16 +489,24 @@ const Map<String, String> en = {
   'autoRideNavigationActive': 'Navigation active',
   'autoRideSpeed': 'SPEED',
   'autoRideRide': 'RIDE',
-  'autoRideArrivalBody': 'Destination reached. The ride will end and be saved automatically.',
-  'autoRideConfirmArrivalBody': 'Stay near the destination while Munja confirms your arrival.',
-  'autoRideReroutingBody': 'Munja is calculating a new bicycle route from your current position.',
-  'autoRideCheckingDeviationBody': 'You are off the route. Munja is confirming the deviation.',
-  'autoRideRerouteSuccessBody': 'The new route, ETA and navigation have been updated.',
-  'autoRideRerouteFailedBody': 'Check your internet connection. Munja will try again after the next persistent deviation.',
+  'autoRideArrivalBody':
+      'Destination reached. The ride will end and be saved automatically.',
+  'autoRideConfirmArrivalBody':
+      'Stay near the destination while Munja confirms your arrival.',
+  'autoRideReroutingBody':
+      'Munja is calculating a new bicycle route from your current position.',
+  'autoRideCheckingDeviationBody':
+      'You are off the route. Munja is confirming the deviation.',
+  'autoRideRerouteSuccessBody':
+      'The new route, ETA and navigation have been updated.',
+  'autoRideRerouteFailedBody':
+      'Check your internet connection. Munja will try again after the next persistent deviation.',
   'autoRideOffRouteBody': 'You have left the route.',
-  'autoRideRouteCalculatedBody': 'The bicycle route has been calculated and is shown on the map.',
+  'autoRideRouteCalculatedBody':
+      'The bicycle route has been calculated and is shown on the map.',
   'autoRideRouteProgress': 'Route progress',
-  'autoRideDestinationNotSaved': 'The destination is selected, but the bicycle route has not been saved yet.',
+  'autoRideDestinationNotSaved':
+      'The destination is selected, but the bicycle route has not been saved yet.',
   'altitudeShort': 'ALT',
   'showFullRoute': 'Show full route',
   'routeStartedFromWheel': 'The route was started from the wheel',
@@ -457,7 +515,8 @@ const Map<String, String> en = {
   // Home + Profile
   'homeBikeLoadFailed': 'The bike could not be loaded.',
   'homeNoActiveBike': 'No active bike',
-  'homeNoActiveBikeBody': 'Create or select a bike in Gear to activate your Digital Twin.',
+  'homeNoActiveBikeBody':
+      'Create or select a bike in Gear to activate your Digital Twin.',
   'homeOpenGear': 'Open Gear',
   'homeOpeningGear': 'OPENING GEAR',
   'homeActiveChallenge': 'ACTIVE CHALLENGE',
@@ -482,14 +541,17 @@ const Map<String, String> en = {
   'profileChallenges': 'Challenges',
   'profileChallengeHub': 'Challenge Hub',
   'profileFindRiders': 'Find riders',
-  'profileFindRidersBody': 'Find riders, build your crew and challenge each other.',
+  'profileFindRidersBody':
+      'Find riders, build your crew and challenge each other.',
   'profileFindAnotherRider': 'Find another Munja rider and build your crew.',
   'profileNoFriendsYet': 'No friends yet',
   'profileViewAll': 'View all',
   'profileViewAllFriends': 'View all friends',
   'profileNewChallenge': 'New challenge',
-  'profileChallengeHubBody': 'Compete with friends, build progress and prepare for Munja Monthly Specials.',
-  'profileChallengeInfo': 'Start with 1 vs 1 distance now. More challenge types, Crystal rewards and Monthly Specials are the next progression layer.',
+  'profileChallengeHubBody':
+      'Compete with friends, build progress and prepare for Munja Monthly Specials.',
+  'profileChallengeInfo':
+      'Start with 1 vs 1 distance now. More challenge types, Crystal rewards and Monthly Specials are the next progression layer.',
   'profileAchievements': 'Achievements',
   'profileAchievementsCaps': 'ACHIEVEMENTS',
   'profileMilestonesBody': 'Milestones earned from your real ride history.',
@@ -503,34 +565,46 @@ const Map<String, String> en = {
   'profileTotalXp': 'TOTAL XP',
 
   // MUNJA PRO + Challenges
-  'proPurchaseFailed': 'MUNJA PRO purchase could not be started. Please try again.',
+  'proPurchaseFailed':
+      'MUNJA PRO purchase could not be started. Please try again.',
   'proRestoreFailed': 'MUNJA PRO could not be restored. Please try again.',
   'proExperience': 'YOUR MUNJA EXPERIENCE',
   'proAdvancedAnalytics': 'Advanced Analytics',
-  'proAdvancedAnalyticsDesc': 'Deeper performance trends, ride insights and long-term progress.',
+  'proAdvancedAnalyticsDesc':
+      'Deeper performance trends, ride insights and long-term progress.',
   'proAiRideAnalysis': 'AI Ride Analysis',
-  'proAiRideAnalysisDesc': 'Turn your ride data into useful feedback and personal insights.',
+  'proAiRideAnalysisDesc':
+      'Turn your ride data into useful feedback and personal insights.',
   'proAiCoach': 'AI Ride Coach',
-  'proAiCoachDesc': 'Personal coaching based on your riding, goals and progress.',
+  'proAiCoachDesc':
+      'Personal coaching based on your riding, goals and progress.',
   'proRoutePlanner': 'Advanced Route Planner',
-  'proRoutePlannerDesc': 'More intelligent route tools built around the way you ride.',
+  'proRoutePlannerDesc':
+      'More intelligent route tools built around the way you ride.',
   'proChallenges': 'Pro Challenges',
-  'proChallengesDesc': 'Special challenges, deeper goals and selected monthly events.',
+  'proChallengesDesc':
+      'Special challenges, deeper goals and selected monthly events.',
   'proSkinsFrames': 'Exclusive Skins & Frames',
-  'proSkinsFramesDesc': 'Access selected Pro cosmetics while Crystals remain a separate economy.',
-  'proLinkedActive': 'MUNJA PRO is linked to your account and updates automatically.',
-  'proLinkedSecure': 'Your MUNJA PRO status is linked securely to your Munja account.',
+  'proSkinsFramesDesc':
+      'Access selected Pro cosmetics while Crystals remain a separate economy.',
+  'proLinkedActive':
+      'MUNJA PRO is linked to your account and updates automatically.',
+  'proLinkedSecure':
+      'Your MUNJA PRO status is linked securely to your Munja account.',
   'proYouArePro': 'YOU ARE MUNJA PRO',
   'proUnlockMore': 'UNLOCK MORE OF MUNJA',
   'proFeaturesActive': 'Your Pro features are active on this account.',
-  'proMoreInsight': 'More insight. More intelligence. More ways to challenge yourself.',
+  'proMoreInsight':
+      'More insight. More intelligence. More ways to challenge yourself.',
   'monthlyCompletedClaimed': 'COMPLETED · REWARD CLAIMED',
   'monthlyCompletedReady': 'COMPLETED · REWARD READY',
   'expired': 'EXPIRED',
   'monthlyLoading': 'Loading Monthly Special...',
   'monthlySpecial': 'MONTHLY SPECIAL',
-  'monthlyStartsWithPro': 'Your 30-day Monthly Special starts automatically with MUNJA PRO.',
-  'monthlyActivatePro': 'Activate MUNJA PRO to automatically start this 30-day Monthly Special.',
+  'monthlyStartsWithPro':
+      'Your 30-day Monthly Special starts automatically with MUNJA PRO.',
+  'monthlyActivatePro':
+      'Activate MUNJA PRO to automatically start this 30-day Monthly Special.',
   'monthlyActivating': 'Activating your Monthly Special...',
   'refresh': 'REFRESH',
   'claiming': 'CLAIMING...',
@@ -540,8 +614,10 @@ const Map<String, String> en = {
   'monthlySubscription': 'Monthly subscription',
   'premiumExperience': 'Premium Munja experience',
   'freeCaps': 'FREE',
-  'membershipSync': 'Membership status is synced automatically with your Munja account.',
-  'autoRenewing': 'Auto-renewing monthly subscription. Cancel anytime through Google Play.',
+  'membershipSync':
+      'Membership status is synced automatically with your Munja account.',
+  'autoRenewing':
+      'Auto-renewing monthly subscription. Cancel anytime through Google Play.',
   'connectingStore': 'CONNECTING TO GOOGLE PLAY...',
   'getPro': 'GET MUNJA PRO',
   'restoring': 'RESTORING...',
@@ -574,18 +650,22 @@ const Map<String, String> en = {
   'rideTime': 'Ride Time',
   'rideTimeDesc': 'Compete on total active riding time.',
   'streakDesc': 'Build the longest consistent ride streak.',
-  'friendsLoadFailed': 'Your Munja friends could not be loaded. Please try again.',
+  'friendsLoadFailed':
+      'Your Munja friends could not be loaded. Please try again.',
   'newChallenge': 'New Challenge',
   'challengeType': 'CHALLENGE TYPE',
   'chooseRider': 'CHOOSE RIDER',
   'sending': 'Sending...',
   'sendChallenge': 'Send Challenge',
-  'challengeRewardsBalanced': 'Challenge rewards are balanced to make Crystals valuable.',
+  'challengeRewardsBalanced':
+      'Challenge rewards are balanced to make Crystals valuable.',
   'challengeARider': 'Challenge a rider',
   'challengeIntro': 'Compete, build XP and work toward Munja Crystal rewards.',
   'monthlyLoadFailed': 'Monthly Special could not be loaded.',
-  'rewardAlreadyClaimed': 'This Monthly Special reward has already been claimed.',
-  'completeBeforeClaim': 'Complete the Monthly Special before claiming the reward.',
+  'rewardAlreadyClaimed':
+      'This Monthly Special reward has already been claimed.',
+  'completeBeforeClaim':
+      'Complete the Monthly Special before claiming the reward.',
   'monthlyNotFound': 'Monthly Special could not be found.',
   'profileNotFound': 'Your Munja profile could not be found.',
   'rewardClaimed': 'Reward claimed.',
@@ -596,8 +676,10 @@ const Map<String, String> en = {
   'proCaps': 'PRO',
   'claimed': 'CLAIMED',
   'claim': 'CLAIM',
-  'monthlyTimerInfo': 'Your 30-day timer started when you activated this Special. Calendar month changes do not shorten it.',
-  'monthlyActivateInfo': 'Activate this Special whenever you are ready. Your personal 30-day timer starts only when you press START.',
+  'monthlyTimerInfo':
+      'Your 30-day timer started when you activated this Special. Calendar month changes do not shorten it.',
+  'monthlyActivateInfo':
+      'Activate this Special whenever you are ready. Your personal 30-day timer starts only when you press START.',
   'unlockPro': 'UNLOCK MUNJA PRO',
   'rewardClaimedCaps': 'REWARD CLAIMED',
   'specialActive': 'SPECIAL ACTIVE',
@@ -606,13 +688,16 @@ const Map<String, String> en = {
   'chooseRiderFirst': 'Choose a rider first',
   'challengeSummary': 'CHALLENGE SUMMARY',
   'goal': 'GOAL',
-  'challengeStartsAccept': 'The challenge starts when your friend accepts the invitation.',
+  'challengeStartsAccept':
+      'The challenge starts when your friend accepts the invitation.',
   'loadingFriends': 'Loading your friends...',
   'couldNotCreate': 'Could not create challenge',
   'tryAgain': 'Try again',
   'noFriendsChallenge': 'No friends to challenge',
-  'addFriendFirst': 'Add a Munja friend first. Then you can start a 1 vs 1 challenge.',
-  'requestsLoadFailed': 'Challenge requests could not be loaded. Please try again.',
+  'addFriendFirst':
+      'Add a Munja friend first. Then you can start a 1 vs 1 challenge.',
+  'requestsLoadFailed':
+      'Challenge requests could not be loaded. Please try again.',
   'acceptFailed': 'Challenge could not be accepted. Please try again.',
   'declineFailed': 'Challenge could not be declined. Please try again.',
   'declineChallengeQ': 'Decline challenge?',
@@ -652,20 +737,26 @@ const Map<String, String> en = {
   'bikeCouldNotSave': 'The bike could not be saved.',
   'bikeCreated': 'Bike created.',
   'bikeDeleted': 'Bike deleted.',
-  'bikeFirebaseSyncInfo': 'Your bike is synced with Firebase and your Digital Twin.',
+  'bikeFirebaseSyncInfo':
+      'Your bike is synced with Firebase and your Digital Twin.',
   'bikeInfo': 'Bike info',
   'bikeName': 'Bike name',
-  'bikeSavedFileProcessFailed': 'The bike was saved, but the selected file could not be processed.',
+  'bikeSavedFileProcessFailed':
+      'The bike was saved, but the selected file could not be processed.',
   'bikeUpdated': 'Bike updated.',
   'bikes': 'Bikes',
   'bleUuidMissing': 'BLE UUID is missing.',
-  'brakeLightAlreadyMounted': 'Munja Smart Brake Light is already mounted on this bike.',
+  'brakeLightAlreadyMounted':
+      'Munja Smart Brake Light is already mounted on this bike.',
   'brakeLightDashboard': 'Brake Light Dashboard',
-  'brakeLightDashboardSubtitle': 'Live status and controls for your Munja Smart Brake Light.',
-  'brakeLightMountedTwin': 'Munja Smart Brake Light is mounted on your Digital Twin.',
+  'brakeLightDashboardSubtitle':
+      'Live status and controls for your Munja Smart Brake Light.',
+  'brakeLightMountedTwin':
+      'Munja Smart Brake Light is mounted on your Digital Twin.',
   'brakeMountedOnBike': 'Smart Brake Light mounted on bike',
   'brakeMountedReady': 'Mounted and ready on your bike.',
-  'brakeProductSubtitle': 'Smart rear light with automatic braking and Bluetooth.',
+  'brakeProductSubtitle':
+      'Smart rear light with automatic braking and Bluetooth.',
   'brakeReady': 'Brake light ready',
   'brakingNow': 'Braking now',
   'brand': 'Brand',
@@ -686,7 +777,8 @@ const Map<String, String> en = {
   'connectedDevicesSubtitle': 'Connections linked to this bike’s Digital Twin.',
   'connection': 'Connection',
   'connectionStatus': 'Connection status',
-  'connectionStatusSubtitle': 'Bluetooth, Digital Twin and firmware in one place.',
+  'connectionStatusSubtitle':
+      'Bluetooth, Digital Twin and firmware in one place.',
   'createBike': 'Create bike',
   'creating': 'Creating...',
   'customizeDigitalTwinCaps': 'CUSTOMIZE DIGITAL TWIN',
@@ -733,13 +825,15 @@ const Map<String, String> en = {
   'mountProduct': 'Mount product',
   'mountProductFirst': 'Mount a product first',
   'mounted': 'Mounted',
-  'mountedNoActiveConnections': 'Products are mounted, but no active device connections were found.',
+  'mountedNoActiveConnections':
+      'Products are mounted, but no active device connections were found.',
   'mountedOnBike': 'Mounted on bike',
   'mountedOnBikeSubtitle': 'Products currently mounted on your bike.',
   'mountedOnDigitalTwin': 'Mounted on Digital Twin',
   'mountedProducts': 'Mounted products',
   'mountedProductsSubtitle': 'Munja products mounted on this bike.',
-  'munjaKeepsStatusTogether': 'Munja keeps connection, firmware and Digital Twin status together.',
+  'munjaKeepsStatusTogether':
+      'Munja keeps connection, firmware and Digital Twin status together.',
   'myBikes': 'My bikes',
   'newFrame': 'New frame',
   'newImageReadyUpload': 'New image ready to upload',
@@ -754,7 +848,8 @@ const Map<String, String> en = {
   'notes': 'Notes',
   'off': 'Off',
   'openCustomizeCaps': 'OPEN CUSTOMIZE',
-  'physicalDeviceConnectsProduct': 'A physical device connects to a specific Munja product.',
+  'physicalDeviceConnectsProduct':
+      'A physical device connects to a specific Munja product.',
   'physicalDeviceLinked': 'Physical device linked to product',
   'product': 'Product',
   'productStatus': 'Product status',
@@ -762,7 +857,8 @@ const Map<String, String> en = {
   'qrActivationComingSoon': 'QR activation is coming soon.',
   'readyToMount': 'Ready to mount',
   'rear': 'Rear',
-  'rideSensorCatalogSubtitle': 'Future ride sensor for cadence, motion and bike data.',
+  'rideSensorCatalogSubtitle':
+      'Future ride sensor for cadence, motion and bike data.',
   'rssi': 'RSSI',
   'saveChanges': 'Save changes',
   'savedProductsAppearHere': 'Saved products will appear here.',
@@ -772,14 +868,17 @@ const Map<String, String> en = {
   'scanBleQrLater': 'Scan via Bluetooth now. QR activation comes later.',
   'scanForProducts': 'Scan for products',
   'scanMountProduct': 'Scan and mount product',
-  'scanMountProductsTwin': 'Scan and mount Munja products on your Digital Twin.',
+  'scanMountProductsTwin':
+      'Scan and mount Munja products on your Digital Twin.',
   'scanningMunjaProducts': 'Scanning for Munja products...',
   'sensitivity': 'Sensitivity',
   'showroomDrag360Caps': 'SHOWROOM · DRAG 360°',
   'signal': 'Signal',
   'skinsQuickTestCaps': 'SKINS · QUICK TEST',
-  'smartBrakeLightCatalogSubtitle': 'Smart rear light with automatic brake detection and Bluetooth connection.',
-  'smartBrakeLightDescription': 'Smart rear light with automatic brake light and Bluetooth connection.',
+  'smartBrakeLightCatalogSubtitle':
+      'Smart rear light with automatic brake detection and Bluetooth connection.',
+  'smartBrakeLightDescription':
+      'Smart rear light with automatic brake light and Bluetooth connection.',
   'supportsGlbGltf': 'Supports GLB and GLTF.',
   'takePhoto': 'Take photo',
   'tapScanConnect': 'Tap a mounted product to scan and connect.',

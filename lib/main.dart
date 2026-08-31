@@ -486,11 +486,10 @@ class MunjaApp extends StatelessWidget {
       valueListenable: AppText.localeNotifier,
       builder: (context, locale, _) {
         return MaterialApp(
-          key: ValueKey(locale.languageCode),
           debugShowCheckedModeBanner: false,
           title: AppText.t('appTitle'),
           locale: locale,
-          supportedLocales: const [Locale('da'), Locale('en'), Locale('bs')],
+          supportedLocales: AppText.supportedLocales,
 
           localizationsDelegates: const [
             GlobalMaterialLocalizations.delegate,
@@ -906,23 +905,24 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
             children: [
               Padding(
                 padding: const EdgeInsets.fromLTRB(26, 18, 26, 12),
-                child: Align(
-                  alignment: Alignment.centerLeft,
-                  child: Text(
-                    _text(
-                      context,
-                      da: 'Kom godt i gang',
-                      en: 'Get started',
-                      bs: 'Započni',
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Text(
+                        AppText.t('getStarted'),
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontSize:
+                              MediaQuery.sizeOf(context).width < 390 ? 31 : 35,
+                          height: 1.05,
+                          fontWeight: FontWeight.w900,
+                          letterSpacing: -1.1,
+                        ),
+                      ),
                     ),
-                    style: TextStyle(
-                      color: Colors.white,
-                      fontSize: MediaQuery.sizeOf(context).width < 390 ? 31 : 35,
-                      height: 1.05,
-                      fontWeight: FontWeight.w900,
-                      letterSpacing: -1.1,
-                    ),
-                  ),
+                    const SizedBox(width: 12),
+                    const _OnboardingLanguageSelector(),
+                  ],
                 ),
               ),
               Expanded(
@@ -1476,7 +1476,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                   final avatar = avatarOptions[index];
                   return _RiderModeCard(
                     icon: _avatarIcon(avatar.id),
-                    label: avatar.label,
+                    label: _avatarLabel(context, avatar.id),
                     selected: selectedAvatar == avatar.id,
                     onTap: () => setState(() => selectedAvatar = avatar.id),
                   );
@@ -1534,6 +1534,23 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
     );
   }
 
+  String _avatarLabel(BuildContext context, int id) {
+    switch (id) {
+      case 1:
+        return _text(context, da: 'Fart', en: 'Speed', bs: 'Brzina');
+      case 2:
+        return _text(context, da: 'Eco', en: 'Eco', bs: 'Eco');
+      case 3:
+        return _text(context, da: 'Challenge', en: 'Challenge', bs: 'Izazov');
+      case 4:
+        return _text(context, da: 'Nat', en: 'Night', bs: 'Noć');
+      case 5:
+        return _text(context, da: 'Sikker', en: 'Safe', bs: 'Sigurno');
+      default:
+        return _text(context, da: 'Klassisk', en: 'Classic', bs: 'Klasično');
+    }
+  }
+
   IconData _avatarIcon(int id) {
     switch (id) {
       case 1:
@@ -1549,6 +1566,79 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
       default:
         return Icons.directions_bike_rounded;
     }
+  }
+}
+
+class _OnboardingLanguageSelector extends StatelessWidget {
+  const _OnboardingLanguageSelector();
+
+  @override
+  Widget build(BuildContext context) {
+    final current = AppText.currentLanguageCode;
+
+    return PopupMenuButton<Locale>(
+      tooltip: AppText.t('language'),
+      color: const Color(0xFF07130F),
+      onSelected: (locale) async {
+        FocusScope.of(context).unfocus();
+        await AppText.setLocale(locale);
+      },
+      itemBuilder: (context) => AppText.supportedLocales.map((locale) {
+        return PopupMenuItem<Locale>(
+          value: locale,
+          child: Row(
+            children: [
+              Text(
+                AppText.languageFlag(locale),
+                style: const TextStyle(fontSize: 20),
+              ),
+              const SizedBox(width: 10),
+              Text(
+                AppText.languageName(locale),
+                style: TextStyle(
+                  color: locale.languageCode == current
+                      ? MunjaColors.mint
+                      : Colors.white,
+                  fontWeight: FontWeight.w800,
+                ),
+              ),
+            ],
+          ),
+        );
+      }).toList(),
+      child: Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 9),
+        decoration: BoxDecoration(
+          color: MunjaColors.mint.withOpacity(0.10),
+          borderRadius: BorderRadius.circular(999),
+          border: Border.all(color: MunjaColors.mint.withOpacity(0.28)),
+        ),
+        child: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              AppText.languageFlag(AppText.currentLocale),
+              style: const TextStyle(fontSize: 18),
+            ),
+            const SizedBox(width: 6),
+            Text(
+              current.toUpperCase(),
+              style: const TextStyle(
+                color: MunjaColors.mint,
+                fontSize: 11,
+                fontWeight: FontWeight.w900,
+              ),
+            ),
+            const SizedBox(width: 2),
+            const Icon(
+              Icons.keyboard_arrow_down_rounded,
+              color: MunjaColors.mint,
+              size: 18,
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 
@@ -1892,12 +1982,12 @@ class _DigitalTwinPreview extends StatelessWidget {
               ),
             ),
           ),
-          const Positioned(
+          Positioned(
             top: 18,
             left: 18,
             child: _PreviewPill(
               icon: Icons.circle,
-              label: 'LIVE DIGITAL TWIN',
+              label: AppText.t('onboardingLiveDigitalTwin'),
             ),
           ),
           Positioned(
@@ -1917,21 +2007,21 @@ class _DigitalTwinPreview extends StatelessWidget {
                     color: Colors.white.withOpacity(0.08),
                   ),
                 ),
-                child: const Row(
+                child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
                   children: [
-                    Icon(
+                    const Icon(
                       Icons.swipe_rounded,
                       color: MunjaColors.mint,
                       size: 19,
                     ),
-                    SizedBox(width: 8),
+                    const SizedBox(width: 8),
                     Flexible(
                       child: Text(
-                        'Træk for at dreje • Knib for at zoome',
+                        AppText.t('dragPinch'),
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: TextStyle(
+                        style: const TextStyle(
                           color: Colors.white70,
                           fontSize: 12,
                           fontWeight: FontWeight.w800,

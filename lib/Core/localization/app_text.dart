@@ -73,6 +73,20 @@ class AppText {
   /// Nuværende sprognavn
   static String get currentLanguageName => languageName(currentLocale);
 
+  /// Kort flag til sprogvalg i login/onboarding.
+  static String languageFlag(Locale locale) {
+    switch (locale.languageCode) {
+      case 'da':
+        return '🇩🇰';
+      case 'en':
+        return '🇬🇧';
+      case 'bs':
+        return '🇧🇦';
+      default:
+        return '🌐';
+    }
+  }
+
   /// Tjek om sproget understøttes
   static bool _isSupported(String code) {
     return code == 'da' || code == 'en' || code == 'bs';

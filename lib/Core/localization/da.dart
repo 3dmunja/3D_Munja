@@ -1,6 +1,35 @@
 const Map<String, String> da = {
   'appTitle': 'Munja',
 
+  // Login / authentication
+  'authGenericError': 'Noget gik galt. Prøv igen.',
+  'googleLoginFailed': 'Google-login kunne ikke gennemføres.',
+  'appleLoginFailed': 'Apple-login kunne ikke gennemføres.',
+  'enterEmailFirst': 'Indtast din e-mailadresse først.',
+  'resetPasswordSent': 'Vi har sendt et link til nulstilling af adgangskoden.',
+  'resetPasswordFailed': 'Nulstilling af adgangskoden kunne ikke gennemføres.',
+  'createMunjaAccount': 'Opret din Munja-konto',
+  'welcomeBack': 'Velkommen tilbage',
+  'createAccountSubtitle':
+      'Byg din digitale cykel, forbind dine produkter og saml dine ture ét sted.',
+  'loginSubtitle': 'Fortsæt til din cykel, dine ture og din digitale verden.',
+  'yourName': 'Dit navn',
+  'email': 'E-mail',
+  'emailHint': 'navn@email.dk',
+  'password': 'Adgangskode',
+  'passwordHint': 'Mindst 6 tegn',
+  'forgotPassword': 'Glemt adgangskode?',
+  'createAccount': 'Opret konto',
+  'signIn': 'Log ind',
+  'continueApple': 'Fortsæt med Apple',
+  'continueGoogle': 'Fortsæt med Google',
+  'alreadyAccount': 'Har du allerede en konto?',
+  'noAccount': 'Har du ikke en konto?',
+  'or': 'ELLER',
+  'digitalCyclingPlatform': 'DIGITAL CYKELPLATFORM',
+  'rideConnectEvolve': 'CYKL • FORBIND • UDVIKL',
+  'language': 'Sprog',
+
   'welcome': 'Velkommen',
   'welcomeToMunja': 'Velkommen til Munja',
   'howToUseApp': 'Sådan bruger du appen',
@@ -296,22 +325,28 @@ const Map<String, String> da = {
   'munjaCrystals': 'Munja Crystals',
   'munjaPro': 'Munja Pro',
   'proExclusive': 'Kun til Pro',
-  'crystalSkinDescription': 'Dette skin kan låses op med Munja Crystals. Købsflowet kobles på i næste store step.',
-  'proSkinDescription': 'Dette skin bliver en del af Munja Pro. Abonnementsflowet kobles på senere.',
+  'crystalSkinDescription':
+      'Dette skin kan låses op med Munja Crystals. Købsflowet kobles på i næste store step.',
+  'proSkinDescription':
+      'Dette skin bliver en del af Munja Pro. Abonnementsflowet kobles på senere.',
   'challengeReward': 'Challenge-belønning',
-  'rewardSkinDescription': 'Dette skin låses op gennem en challenge eller achievement.',
+  'rewardSkinDescription':
+      'Dette skin låses op gennem en challenge eller achievement.',
   'gotIt': 'Forstået',
   'comingNext': 'Kommer næste',
-  'freeFrameColorActive': 'Gratis frame-farve aktiv. Premium skin er slået fra.',
+  'freeFrameColorActive':
+      'Gratis frame-farve aktiv. Premium skin er slået fra.',
   'frameColorSyncFailed': 'Frame-farven kunne ikke synkroniseres. Prøv igen.',
   'frameChangeFailed': 'Frame kunne ikke skiftes. Prøv igen.',
   'livePremiumPreview': 'Live premium preview',
   'materialPending': 'materiale afventer',
   'activeAndSynced': 'Aktiv og synkroniseret',
   'skinActivationFailed': 'Skin kunne ikke aktiveres. Prøv igen.',
-  'skinsSectionSubtitle': 'Premium-materialer vises direkte på din 3D-cykel · gratis farver findes under Frame.',
+  'skinsSectionSubtitle':
+      'Premium-materialer vises direkte på din 3D-cykel · gratis farver findes under Frame.',
   'livePremiumPreviews': 'Live premium previews',
-  'skinStoreComingSoonMessage': 'Skin Store-kataloget er klar. Køb og oplåsning kobles på som næste step.',
+  'skinStoreComingSoonMessage':
+      'Skin Store-kataloget er klar. Køb og oplåsning kobles på som næste step.',
   'munjaSkinStore': 'Munja Skin Store',
   'premiumProRewardSkins': 'Premium-, Pro- og reward-skins',
   'equipped': 'Aktiveret',
@@ -329,20 +364,25 @@ const Map<String, String> da = {
   'rideSetupCreateRoundTripButton': 'Lav rundtur',
   'rideSetupShowSuggestions': 'Vis ruteforslag',
   'rideSetupUseSelectedSuggestion': 'Brug valgt forslag',
-  'rideSetupAddressSuggestionsUnavailable': 'Adresseforslag kunne ikke hentes lige nu.',
-  'rideSetupGooglePlacesLocalFallback': 'Google Places kunne ikke nås – viser lokale forslag.',
+  'rideSetupAddressSuggestionsUnavailable':
+      'Adresseforslag kunne ikke hentes lige nu.',
+  'rideSetupGooglePlacesLocalFallback':
+      'Google Places kunne ikke nås – viser lokale forslag.',
   'rideSetupShowingLocalSuggestions': 'Viser lokale forslag.',
-  'rideSetupGpsUnavailable': 'Munja kunne ikke finde din GPS-position. Kontrollér placeringstilladelsen og prøv igen.',
+  'rideSetupGpsUnavailable':
+      'Munja kunne ikke finde din GPS-position. Kontrollér placeringstilladelsen og prøv igen.',
   'rideSetupNoGoodSuggestions': 'Munja fandt ingen gode forslag i området.',
   'rideSetupChooseBestRoute': 'Vælg den rute, der passer dig bedst.',
   'rideSetupSuggestionsLoadFailed': 'Ruteforslag kunne ikke hentes.',
-  'rideSetupSuggestionsLoadFailedRetry': 'Ruteforslag kunne ikke hentes. Prøv igen.',
+  'rideSetupSuggestionsLoadFailedRetry':
+      'Ruteforslag kunne ikke hentes. Prøv igen.',
   'rideSetupChooseSuggestionFirst': 'Vælg et ruteforslag først.',
   'rideSetupEnterAndChooseDestination': 'Indtast og vælg en destination.',
   'rideSetupChooseAddressFromSuggestions': 'Vælg en adresse fra forslagene.',
   'rideSetupTitle': 'Tur',
   'rideSetupHowRide': 'Hvordan vil du cykle?',
-  'rideSetupChooseOneOption': 'Vælg én mulighed. Munja viser kun de valg, du har brug for.',
+  'rideSetupChooseOneOption':
+      'Vælg én mulighed. Munja viser kun de valg, du har brug for.',
   'rideSetupHowFar': 'Hvor langt?',
   'rideSetupChooseApproxDistance': 'Vælg cirka hvor lang turen skal være.',
   'rideSetupHowRouteFeel': 'Hvordan skal ruten føles?',
@@ -352,7 +392,8 @@ const Map<String, String> da = {
   'rideSetupProPlannerActive': 'MUNJA PRO · Avanceret ruteplanlægger aktiv',
   'rideSetupProRequired': 'Denne rutetype kræver MUNJA PRO',
   'rideSetupIntroTitle': 'Hvordan vil du cykle i dag?',
-  'rideSetupIntroSubtitle': 'Vælg turtype. Resten kommer først frem, når det er relevant.',
+  'rideSetupIntroSubtitle':
+      'Vælg turtype. Resten kommer først frem, når det er relevant.',
   'rideSetupDestination': 'Destination',
   'rideSetupDestinationSubtitle': 'Vælg hvor du vil hen',
   'rideSetupRoundTrip': 'Rundtur',
@@ -363,7 +404,8 @@ const Map<String, String> da = {
   'rideSetupFreeRideSubtitle': 'Ingen plan. Bare kør.',
   'rideSetupChange': 'SKIFT',
   'rideSetupWhereTo': 'Hvor vil du hen?',
-  'rideSetupSearchAddressOrDestination': 'Søg efter en adresse eller destination.',
+  'rideSetupSearchAddressOrDestination':
+      'Søg efter en adresse eller destination.',
   'rideSetupFreeHeroTitle': 'Ingen rute. Bare kør.',
   'rideSetupFreeHeroBody': 'Munja registrerer stadig din tur, distance og tid.',
   'rideSetupChooseRideTypeContinue': 'Vælg en turtype for at fortsætte',
@@ -377,14 +419,16 @@ const Map<String, String> da = {
   'rideSetupRequiresPro': 'Kræver Munja Pro',
   'rideSetupAddressHint': 'Indtast adresse eller destination',
   'rideSetupClear': 'Ryd',
-  'rideSetupLocalTestMode': 'Testtilstand: lokale adresseforslag. Tilføj GOOGLE_MAPS_API_KEY for Google-forslag.',
+  'rideSetupLocalTestMode':
+      'Testtilstand: lokale adresseforslag. Tilføj GOOGLE_MAPS_API_KEY for Google-forslag.',
   'rideSetupNoAddresses': 'Ingen adresser fundet.',
   'rideSetupNoLocalAddresses': 'Ingen lokale testadresser fundet.',
   'rideSetupChooseDestination': 'Vælg destination',
   'rideSetupEnterAddressRoute': 'Indtast en adresse for at finde en rute.',
   'rideSetupAutomaticRoundTrip': 'Automatisk rundtur',
   'rideSetupRoundTripInfo': 'Munja gemmer din valgte distance og rutetype.',
-  'rideSetupSuggestionsInfo': 'Munja finder flere cykelruter omkring dig og matcher dem med din ønskede distance.',
+  'rideSetupSuggestionsInfo':
+      'Munja finder flere cykelruter omkring dig og matcher dem med din ønskede distance.',
   'rideSetupFreeRideInfo': 'Start turregistrering uden en fast destination.',
   'rideSetupAround': 'Omkring',
   'rideSetupFindNewSuggestions': 'Find nye forslag',
@@ -401,8 +445,10 @@ const Map<String, String> da = {
 
   // Ride Summary + Auto Ride
   'rideSummaryAiAnalysis': 'AI-turanalyse',
-  'rideSummaryAiProSubtitle': 'Personlig Pro-analyse baseret på denne tur og din turhistorik.',
-  'rideSummaryAiFreeSubtitle': 'En enkel turopsummering. MUNJA PRO tilføjer personlig historik og dybere anbefalinger.',
+  'rideSummaryAiProSubtitle':
+      'Personlig Pro-analyse baseret på denne tur og din turhistorik.',
+  'rideSummaryAiFreeSubtitle':
+      'En enkel turopsummering. MUNJA PRO tilføjer personlig historik og dybere anbefalinger.',
   'rideSummaryAnalyzing': 'Analyserer din tur...',
   'rideSummaryAnalysisUnavailable': 'Turanalysen er ikke tilgængelig lige nu.',
   'rideSummaryProAnalysis': 'MUNJA PRO ANALYSE',
@@ -442,16 +488,22 @@ const Map<String, String> da = {
   'autoRideNavigationActive': 'Navigation aktiv',
   'autoRideSpeed': 'FART',
   'autoRideRide': 'TUR',
-  'autoRideArrivalBody': 'Destinationen er nået. Turen afsluttes og gemmes automatisk.',
-  'autoRideConfirmArrivalBody': 'Bliv tæt på destinationen, mens Munja bekræfter ankomsten.',
-  'autoRideReroutingBody': 'Munja beregner en ny cykelrute fra din aktuelle position.',
-  'autoRideCheckingDeviationBody': 'Du er væk fra ruten. Munja bekræfter afvigelsen.',
+  'autoRideArrivalBody':
+      'Destinationen er nået. Turen afsluttes og gemmes automatisk.',
+  'autoRideConfirmArrivalBody':
+      'Bliv tæt på destinationen, mens Munja bekræfter ankomsten.',
+  'autoRideReroutingBody':
+      'Munja beregner en ny cykelrute fra din aktuelle position.',
+  'autoRideCheckingDeviationBody':
+      'Du er væk fra ruten. Munja bekræfter afvigelsen.',
   'autoRideRerouteSuccessBody': 'Den nye rute, ETA og navigation er opdateret.',
-  'autoRideRerouteFailedBody': 'Kontrollér internetforbindelsen. Munja prøver igen ved næste vedvarende afvigelse.',
+  'autoRideRerouteFailedBody':
+      'Kontrollér internetforbindelsen. Munja prøver igen ved næste vedvarende afvigelse.',
   'autoRideOffRouteBody': 'Du er kørt fra ruten.',
   'autoRideRouteCalculatedBody': 'Cykelruten er beregnet og vises på kortet.',
   'autoRideRouteProgress': 'Ruteprogression',
-  'autoRideDestinationNotSaved': 'Destinationen er valgt, men den rigtige cykelrute er endnu ikke gemt.',
+  'autoRideDestinationNotSaved':
+      'Destinationen er valgt, men den rigtige cykelrute er endnu ikke gemt.',
   'altitudeShort': 'HØJDE',
   'showFullRoute': 'Vis hele ruten',
   'routeStartedFromWheel': 'Ruten er startet fra hjulet',
@@ -460,7 +512,8 @@ const Map<String, String> da = {
   // Home + Profile
   'homeBikeLoadFailed': 'Cyklen kunne ikke indlæses.',
   'homeNoActiveBike': 'Ingen aktiv cykel',
-  'homeNoActiveBikeBody': 'Opret eller vælg en cykel under Udstyr for at aktivere din Digital Twin.',
+  'homeNoActiveBikeBody':
+      'Opret eller vælg en cykel under Udstyr for at aktivere din Digital Twin.',
   'homeOpenGear': 'Åbn Udstyr',
   'homeOpeningGear': 'ÅBNER UDSTYR',
   'homeActiveChallenge': 'AKTIV UDFORDRING',
@@ -485,14 +538,18 @@ const Map<String, String> da = {
   'profileChallenges': 'Udfordringer',
   'profileChallengeHub': 'Udfordringscenter',
   'profileFindRiders': 'Find cyklister',
-  'profileFindRidersBody': 'Find andre Munja-cyklister, byg dit fællesskab og udfordr hinanden.',
-  'profileFindAnotherRider': 'Find en anden Munja-cyklist og byg dit fællesskab.',
+  'profileFindRidersBody':
+      'Find andre Munja-cyklister, byg dit fællesskab og udfordr hinanden.',
+  'profileFindAnotherRider':
+      'Find en anden Munja-cyklist og byg dit fællesskab.',
   'profileNoFriendsYet': 'Ingen venner endnu',
   'profileViewAll': 'Se alle',
   'profileViewAllFriends': 'Se alle venner',
   'profileNewChallenge': 'Ny udfordring',
-  'profileChallengeHubBody': 'Konkurrér med venner, byg fremgang og gør dig klar til Munja Monthly Specials.',
-  'profileChallengeInfo': 'Start med 1 mod 1-distance. Flere udfordringstyper, Crystal-belønninger og Monthly Specials er næste udviklingslag.',
+  'profileChallengeHubBody':
+      'Konkurrér med venner, byg fremgang og gør dig klar til Munja Monthly Specials.',
+  'profileChallengeInfo':
+      'Start med 1 mod 1-distance. Flere udfordringstyper, Crystal-belønninger og Monthly Specials er næste udviklingslag.',
   'profileAchievements': 'Præstationer',
   'profileAchievementsCaps': 'PRÆSTATIONER',
   'profileMilestonesBody': 'Milepæle optjent fra din faktiske turhistorik.',
@@ -510,30 +567,41 @@ const Map<String, String> da = {
   'proRestoreFailed': 'MUNJA PRO kunne ikke gendannes. Prøv igen.',
   'proExperience': 'DIN MUNJA-OPLEVELSE',
   'proAdvancedAnalytics': 'Avanceret analyse',
-  'proAdvancedAnalyticsDesc': 'Dybere præstationstrends, turindsigter og langsigtet fremgang.',
+  'proAdvancedAnalyticsDesc':
+      'Dybere præstationstrends, turindsigter og langsigtet fremgang.',
   'proAiRideAnalysis': 'AI-turanalyse',
-  'proAiRideAnalysisDesc': 'Omsæt dine turdata til brugbar feedback og personlige indsigter.',
+  'proAiRideAnalysisDesc':
+      'Omsæt dine turdata til brugbar feedback og personlige indsigter.',
   'proAiCoach': 'AI-cykelcoach',
-  'proAiCoachDesc': 'Personlig coaching baseret på din kørsel, dine mål og din fremgang.',
+  'proAiCoachDesc':
+      'Personlig coaching baseret på din kørsel, dine mål og din fremgang.',
   'proRoutePlanner': 'Avanceret ruteplanlægger',
-  'proRoutePlannerDesc': 'Mere intelligente ruteværktøjer bygget omkring den måde, du cykler på.',
+  'proRoutePlannerDesc':
+      'Mere intelligente ruteværktøjer bygget omkring den måde, du cykler på.',
   'proChallenges': 'Pro-udfordringer',
-  'proChallengesDesc': 'Særlige udfordringer, dybere mål og udvalgte månedlige events.',
+  'proChallengesDesc':
+      'Særlige udfordringer, dybere mål og udvalgte månedlige events.',
   'proSkinsFrames': 'Eksklusive skins og frames',
-  'proSkinsFramesDesc': 'Få adgang til udvalgte Pro-designs, mens Crystals fortsat er en separat økonomi.',
-  'proLinkedActive': 'MUNJA PRO er knyttet til din konto og opdateres automatisk.',
-  'proLinkedSecure': 'Din MUNJA PRO-status er sikkert knyttet til din Munja-konto.',
+  'proSkinsFramesDesc':
+      'Få adgang til udvalgte Pro-designs, mens Crystals fortsat er en separat økonomi.',
+  'proLinkedActive':
+      'MUNJA PRO er knyttet til din konto og opdateres automatisk.',
+  'proLinkedSecure':
+      'Din MUNJA PRO-status er sikkert knyttet til din Munja-konto.',
   'proYouArePro': 'DU HAR MUNJA PRO',
   'proUnlockMore': 'LÅS MERE AF MUNJA OP',
   'proFeaturesActive': 'Dine Pro-funktioner er aktive på denne konto.',
-  'proMoreInsight': 'Mere indsigt. Mere intelligens. Flere måder at udfordre dig selv på.',
+  'proMoreInsight':
+      'Mere indsigt. Mere intelligens. Flere måder at udfordre dig selv på.',
   'monthlyCompletedClaimed': 'GENNEMFØRT · BELØNNING HENTET',
   'monthlyCompletedReady': 'GENNEMFØRT · BELØNNING KLAR',
   'expired': 'UDLØBET',
   'monthlyLoading': 'Indlæser Monthly Special...',
   'monthlySpecial': 'MONTHLY SPECIAL',
-  'monthlyStartsWithPro': 'Din 30-dages Monthly Special starter automatisk med MUNJA PRO.',
-  'monthlyActivatePro': 'Aktivér MUNJA PRO for automatisk at starte denne 30-dages Monthly Special.',
+  'monthlyStartsWithPro':
+      'Din 30-dages Monthly Special starter automatisk med MUNJA PRO.',
+  'monthlyActivatePro':
+      'Aktivér MUNJA PRO for automatisk at starte denne 30-dages Monthly Special.',
   'monthlyActivating': 'Aktiverer din Monthly Special...',
   'refresh': 'OPDATER',
   'claiming': 'HENTER...',
@@ -543,8 +611,10 @@ const Map<String, String> da = {
   'monthlySubscription': 'Månedligt abonnement',
   'premiumExperience': 'Premium Munja-oplevelse',
   'freeCaps': 'GRATIS',
-  'membershipSync': 'Medlemsstatus synkroniseres automatisk med din Munja-konto.',
-  'autoRenewing': 'Månedligt abonnement med automatisk fornyelse. Kan annulleres når som helst via Google Play.',
+  'membershipSync':
+      'Medlemsstatus synkroniseres automatisk med din Munja-konto.',
+  'autoRenewing':
+      'Månedligt abonnement med automatisk fornyelse. Kan annulleres når som helst via Google Play.',
   'connectingStore': 'FORBINDER TIL GOOGLE PLAY...',
   'getPro': 'FÅ MUNJA PRO',
   'restoring': 'GENDANNER...',
@@ -552,7 +622,8 @@ const Map<String, String> da = {
   'challengesTitle': 'Udfordringer',
   'challengeTagline': 'KONKURRÉR · FREMGANG · HISTORIK',
   'readyNextRace': 'Klar til næste duel',
-  'completedAppearHistory': 'Gennemførte dueller vises automatisk i din historik.',
+  'completedAppearHistory':
+      'Gennemførte dueller vises automatisk i din historik.',
   'activeCaps': 'AKTIVE',
   'historyCaps': 'HISTORIK',
   'wins': 'SEJRE',
@@ -583,12 +654,15 @@ const Map<String, String> da = {
   'chooseRider': 'VÆLG CYKLIST',
   'sending': 'Sender...',
   'sendChallenge': 'Send udfordring',
-  'challengeRewardsBalanced': 'Udfordringsbelønninger er balanceret, så Crystals forbliver værdifulde.',
+  'challengeRewardsBalanced':
+      'Udfordringsbelønninger er balanceret, så Crystals forbliver værdifulde.',
   'challengeARider': 'Udfordr en cyklist',
-  'challengeIntro': 'Konkurrér, optjen XP og arbejd mod Munja Crystal-belønninger.',
+  'challengeIntro':
+      'Konkurrér, optjen XP og arbejd mod Munja Crystal-belønninger.',
   'monthlyLoadFailed': 'Monthly Special kunne ikke indlæses.',
   'rewardAlreadyClaimed': 'Denne Monthly Special-belønning er allerede hentet.',
-  'completeBeforeClaim': 'Gennemfør Monthly Special, før du henter belønningen.',
+  'completeBeforeClaim':
+      'Gennemfør Monthly Special, før du henter belønningen.',
   'monthlyNotFound': 'Monthly Special kunne ikke findes.',
   'profileNotFound': 'Din Munja-profil kunne ikke findes.',
   'rewardClaimed': 'Belønning hentet.',
@@ -599,8 +673,10 @@ const Map<String, String> da = {
   'proCaps': 'PRO',
   'claimed': 'HENTET',
   'claim': 'HENT',
-  'monthlyTimerInfo': 'Din 30-dages timer startede, da du aktiverede denne Special. Et nyt kalendermånedsskifte forkorter den ikke.',
-  'monthlyActivateInfo': 'Aktivér denne Special, når du er klar. Din personlige 30-dages timer starter først, når du trykker START.',
+  'monthlyTimerInfo':
+      'Din 30-dages timer startede, da du aktiverede denne Special. Et nyt kalendermånedsskifte forkorter den ikke.',
+  'monthlyActivateInfo':
+      'Aktivér denne Special, når du er klar. Din personlige 30-dages timer starter først, når du trykker START.',
   'unlockPro': 'LÅS MUNJA PRO OP',
   'rewardClaimedCaps': 'BELØNNING HENTET',
   'specialActive': 'SPECIAL AKTIV',
@@ -609,13 +685,16 @@ const Map<String, String> da = {
   'chooseRiderFirst': 'Vælg en cyklist først',
   'challengeSummary': 'UDFORDRINGSOVERSIGT',
   'goal': 'MÅL',
-  'challengeStartsAccept': 'Udfordringen starter, når din ven accepterer invitationen.',
+  'challengeStartsAccept':
+      'Udfordringen starter, når din ven accepterer invitationen.',
   'loadingFriends': 'Indlæser dine venner...',
   'couldNotCreate': 'Kunne ikke oprette udfordring',
   'tryAgain': 'Prøv igen',
   'noFriendsChallenge': 'Ingen venner at udfordre',
-  'addFriendFirst': 'Tilføj først en Munja-ven. Derefter kan du starte en 1 mod 1-udfordring.',
-  'requestsLoadFailed': 'Udfordringsanmodninger kunne ikke indlæses. Prøv igen.',
+  'addFriendFirst':
+      'Tilføj først en Munja-ven. Derefter kan du starte en 1 mod 1-udfordring.',
+  'requestsLoadFailed':
+      'Udfordringsanmodninger kunne ikke indlæses. Prøv igen.',
   'acceptFailed': 'Udfordringen kunne ikke accepteres. Prøv igen.',
   'declineFailed': 'Udfordringen kunne ikke afvises. Prøv igen.',
   'declineChallengeQ': 'Afvis udfordring?',
@@ -644,31 +723,39 @@ const Map<String, String> da = {
   'activeBike': 'Aktiv cykel',
   'addAnotherProduct': 'Tilføj endnu et produkt',
   'addBike': 'Tilføj cykel',
-  'addFirstBikeSync': 'Tilføj din første cykel for at starte synkronisering af din Digital Twin.',
+  'addFirstBikeSync':
+      'Tilføj din første cykel for at starte synkronisering af din Digital Twin.',
   'addImageCameraGallery': 'Tilføj et billede fra kamera eller galleri.',
   'addProduct': 'Tilføj produkt',
   'appWorksWithoutHardware': 'Munja fungerer også uden hardware.',
   'bandProductSubtitle': 'Fremtidig wearable til turadvarsler og status.',
-  'batteryCatalogSubtitle': 'Fremtidigt Munja-batterimodul til forbundet udstyr.',
+  'batteryCatalogSubtitle':
+      'Fremtidigt Munja-batterimodul til forbundet udstyr.',
   'bikeCouldNotActivate': 'Cyklen kunne ikke aktiveres.',
   'bikeCouldNotDelete': 'Cyklen kunne ikke slettes.',
   'bikeCouldNotSave': 'Cyklen kunne ikke gemmes.',
   'bikeCreated': 'Cykel oprettet.',
   'bikeDeleted': 'Cykel slettet.',
-  'bikeFirebaseSyncInfo': 'Din cykel synkroniseres med Firebase og din Digital Twin.',
+  'bikeFirebaseSyncInfo':
+      'Din cykel synkroniseres med Firebase og din Digital Twin.',
   'bikeInfo': 'Cykelinfo',
   'bikeName': 'Cykelnavn',
-  'bikeSavedFileProcessFailed': 'Cyklen blev gemt, men den valgte fil kunne ikke behandles.',
+  'bikeSavedFileProcessFailed':
+      'Cyklen blev gemt, men den valgte fil kunne ikke behandles.',
   'bikeUpdated': 'Cykel opdateret.',
   'bikes': 'Cykler',
   'bleUuidMissing': 'BLE-UUID mangler.',
-  'brakeLightAlreadyMounted': 'Munja Smart Brake Light er allerede monteret på denne cykel.',
+  'brakeLightAlreadyMounted':
+      'Munja Smart Brake Light er allerede monteret på denne cykel.',
   'brakeLightDashboard': 'Bremselygte-dashboard',
-  'brakeLightDashboardSubtitle': 'Live status og styring af din Munja Smart Brake Light.',
-  'brakeLightMountedTwin': 'Munja Smart Brake Light er monteret på din Digital Twin.',
+  'brakeLightDashboardSubtitle':
+      'Live status og styring af din Munja Smart Brake Light.',
+  'brakeLightMountedTwin':
+      'Munja Smart Brake Light er monteret på din Digital Twin.',
   'brakeMountedOnBike': 'Smart Brake Light monteret på cyklen',
   'brakeMountedReady': 'Monteret og klar på din cykel.',
-  'brakeProductSubtitle': 'Smart baglygte med automatisk bremselys og Bluetooth.',
+  'brakeProductSubtitle':
+      'Smart baglygte med automatisk bremselys og Bluetooth.',
   'brakeReady': 'Bremselygte klar',
   'brakingNow': 'Bremser nu',
   'brand': 'Mærke',
@@ -686,10 +773,12 @@ const Map<String, String> da = {
   'connectGear': 'Forbind udstyr',
   'connectedDeviceAppearsHere': 'Din forbundne enhed vises her.',
   'connectedDevices': 'Forbundne enheder',
-  'connectedDevicesSubtitle': 'Forbindelser knyttet til denne cykels Digital Twin.',
+  'connectedDevicesSubtitle':
+      'Forbindelser knyttet til denne cykels Digital Twin.',
   'connection': 'Forbindelse',
   'connectionStatus': 'Forbindelsesstatus',
-  'connectionStatusSubtitle': 'Bluetooth, Digital Twin og firmware samlet ét sted.',
+  'connectionStatusSubtitle':
+      'Bluetooth, Digital Twin og firmware samlet ét sted.',
   'createBike': 'Opret cykel',
   'creating': 'Opretter...',
   'customizeDigitalTwinCaps': 'TILPAS DIGITAL TWIN',
@@ -712,7 +801,8 @@ const Map<String, String> da = {
   'framesSkinsColors': 'Frames, skins og farver',
   'garage': 'Garage',
   'garageEmpty': 'Din garage er tom.',
-  'garageSubtitle': 'Dine cykler, dit udstyr og din Digital Twin samlet ét sted.',
+  'garageSubtitle':
+      'Dine cykler, dit udstyr og din Digital Twin samlet ét sted.',
   'glbModelConnected': '3D-model forbundet',
   'gpsCatalogSubtitle': 'Fremtidigt GPS-modul til lokation og tursporing.',
   'hardwareInfo': 'Hardwareinfo',
@@ -736,13 +826,15 @@ const Map<String, String> da = {
   'mountProduct': 'Montér produkt',
   'mountProductFirst': 'Montér først et produkt',
   'mounted': 'Monteret',
-  'mountedNoActiveConnections': 'Produkter er monteret, men der blev ikke fundet aktive enhedsforbindelser.',
+  'mountedNoActiveConnections':
+      'Produkter er monteret, men der blev ikke fundet aktive enhedsforbindelser.',
   'mountedOnBike': 'Monteret på cyklen',
   'mountedOnBikeSubtitle': 'Produkter, der er monteret på din cykel lige nu.',
   'mountedOnDigitalTwin': 'Monteret på Digital Twin',
   'mountedProducts': 'Monterede produkter',
   'mountedProductsSubtitle': 'Munja-produkter monteret på denne cykel.',
-  'munjaKeepsStatusTogether': 'Munja samler forbindelse, firmware og Digital Twin-status ét sted.',
+  'munjaKeepsStatusTogether':
+      'Munja samler forbindelse, firmware og Digital Twin-status ét sted.',
   'myBikes': 'Mine cykler',
   'newFrame': 'Ny frame',
   'newImageReadyUpload': 'Nyt billede klar til upload',
@@ -757,7 +849,8 @@ const Map<String, String> da = {
   'notes': 'Noter',
   'off': 'Fra',
   'openCustomizeCaps': 'ÅBN TILPASNING',
-  'physicalDeviceConnectsProduct': 'En fysisk enhed forbindes til et konkret Munja-produkt.',
+  'physicalDeviceConnectsProduct':
+      'En fysisk enhed forbindes til et konkret Munja-produkt.',
   'physicalDeviceLinked': 'Fysisk enhed knyttet til produkt',
   'product': 'Produkt',
   'productStatus': 'Produktstatus',
@@ -765,7 +858,8 @@ const Map<String, String> da = {
   'qrActivationComingSoon': 'QR-aktivering kommer snart.',
   'readyToMount': 'Klar til montering',
   'rear': 'Bagpå',
-  'rideSensorCatalogSubtitle': 'Fremtidig ridesensor til kadence, bevægelse og cykeldata.',
+  'rideSensorCatalogSubtitle':
+      'Fremtidig ridesensor til kadence, bevægelse og cykeldata.',
   'rssi': 'RSSI',
   'saveChanges': 'Gem ændringer',
   'savedProductsAppearHere': 'Gemte produkter vises her.',
@@ -775,14 +869,17 @@ const Map<String, String> da = {
   'scanBleQrLater': 'Scan via Bluetooth nu. QR-aktivering kommer senere.',
   'scanForProducts': 'Scan efter produkter',
   'scanMountProduct': 'Scan og montér produkt',
-  'scanMountProductsTwin': 'Scan og montér Munja-produkter på din Digital Twin.',
+  'scanMountProductsTwin':
+      'Scan og montér Munja-produkter på din Digital Twin.',
   'scanningMunjaProducts': 'Scanner efter Munja-produkter...',
   'sensitivity': 'Følsomhed',
   'showroomDrag360Caps': 'SHOWROOM · TRÆK 360°',
   'signal': 'Signal',
   'skinsQuickTestCaps': 'SKINS · HURTIG TEST',
-  'smartBrakeLightCatalogSubtitle': 'Smart baglygte med automatisk bremsedetektering og Bluetooth-forbindelse.',
-  'smartBrakeLightDescription': 'Smart baglygte med automatisk bremselys og Bluetooth-forbindelse.',
+  'smartBrakeLightCatalogSubtitle':
+      'Smart baglygte med automatisk bremsedetektering og Bluetooth-forbindelse.',
+  'smartBrakeLightDescription':
+      'Smart baglygte med automatisk bremselys og Bluetooth-forbindelse.',
   'supportsGlbGltf': 'Understøtter GLB og GLTF.',
   'takePhoto': 'Tag billede',
   'tapScanConnect': 'Tryk på et monteret produkt for at scanne og forbinde.',

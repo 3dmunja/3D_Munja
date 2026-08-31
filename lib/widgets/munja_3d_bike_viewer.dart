@@ -525,87 +525,74 @@ class _Munja3DBikeViewerState extends State<Munja3DBikeViewer> {
 
   void _startRiderViewAnimation() {
     _cameraAnimationTimer?.cancel();
+    _cameraSettleTimer?.cancel();
 
-    const startTheta = 0.0;
     final endTheta = widget.heroTheta;
-    final totalMilliseconds = widget.riderViewAnimationDuration.inMilliseconds
-        .clamp(300, 3000);
-    const frameMilliseconds = 16;
-    final totalFrames = (totalMilliseconds / frameMilliseconds).ceil();
 
-    var frame = 0;
-
+    // IMPORTANT FOR OLDER iPHONES:
+    // Do not stream camera commands every 16 ms through the platform channel.
+    // Older devices can fall behind and end the transition at an intermediate
+    // orbit. Instead, apply the final rider-facing pose deterministically and
+    // re-apply it after the native view has had time to settle.
     try {
       _controller.resetCameraTarget();
-      _controller.setCameraOrbit(startTheta, widget.heroPhi, widget.heroRadius);
-    } catch (error) {
-      debugPrint('MUNJA 3D RIDER ANIMATION START ERROR: $error');
+      _controller.setCameraOrbit(endTheta, widget.heroPhi, widget.heroRadius);
+
+      _riderViewAnimationPlayed = true;
+
+      debugPrint(
+        'MUNJA 3D RIDER VIEW APPLIED: '
+        'theta=$endTheta°, phi=${widget.heroPhi}°, '
+        'radius=${widget.heroRadius}',
+      );
+    } catch (error, stackTrace) {
+      debugPrint('MUNJA 3D RIDER VIEW APPLY ERROR: $error');
+      debugPrint('$stackTrace');
+      return;
     }
 
-    _cameraAnimationTimer = Timer.periodic(
-      const Duration(milliseconds: frameMilliseconds),
-      (timer) {
-        if (!mounted || _modelFailed) {
-          timer.cancel();
+    // First settle pass.
+    _cameraSettleTimer = Timer(const Duration(milliseconds: 180), () {
+      if (!mounted ||
+          widget.useDigitalTwinMaterials ||
+          !_modelLoaded ||
+          _modelFailed ||
+          !_riderViewAnimationPlayed) {
+        return;
+      }
+
+      try {
+        _controller.resetCameraTarget();
+        _controller.setCameraOrbit(endTheta, widget.heroPhi, widget.heroRadius);
+      } catch (error) {
+        debugPrint('MUNJA 3D RIDER VIEW SETTLE ERROR: $error');
+        return;
+      }
+
+      // Second settle pass. This is intentionally low-frequency; it protects
+      // older iOS platform views from ending at a stale/intermediate orbit.
+      _cameraAnimationTimer?.cancel();
+      _cameraAnimationTimer = Timer(const Duration(milliseconds: 260), () {
+        if (!mounted ||
+            widget.useDigitalTwinMaterials ||
+            !_modelLoaded ||
+            _modelFailed ||
+            !_riderViewAnimationPlayed) {
           return;
         }
-
-        frame += 1;
-
-        final linearProgress = (frame / totalFrames).clamp(0.0, 1.0);
-
-        // Smooth ease-in-out rotation.
-        final easedProgress = Curves.easeInOutCubic.transform(linearProgress);
-
-        final theta = startTheta + ((endTheta - startTheta) * easedProgress);
 
         try {
-          _controller.setCameraOrbit(theta, widget.heroPhi, widget.heroRadius);
-        } catch (error) {
-          debugPrint('MUNJA 3D RIDER ANIMATION ERROR: $error');
-          timer.cancel();
-          return;
-        }
-
-        if (linearProgress >= 1.0) {
-          timer.cancel();
-          _riderViewAnimationPlayed = true;
-
-          try {
-            _controller.setCameraOrbit(
-              endTheta,
-              widget.heroPhi,
-              widget.heroRadius,
-            );
-          } catch (error) {
-            debugPrint('MUNJA 3D RIDER ANIMATION END ERROR: $error');
-          }
-
-          _cameraSettleTimer?.cancel();
-          _cameraSettleTimer = Timer(const Duration(milliseconds: 300), () {
-            if (!mounted || _modelFailed || !_riderViewAnimationPlayed) {
-              return;
-            }
-
-            try {
-              _controller.resetCameraTarget();
-              _controller.setCameraOrbit(
-                endTheta,
-                widget.heroPhi,
-                widget.heroRadius,
-              );
-            } catch (error) {
-              debugPrint('MUNJA 3D RIDER FINAL SETTLE ERROR: $error');
-            }
-          });
-
-          debugPrint(
-            'MUNJA 3D RIDER VIEW ANIMATION COMPLETE: '
-            '$startTheta° → $endTheta°',
+          _controller.resetCameraTarget();
+          _controller.setCameraOrbit(
+            endTheta,
+            widget.heroPhi,
+            widget.heroRadius,
           );
+        } catch (error) {
+          debugPrint('MUNJA 3D RIDER VIEW FINAL SETTLE ERROR: $error');
         }
-      },
-    );
+      });
+    });
   }
 
   bool _applyCameraNow() {
@@ -2001,139 +1988,143 @@ class _MunjaNativeDigitalTwinViewerState
     // the bike without changing the caller API.
     final compactHeight = (widget.height * 0.88).clamp(270.0, 330.0);
 
-    return GestureDetector(
-      behavior: HitTestBehavior.translucent,
-      onTap: widget.onBikeTap,
-      child: Container(
-        height: compactHeight,
-        decoration: BoxDecoration(
-          gradient: const LinearGradient(
-            begin: Alignment.topCenter,
-            end: Alignment.bottomCenter,
-            colors: <Color>[
-              Color(0xFF071914),
-              Color(0xFF03100D),
-              Color(0xFF010806),
-            ],
-            stops: <double>[0.0, 0.58, 1.0],
-          ),
-          borderRadius: BorderRadius.circular(27),
-          border: Border.all(
-            color: MunjaColors.mint.withOpacity(widget.isLive ? 0.34 : 0.20),
-            width: 1.15,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: MunjaColors.mint.withOpacity(widget.isLive ? 0.20 : 0.10),
-              blurRadius: widget.isLive ? 44 : 28,
-              spreadRadius: widget.isLive ? 2 : 0,
-              offset: const Offset(0, 14),
-            ),
-            BoxShadow(
-              color: Colors.black.withOpacity(0.46),
-              blurRadius: 24,
-              offset: const Offset(0, 16),
-            ),
+    return Container(
+      height: compactHeight,
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: <Color>[
+            Color(0xFF071914),
+            Color(0xFF03100D),
+            Color(0xFF010806),
           ],
+          stops: <double>[0.0, 0.58, 1.0],
         ),
-        clipBehavior: Clip.antiAlias,
-        child: Stack(
-          fit: StackFit.expand,
-          children: [
-            Positioned.fill(child: _BackgroundGlow(isLive: widget.isLive)),
+        borderRadius: BorderRadius.circular(27),
+        border: Border.all(
+          color: MunjaColors.mint.withOpacity(widget.isLive ? 0.34 : 0.20),
+          width: 1.15,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: MunjaColors.mint.withOpacity(widget.isLive ? 0.20 : 0.10),
+            blurRadius: widget.isLive ? 44 : 28,
+            spreadRadius: widget.isLive ? 2 : 0,
+            offset: const Offset(0, 14),
+          ),
+          BoxShadow(
+            color: Colors.black.withOpacity(0.46),
+            blurRadius: 24,
+            offset: const Offset(0, 16),
+          ),
+        ],
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          Positioned.fill(child: _BackgroundGlow(isLive: widget.isLive)),
 
-            // Premium inner showroom frame.
-            Positioned.fill(
-              child: IgnorePointer(
-                child: Container(
-                  margin: const EdgeInsets.all(8),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(20),
-                    border: Border.all(
-                      color: MunjaColors.mint.withOpacity(0.08),
-                    ),
-                  ),
+          // Premium inner showroom frame.
+          Positioned.fill(
+            child: IgnorePointer(
+              child: Container(
+                margin: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: MunjaColors.mint.withOpacity(0.08)),
                 ),
               ),
             ),
+          ),
 
-            // Subtle floor halo. It visually grounds the model without
-            // stealing vertical space from the bike itself.
-            Positioned(
-              left: 36,
-              right: 36,
-              bottom: 18,
-              child: IgnorePointer(
-                child: Container(
-                  height: 28,
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(999),
-                    gradient: RadialGradient(
-                      radius: 1.0,
-                      colors: <Color>[
-                        MunjaColors.mint.withOpacity(0.18),
-                        MunjaColors.mint.withOpacity(0.06),
-                        Colors.transparent,
-                      ],
-                    ),
-                    boxShadow: [
-                      BoxShadow(
-                        color: MunjaColors.mint.withOpacity(0.15),
-                        blurRadius: 34,
-                        spreadRadius: 5,
-                      ),
+          // Subtle floor halo. It visually grounds the model without
+          // stealing vertical space from the bike itself.
+          Positioned(
+            left: 36,
+            right: 36,
+            bottom: 18,
+            child: IgnorePointer(
+              child: Container(
+                height: 28,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(999),
+                  gradient: RadialGradient(
+                    radius: 1.0,
+                    colors: <Color>[
+                      MunjaColors.mint.withOpacity(0.18),
+                      MunjaColors.mint.withOpacity(0.06),
+                      Colors.transparent,
                     ],
                   ),
-                ),
-              ),
-            ),
-
-            IgnorePointer(
-              ignoring: !widget.enableTouch,
-              child: Interactive3d(
-                controller: _nativeController,
-                modelPath: Munja3DBikeViewer.digitalTwinMasterModelPath,
-                solidBackgroundColor: const <double>[0.0, 0.0, 0.0, 0.0],
-                backgroundColor: Colors.transparent,
-                defaultZoom: _nativeHomeZoom,
-                onSelectionChanged: (entities) {
-                  debugPrint(
-                    'MUNJA DIGITAL TWIN VIEWER SELECTION: '
-                    '${entities.map((e) => e.name).toList()}',
-                  );
-                },
-              ),
-            ),
-            if (!_ready && !_failed)
-              const Center(
-                child: CircularProgressIndicator(
-                  color: MunjaColors.mint,
-                  strokeWidth: 2,
-                ),
-              ),
-            if (_failed)
-              Center(
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 14,
-                    vertical: 10,
-                  ),
-                  decoration: BoxDecoration(
-                    color: Colors.black.withOpacity(0.55),
-                    borderRadius: BorderRadius.circular(16),
-                  ),
-                  child: const Text(
-                    'Digital Twin could not be loaded',
-                    style: TextStyle(
-                      color: Colors.white70,
-                      fontSize: 11,
-                      fontWeight: FontWeight.w800,
+                  boxShadow: [
+                    BoxShadow(
+                      color: MunjaColors.mint.withOpacity(0.15),
+                      blurRadius: 34,
+                      spreadRadius: 5,
                     ),
+                  ],
+                ),
+              ),
+            ),
+          ),
+
+          IgnorePointer(
+            ignoring: !widget.enableTouch,
+            child: Interactive3d(
+              controller: _nativeController,
+              modelPath: Munja3DBikeViewer.digitalTwinMasterModelPath,
+              solidBackgroundColor: const <double>[0.0, 0.0, 0.0, 0.0],
+              backgroundColor: Colors.transparent,
+              defaultZoom: _nativeHomeZoom,
+              onSelectionChanged: (entities) {
+                debugPrint(
+                  'MUNJA DIGITAL TWIN VIEWER SELECTION: '
+                  '${entities.map((e) => e.name).toList()}',
+                );
+
+                // Keep tap support without placing a Flutter GestureDetector
+                // above the native iOS view. The parent GestureDetector used
+                // previously could win the gesture arena on older iPhones and
+                // prevent the native 360-degree drag from receiving movement.
+                if (widget.enableTouch &&
+                    entities.isNotEmpty &&
+                    widget.onBikeTap != null) {
+                  widget.onBikeTap!();
+                }
+              },
+            ),
+          ),
+          if (!_ready && !_failed)
+            const Center(
+              child: CircularProgressIndicator(
+                color: MunjaColors.mint,
+                strokeWidth: 2,
+              ),
+            ),
+          if (_failed)
+            Center(
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 10,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.55),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: const Text(
+                  'Digital Twin could not be loaded',
+                  style: TextStyle(
+                    color: Colors.white70,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w800,
                   ),
                 ),
               ),
-          ],
-        ),
+            ),
+        ],
       ),
     );
   }

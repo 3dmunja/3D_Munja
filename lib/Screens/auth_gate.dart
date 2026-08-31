@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
+import '../core/localization/app_text.dart';
 import '../core/theme/munja_colors.dart';
 import '../services/auth_service.dart';
 import '../services/firestore_user_service.dart';
@@ -37,7 +38,7 @@ class _AuthGateState extends State<AuthGate> {
       future: _initializationFuture,
       builder: (context, initializationSnapshot) {
         if (initializationSnapshot.connectionState != ConnectionState.done) {
-          return const _AuthLoadingScreen(message: 'Forbinder din konto...');
+          return _AuthLoadingScreen(message: AppText.t('authConnecting'));
         }
 
         if (initializationSnapshot.hasError) {
@@ -50,8 +51,8 @@ class _AuthGateState extends State<AuthGate> {
           builder: (context, authSnapshot) {
             if (authSnapshot.connectionState == ConnectionState.waiting &&
                 authSnapshot.data == null) {
-              return const _AuthLoadingScreen(
-                message: 'Kontrollerer din loginstatus...',
+              return _AuthLoadingScreen(
+                message: AppText.t('authChecking'),
               );
             }
 
@@ -76,8 +77,8 @@ class _AuthGateState extends State<AuthGate> {
               future: syncFuture,
               builder: (context, syncSnapshot) {
                 if (syncSnapshot.connectionState != ConnectionState.done) {
-                  return const _AuthLoadingScreen(
-                    message: 'Synkroniserer din Munja-profil...',
+                  return _AuthLoadingScreen(
+                    message: AppText.t('authSyncing'),
                   );
                 }
 
@@ -235,9 +236,8 @@ class _AuthInitializationErrorScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return _AuthErrorScreen(
-      title: 'Login kunne ikke startes',
-      message:
-          'Munja kunne ikke initialisere login-systemet. Kontrollér din internetforbindelse og prøv igen.',
+      title: AppText.t('authInitTitle'),
+      message: AppText.t('authInitMessage'),
       onRetry: onRetry,
     );
   }
@@ -251,8 +251,8 @@ class _AuthStreamErrorScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return _AuthErrorScreen(
-      title: 'Kontoen kunne ikke indlæses',
-      message: 'Der opstod en fejl, mens Munja kontrollerede din loginstatus.',
+      title: AppText.t('authAccountLoadTitle'),
+      message: AppText.t('authAccountLoadMessage'),
       onRetry: onRetry,
     );
   }
@@ -266,9 +266,8 @@ class _FirestoreSyncErrorScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return _AuthErrorScreen(
-      title: 'Profilen kunne ikke synkroniseres',
-      message:
-          'Munja kunne ikke oprette eller hente din cloud-profil. Kontrollér internetforbindelsen og Firestore-adgangen, og prøv igen.',
+      title: AppText.t('authProfileSyncTitle'),
+      message: AppText.t('authProfileSyncMessage'),
       onRetry: onRetry,
     );
   }
@@ -367,8 +366,8 @@ class _AuthErrorScreen extends StatelessWidget {
                             ),
                           ),
                           icon: const Icon(Icons.refresh_rounded),
-                          label: const Text(
-                            'Prøv igen',
+                          label: Text(
+                            AppText.t('retry'),
                             style: TextStyle(fontWeight: FontWeight.w900),
                           ),
                         ),
