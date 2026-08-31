@@ -1,5 +1,6 @@
 import 'dart:async';
 
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_3d_controller/flutter_3d_controller.dart';
 import 'package:interactive_3d/interactive_3d.dart';
@@ -1517,6 +1518,34 @@ class _MunjaNativeDigitalTwinViewerState
   int _applyGeneration = 0;
   String? _lastAppliedSignature;
 
+  // ---------------------------------------------------------------------------
+  // iOS touch fallback
+  // ---------------------------------------------------------------------------
+  //
+  // Interactive3d renders correctly on iOS, but on some iPhones its native
+  // SceneKit drag recognizer can lose the gesture arena inside a complex Flutter
+  // Stack. Android is left completely unchanged. On iOS we listen to raw pointer
+  // movement in Flutter and drive Interactive3d's own camera through
+  // setCameraPose(). This gives deterministic 360-degree horizontal rotation
+  // without changing the GLB, materials, frames, Home layout, or Android path.
+  Timer? _iosGestureResumeTimer;
+  Future<void>? _iosStopShowroomFuture;
+
+  bool _iosPointerActive = false;
+  int? _iosPointerId;
+  Offset? _iosLastPointerPosition;
+  Offset? _iosPointerDownPosition;
+  bool _iosPointerMoved = false;
+
+  double _iosManualHorizontalDegrees = _nativeHomeHorizontalDegrees;
+  double _iosManualVerticalDegrees = _nativeHomeVerticalDegrees;
+
+  bool _iosCameraCommandInFlight = false;
+  bool _iosCameraCommandDirty = false;
+
+  bool get _useIosTouchFallback =>
+      widget.enableTouch && defaultTargetPlatform == TargetPlatform.iOS;
+
   bool _isCurrent(int generation) =>
       mounted && !_disposing && generation == _lifecycleGeneration;
 
@@ -1600,6 +1629,10 @@ class _MunjaNativeDigitalTwinViewerState
     _disposing = true;
     _lifecycleGeneration++;
     _applyGeneration++;
+    _iosGestureResumeTimer?.cancel();
+    _iosPointerActive = false;
+    _iosPointerId = null;
+    _iosCameraCommandDirty = false;
     _ready = false;
     _failed = false;
     super.dispose();
@@ -1784,6 +1817,9 @@ class _MunjaNativeDigitalTwinViewerState
         return;
       }
 
+      _iosManualHorizontalDegrees = _nativeHomeHorizontalDegrees;
+      _iosManualVerticalDegrees = _nativeHomeVerticalDegrees;
+
       debugPrint(
         'MUNJA DIGITAL TWIN HOME POSE RESTORED: '
         'horizontal=$_nativeHomeHorizontalDegrees°, '
@@ -1873,6 +1909,257 @@ class _MunjaNativeDigitalTwinViewerState
       debugPrint('MUNJA DIGITAL TWIN NATIVE SHOWROOM ERROR: $error');
       debugPrint('$stackTrace');
     }
+  }
+
+  double _normalizeDegrees(double value) {
+    var result = value % 360.0;
+    if (result > 180.0) result -= 360.0;
+    if (result < -180.0) result += 360.0;
+    return result;
+  }
+
+  void _handleIosPointerDown(PointerDownEvent event) {
+    if (!_useIosTouchFallback ||
+        !_ready ||
+        _failed ||
+        _disposing ||
+        _iosPointerActive) {
+      return;
+    }
+
+    _iosGestureResumeTimer?.cancel();
+
+    _iosPointerActive = true;
+    _iosPointerId = event.pointer;
+    _iosLastPointerPosition = event.localPosition;
+    _iosPointerDownPosition = event.localPosition;
+    _iosPointerMoved = false;
+
+    // Pause the native showroom animation before Flutter starts driving the
+    // camera. Keeping this Future allows the first camera update to wait for the
+    // stop command instead of racing it on older iPhones.
+    _iosStopShowroomFuture = _stopNativeShowroomForIosGesture();
+  }
+
+  Future<void> _stopNativeShowroomForIosGesture() async {
+    if (_disposing || !_ready || _failed) return;
+
+    try {
+      await _nativeController.stopShowroomRotation();
+    } on StateError catch (error) {
+      if (_disposing || error.toString().contains('not attached to a widget')) {
+        return;
+      }
+      debugPrint('MUNJA iOS 3D TOUCH STOP SHOWROOM ERROR: $error');
+    } catch (error) {
+      debugPrint('MUNJA iOS 3D TOUCH STOP SHOWROOM ERROR: $error');
+    }
+  }
+
+  void _handleIosPointerMove(PointerMoveEvent event) {
+    if (!_useIosTouchFallback ||
+        !_iosPointerActive ||
+        event.pointer != _iosPointerId ||
+        !_ready ||
+        _failed ||
+        _disposing) {
+      return;
+    }
+
+    final previous = _iosLastPointerPosition;
+    if (previous == null) {
+      _iosLastPointerPosition = event.localPosition;
+      return;
+    }
+
+    final delta = event.localPosition - previous;
+    _iosLastPointerPosition = event.localPosition;
+
+    final down = _iosPointerDownPosition;
+    if (down != null && (event.localPosition - down).distanceSquared > 36.0) {
+      _iosPointerMoved = true;
+    }
+
+    // Horizontal drag is the primary 360-degree bike rotation.
+    // Vertical drag is deliberately gentler and clamped so the camera cannot
+    // flip underneath/over the bike.
+    _iosManualHorizontalDegrees = _normalizeDegrees(
+      _iosManualHorizontalDegrees - (delta.dx * 0.52),
+    );
+
+    _iosManualVerticalDegrees = (_iosManualVerticalDegrees + (delta.dy * 0.20))
+        .clamp(-28.0, 28.0)
+        .toDouble();
+
+    _iosCameraCommandDirty = true;
+    unawaited(_flushIosCameraCommand());
+  }
+
+  Future<void> _flushIosCameraCommand() async {
+    if (_iosCameraCommandInFlight ||
+        !_useIosTouchFallback ||
+        !_ready ||
+        _failed ||
+        _disposing) {
+      return;
+    }
+
+    _iosCameraCommandInFlight = true;
+
+    try {
+      final stopFuture = _iosStopShowroomFuture;
+      _iosStopShowroomFuture = null;
+      if (stopFuture != null) {
+        await stopFuture;
+      }
+
+      // Coalesce rapid pointer events. We never queue one platform-channel call
+      // per pixel; if newer movement arrives while a call is in flight, only
+      // the newest desired camera pose is sent next.
+      while (_iosCameraCommandDirty &&
+          _useIosTouchFallback &&
+          _ready &&
+          !_failed &&
+          !_disposing) {
+        _iosCameraCommandDirty = false;
+
+        final horizontal = _iosManualHorizontalDegrees;
+        final vertical = _iosManualVerticalDegrees;
+
+        await _nativeController.setCameraPose(
+          horizontalDegrees: horizontal,
+          verticalDegrees: vertical,
+          targetHeightFactor: _nativeHomeTargetHeightFactor,
+          zoom: _nativeHomeZoom,
+        );
+      }
+    } on StateError catch (error) {
+      if (!_disposing &&
+          !error.toString().contains('not attached to a widget')) {
+        debugPrint('MUNJA iOS 3D TOUCH CAMERA ERROR: $error');
+      }
+    } catch (error, stackTrace) {
+      if (!_disposing) {
+        debugPrint('MUNJA iOS 3D TOUCH CAMERA ERROR: $error');
+        debugPrint('$stackTrace');
+      }
+    } finally {
+      _iosCameraCommandInFlight = false;
+
+      // A move may have arrived after the while-condition was last evaluated.
+      if (_iosCameraCommandDirty &&
+          _useIosTouchFallback &&
+          _ready &&
+          !_failed &&
+          !_disposing) {
+        unawaited(_flushIosCameraCommand());
+      }
+    }
+  }
+
+  void _handleIosPointerUp(PointerUpEvent event) {
+    _finishIosPointer(event.pointer, cancelled: false);
+  }
+
+  void _handleIosPointerCancel(PointerCancelEvent event) {
+    _finishIosPointer(event.pointer, cancelled: true);
+  }
+
+  void _finishIosPointer(int pointer, {required bool cancelled}) {
+    if (!_useIosTouchFallback ||
+        !_iosPointerActive ||
+        pointer != _iosPointerId) {
+      return;
+    }
+
+    final wasTap = !cancelled && !_iosPointerMoved;
+
+    _iosPointerActive = false;
+    _iosPointerId = null;
+    _iosLastPointerPosition = null;
+    _iosPointerDownPosition = null;
+    _iosPointerMoved = false;
+
+    // Preserve the existing "tap bike" behavior even though the native iOS view
+    // is ignored for pointer handling in fallback mode.
+    if (wasTap && widget.onBikeTap != null) {
+      widget.onBikeTap!();
+    }
+
+    if (!widget.showroomSwing ||
+        widget.isLive ||
+        !widget.resumeAutoRotateAfterInteraction) {
+      return;
+    }
+
+    _iosGestureResumeTimer?.cancel();
+    _iosGestureResumeTimer = Timer(widget.showroomSwingResumeDelay, () {
+      if (!mounted ||
+          _disposing ||
+          !_ready ||
+          _failed ||
+          _iosPointerActive ||
+          !widget.showroomSwing ||
+          widget.isLive) {
+        return;
+      }
+
+      // Interactive3d's showroom rotation uses the CURRENT camera angle as its
+      // centre, so it resumes from the user's chosen view instead of snapping
+      // back to the original front pose.
+      unawaited(_syncNativeShowroomRotation());
+    });
+  }
+
+  Widget _buildNativeInteractive3d() {
+    return Interactive3d(
+      controller: _nativeController,
+      modelPath: Munja3DBikeViewer.digitalTwinMasterModelPath,
+      solidBackgroundColor: const <double>[0.0, 0.0, 0.0, 0.0],
+      backgroundColor: Colors.transparent,
+      defaultZoom: _nativeHomeZoom,
+      onSelectionChanged: (entities) {
+        debugPrint(
+          'MUNJA DIGITAL TWIN VIEWER SELECTION: '
+          '${entities.map((e) => e.name).toList()}',
+        );
+
+        // Android/native path keeps the existing selection behavior.
+        // iOS fallback handles a short tap itself in _finishIosPointer().
+        if (!_useIosTouchFallback &&
+            widget.enableTouch &&
+            entities.isNotEmpty &&
+            widget.onBikeTap != null) {
+          widget.onBikeTap!();
+        }
+      },
+    );
+  }
+
+  Widget _buildNativeTouchLayer() {
+    if (_useIosTouchFallback) {
+      return Listener(
+        behavior: HitTestBehavior.opaque,
+        onPointerDown: _handleIosPointerDown,
+        onPointerMove: _handleIosPointerMove,
+        onPointerUp: _handleIosPointerUp,
+        onPointerCancel: _handleIosPointerCancel,
+
+        // Disable Interactive3d's own iOS pointer recognizer only in fallback
+        // mode. The model still renders normally; Flutter owns the drag and
+        // drives the same native camera through Interactive3dController.
+        child: IgnorePointer(
+          ignoring: true,
+          child: _buildNativeInteractive3d(),
+        ),
+      );
+    }
+
+    // Existing Android/non-iOS behavior is preserved exactly.
+    return IgnorePointer(
+      ignoring: !widget.enableTouch,
+      child: _buildNativeInteractive3d(),
+    );
   }
 
   Future<void> _applyDigitalTwin({
@@ -2070,32 +2357,7 @@ class _MunjaNativeDigitalTwinViewerState
             ),
           ),
 
-          IgnorePointer(
-            ignoring: !widget.enableTouch,
-            child: Interactive3d(
-              controller: _nativeController,
-              modelPath: Munja3DBikeViewer.digitalTwinMasterModelPath,
-              solidBackgroundColor: const <double>[0.0, 0.0, 0.0, 0.0],
-              backgroundColor: Colors.transparent,
-              defaultZoom: _nativeHomeZoom,
-              onSelectionChanged: (entities) {
-                debugPrint(
-                  'MUNJA DIGITAL TWIN VIEWER SELECTION: '
-                  '${entities.map((e) => e.name).toList()}',
-                );
-
-                // Keep tap support without placing a Flutter GestureDetector
-                // above the native iOS view. The parent GestureDetector used
-                // previously could win the gesture arena on older iPhones and
-                // prevent the native 360-degree drag from receiving movement.
-                if (widget.enableTouch &&
-                    entities.isNotEmpty &&
-                    widget.onBikeTap != null) {
-                  widget.onBikeTap!();
-                }
-              },
-            ),
-          ),
+          _buildNativeTouchLayer(),
           if (!_ready && !_failed)
             const Center(
               child: CircularProgressIndicator(
