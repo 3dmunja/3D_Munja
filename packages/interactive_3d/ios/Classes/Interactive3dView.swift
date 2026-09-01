@@ -333,8 +333,8 @@ class Interactive3DPlatformView: NSObject, FlutterPlatformView, FlutterStreamHan
         case .changed:
             // Direct one-finger orbit for iPhone Customize.
             // Horizontal drag = full orbit, vertical drag = gentler tilt.
-            let horizontal = -translation.x * 0.0055
-            let vertical = -translation.y * 0.0030
+            let horizontal = Float(-translation.x * 0.0055)
+            let vertical = Float(-translation.y * 0.0030)
 
             scnView.defaultCameraController.rotateBy(
                 x: horizontal,
