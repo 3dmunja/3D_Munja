@@ -877,6 +877,28 @@ class _Munja3DBikeViewerState extends State<Munja3DBikeViewer> {
   @override
   Widget build(BuildContext context) {
     if (widget.useDigitalTwinMaterials) {
+      // iOS: use Flutter3DViewer for the visual/touch layer.
+      //
+      // The Interactive3d renderer loads the model correctly on iPhone, but its
+      // native touch/camera path has proved unreliable on the tested devices.
+      // Flutter3DViewer already has a separate iOS implementation and gives us
+      // reliable orbit gestures. Android keeps the existing Interactive3d path
+      // so its Digital Twin material/frame handling remains unchanged.
+      if (defaultTargetPlatform == TargetPlatform.iOS) {
+        return _MunjaIosDigitalTwinViewer(
+          height: widget.height,
+          isLive: widget.isLive,
+          enableTouch: widget.enableTouch,
+          modelPath: widget.modelPath,
+          autoRotate: widget.autoRotate,
+          autoRotateSpeed: widget.autoRotateSpeed,
+          resumeAutoRotateAfterInteraction:
+              widget.resumeAutoRotateAfterInteraction,
+          autoRotateResumeDelay: widget.autoRotateResumeDelay,
+          onBikeTap: widget.onBikeTap,
+        );
+      }
+
       return _MunjaNativeDigitalTwinViewer(
         height: widget.height,
         isLive: widget.isLive,
@@ -1438,6 +1460,454 @@ class _ErrorOverlay extends StatelessWidget {
             ),
           ),
         ),
+      ),
+    );
+  }
+}
+
+/// iOS-only Digital Twin renderer.
+///
+/// This deliberately uses Flutter3DViewer instead of Interactive3d on iPhone.
+/// It is isolated from the Android Digital Twin renderer so Android's native
+/// material/frame behavior remains untouched.
+///
+/// Important:
+/// - Manual one-finger orbit is handled by Flutter3DViewer.
+/// - No GestureDetector is placed above the 3D view.
+/// - A raw Listener only observes pointer start/end so it cannot win the gesture
+///   arena or block the viewer's own drag recognizer.
+/// - The camera is never re-applied while the user is dragging.
+class _MunjaIosDigitalTwinViewer extends StatefulWidget {
+  const _MunjaIosDigitalTwinViewer({
+    required this.height,
+    required this.isLive,
+    required this.enableTouch,
+    required this.modelPath,
+    required this.autoRotate,
+    required this.autoRotateSpeed,
+    required this.resumeAutoRotateAfterInteraction,
+    required this.autoRotateResumeDelay,
+    this.onBikeTap,
+  });
+
+  final double height;
+  final bool isLive;
+  final bool enableTouch;
+  final String modelPath;
+  final bool autoRotate;
+  final int autoRotateSpeed;
+  final bool resumeAutoRotateAfterInteraction;
+  final Duration autoRotateResumeDelay;
+  final VoidCallback? onBikeTap;
+
+  @override
+  State<_MunjaIosDigitalTwinViewer> createState() =>
+      _MunjaIosDigitalTwinViewerState();
+}
+
+class _MunjaIosDigitalTwinViewerState
+    extends State<_MunjaIosDigitalTwinViewer> {
+  final Flutter3DController _controller = Flutter3DController();
+
+  Timer? _cameraSettleTimer;
+  Timer? _autoRotateResumeTimer;
+  Timer? _readyFallbackTimer;
+
+  bool _loaded = false;
+  bool _failed = false;
+  bool _pointerInteracting = false;
+  double _progress = 0.0;
+
+  int? _tapPointer;
+  Offset? _tapDownPosition;
+  bool _tapMoved = false;
+
+  // Same deterministic front-facing camera used by the stable legacy viewer.
+  static const double _frontTheta = 180.0;
+  static const double _frontPhi = 72.0;
+  static const double _frontRadius = 2.85;
+
+  @override
+  void initState() {
+    super.initState();
+    _controller.onModelLoaded.addListener(_onControllerReady);
+
+    // Some iOS versions report onLoad before the controller notifier changes.
+    // This timer only checks readiness; it never sends camera commands early.
+    _readyFallbackTimer = Timer.periodic(const Duration(milliseconds: 200), (
+      timer,
+    ) {
+      if (!mounted || _loaded || _failed) {
+        timer.cancel();
+        return;
+      }
+
+      if (_controller.onModelLoaded.value) {
+        timer.cancel();
+        _markReady('controller-poll');
+      }
+    });
+  }
+
+  @override
+  void didUpdateWidget(covariant _MunjaIosDigitalTwinViewer oldWidget) {
+    super.didUpdateWidget(oldWidget);
+
+    if (oldWidget.modelPath != widget.modelPath) {
+      _cameraSettleTimer?.cancel();
+      _autoRotateResumeTimer?.cancel();
+
+      setState(() {
+        _loaded = false;
+        _failed = false;
+        _progress = 0.0;
+        _pointerInteracting = false;
+      });
+    }
+
+    final rotationChanged =
+        oldWidget.autoRotate != widget.autoRotate ||
+        oldWidget.autoRotateSpeed != widget.autoRotateSpeed ||
+        oldWidget.enableTouch != widget.enableTouch;
+
+    if (_loaded && rotationChanged) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _syncAutoRotation();
+        }
+      });
+    }
+  }
+
+  @override
+  void dispose() {
+    _cameraSettleTimer?.cancel();
+    _autoRotateResumeTimer?.cancel();
+    _readyFallbackTimer?.cancel();
+    _controller.onModelLoaded.removeListener(_onControllerReady);
+    super.dispose();
+  }
+
+  void _onControllerReady() {
+    if (!mounted || !_controller.onModelLoaded.value) return;
+    _markReady('controller-notifier');
+  }
+
+  void _markReady(String reason) {
+    if (!mounted || _failed) return;
+
+    _readyFallbackTimer?.cancel();
+
+    if (!_loaded) {
+      setState(() {
+        _loaded = true;
+        _failed = false;
+        _progress = 1.0;
+      });
+    }
+
+    debugPrint('MUNJA iOS 3D READY: $reason | ${widget.modelPath}');
+
+    // Wait for the iOS 3D view to settle before applying the first camera.
+    // Crucially, this only happens once after load and never during a drag.
+    _cameraSettleTimer?.cancel();
+    _cameraSettleTimer = Timer(const Duration(milliseconds: 320), () {
+      if (!mounted || !_loaded || _failed || _pointerInteracting) return;
+
+      _applyInitialCamera();
+
+      if (widget.autoRotate) {
+        _autoRotateResumeTimer?.cancel();
+        _autoRotateResumeTimer = Timer(const Duration(milliseconds: 550), () {
+          if (mounted &&
+              _loaded &&
+              !_failed &&
+              !_pointerInteracting &&
+              widget.autoRotate) {
+            _syncAutoRotation();
+          }
+        });
+      }
+    });
+  }
+
+  void _applyInitialCamera() {
+    if (!_loaded || _failed || _pointerInteracting) return;
+
+    try {
+      _controller.resetCameraTarget();
+      _controller.setCameraOrbit(_frontTheta, _frontPhi, _frontRadius);
+
+      debugPrint(
+        'MUNJA iOS 3D INITIAL CAMERA: '
+        'theta=$_frontTheta phi=$_frontPhi radius=$_frontRadius',
+      );
+    } catch (error) {
+      debugPrint('MUNJA iOS 3D INITIAL CAMERA ERROR: $error');
+    }
+  }
+
+  void _pauseAutoRotation() {
+    try {
+      _controller.pauseRotation();
+    } catch (_) {
+      try {
+        _controller.stopRotation();
+      } catch (error) {
+        debugPrint('MUNJA iOS 3D PAUSE ROTATION ERROR: $error');
+      }
+    }
+  }
+
+  void _syncAutoRotation() {
+    _autoRotateResumeTimer?.cancel();
+
+    if (!_loaded || _failed || _pointerInteracting || !widget.autoRotate) {
+      _pauseAutoRotation();
+      return;
+    }
+
+    try {
+      _controller.startRotation(rotationSpeed: widget.autoRotateSpeed);
+    } catch (error) {
+      debugPrint('MUNJA iOS 3D AUTO ROTATION ERROR: $error');
+    }
+  }
+
+  void _onPointerDown(PointerDownEvent event) {
+    if (!widget.enableTouch || !_loaded || _failed) return;
+
+    _pointerInteracting = true;
+    _autoRotateResumeTimer?.cancel();
+
+    _tapPointer = event.pointer;
+    _tapDownPosition = event.localPosition;
+    _tapMoved = false;
+
+    if (widget.autoRotate) {
+      _pauseAutoRotation();
+    }
+  }
+
+  void _onPointerMove(PointerMoveEvent event) {
+    if (!widget.enableTouch || event.pointer != _tapPointer) return;
+
+    final down = _tapDownPosition;
+    if (down != null && (event.localPosition - down).distanceSquared > 36.0) {
+      _tapMoved = true;
+    }
+  }
+
+  void _onPointerUp(PointerUpEvent event) {
+    if (!widget.enableTouch) return;
+
+    final isTracked = event.pointer == _tapPointer;
+    final wasTap = isTracked && !_tapMoved;
+
+    _pointerInteracting = false;
+    _tapPointer = null;
+    _tapDownPosition = null;
+    _tapMoved = false;
+
+    if (wasTap && widget.onBikeTap != null) {
+      widget.onBikeTap!();
+    }
+
+    if (!widget.autoRotate || !widget.resumeAutoRotateAfterInteraction) {
+      return;
+    }
+
+    _autoRotateResumeTimer?.cancel();
+    _autoRotateResumeTimer = Timer(widget.autoRotateResumeDelay, () {
+      if (mounted && _loaded && !_failed && !_pointerInteracting) {
+        _syncAutoRotation();
+      }
+    });
+  }
+
+  void _onPointerCancel(PointerCancelEvent event) {
+    if (!widget.enableTouch) return;
+
+    _pointerInteracting = false;
+    _tapPointer = null;
+    _tapDownPosition = null;
+    _tapMoved = false;
+
+    if (!widget.autoRotate || !widget.resumeAutoRotateAfterInteraction) {
+      return;
+    }
+
+    _autoRotateResumeTimer?.cancel();
+    _autoRotateResumeTimer = Timer(widget.autoRotateResumeDelay, () {
+      if (mounted && _loaded && !_failed && !_pointerInteracting) {
+        _syncAutoRotation();
+      }
+    });
+  }
+
+  double _normalizeProgress(double value) {
+    if (value <= 0) return 0.0;
+    if (value > 1.0) {
+      return (value / 100.0).clamp(0.0, 1.0);
+    }
+    return value.clamp(0.0, 1.0);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final compactHeight = (widget.height * 0.88).clamp(270.0, 330.0);
+
+    return Container(
+      height: compactHeight,
+      decoration: BoxDecoration(
+        gradient: const LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+          colors: <Color>[
+            Color(0xFF071914),
+            Color(0xFF03100D),
+            Color(0xFF010806),
+          ],
+          stops: <double>[0.0, 0.58, 1.0],
+        ),
+        borderRadius: BorderRadius.circular(27),
+        border: Border.all(
+          color: MunjaColors.mint.withOpacity(widget.isLive ? 0.34 : 0.20),
+          width: 1.15,
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: MunjaColors.mint.withOpacity(widget.isLive ? 0.20 : 0.10),
+            blurRadius: widget.isLive ? 44 : 28,
+            spreadRadius: widget.isLive ? 2 : 0,
+            offset: const Offset(0, 14),
+          ),
+          BoxShadow(
+            color: Colors.black.withOpacity(0.46),
+            blurRadius: 24,
+            offset: const Offset(0, 16),
+          ),
+        ],
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Stack(
+        fit: StackFit.expand,
+        children: [
+          Positioned.fill(child: _BackgroundGlow(isLive: widget.isLive)),
+
+          Positioned.fill(
+            child: IgnorePointer(
+              child: Container(
+                margin: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(20),
+                  border: Border.all(color: MunjaColors.mint.withOpacity(0.08)),
+                ),
+              ),
+            ),
+          ),
+
+          Positioned(
+            left: 36,
+            right: 36,
+            bottom: 18,
+            child: IgnorePointer(
+              child: Container(
+                height: 28,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(999),
+                  gradient: RadialGradient(
+                    radius: 1.0,
+                    colors: <Color>[
+                      MunjaColors.mint.withOpacity(0.18),
+                      MunjaColors.mint.withOpacity(0.06),
+                      Colors.transparent,
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+
+          Positioned.fill(
+            child: Listener(
+              behavior: HitTestBehavior.translucent,
+              onPointerDown: _onPointerDown,
+              onPointerMove: _onPointerMove,
+              onPointerUp: _onPointerUp,
+              onPointerCancel: _onPointerCancel,
+              child: Flutter3DViewer(
+                controller: _controller,
+                src: widget.modelPath,
+                activeGestureInterceptor: widget.enableTouch,
+                enableTouch: widget.enableTouch,
+                progressBarColor: Colors.transparent,
+                onProgress: (double value) {
+                  if (!mounted || _loaded || _failed) return;
+
+                  final normalized = _normalizeProgress(value);
+                  if ((_progress - normalized).abs() > 0.001) {
+                    setState(() => _progress = normalized);
+                  }
+                },
+                onLoad: (String modelAddress) {
+                  debugPrint('MUNJA iOS 3D MODEL LOADED: $modelAddress');
+                  _markReady('viewer-onLoad');
+                },
+                onError: (String error) {
+                  debugPrint('MUNJA iOS 3D MODEL ERROR: $error');
+
+                  if (!mounted) return;
+
+                  _cameraSettleTimer?.cancel();
+                  _autoRotateResumeTimer?.cancel();
+                  _readyFallbackTimer?.cancel();
+
+                  setState(() {
+                    _loaded = false;
+                    _failed = true;
+                  });
+                },
+              ),
+            ),
+          ),
+
+          if (!_loaded && !_failed)
+            Center(
+              child: SizedBox(
+                width: 44,
+                height: 44,
+                child: CircularProgressIndicator(
+                  value: _progress <= 0 ? null : _progress,
+                  color: MunjaColors.mint,
+                  strokeWidth: 2.4,
+                  backgroundColor: Colors.white.withOpacity(0.08),
+                ),
+              ),
+            ),
+
+          if (_failed)
+            Center(
+              child: Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 14,
+                  vertical: 10,
+                ),
+                decoration: BoxDecoration(
+                  color: Colors.black.withOpacity(0.55),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: const Text(
+                  'Digital Twin could not be loaded',
+                  style: TextStyle(
+                    color: Colors.white70,
+                    fontSize: 11,
+                    fontWeight: FontWeight.w800,
+                  ),
+                ),
+              ),
+            ),
+        ],
       ),
     );
   }
