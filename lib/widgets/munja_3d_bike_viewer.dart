@@ -877,28 +877,6 @@ class _Munja3DBikeViewerState extends State<Munja3DBikeViewer> {
   @override
   Widget build(BuildContext context) {
     if (widget.useDigitalTwinMaterials) {
-      // iOS: use Flutter3DViewer for the visual/touch layer.
-      //
-      // The Interactive3d renderer loads the model correctly on iPhone, but its
-      // native touch/camera path has proved unreliable on the tested devices.
-      // Flutter3DViewer already has a separate iOS implementation and gives us
-      // reliable orbit gestures. Android keeps the existing Interactive3d path
-      // so its Digital Twin material/frame handling remains unchanged.
-      if (defaultTargetPlatform == TargetPlatform.iOS) {
-        return _MunjaIosDigitalTwinViewer(
-          height: widget.height,
-          isLive: widget.isLive,
-          enableTouch: widget.enableTouch,
-          modelPath: widget.modelPath,
-          autoRotate: widget.autoRotate,
-          autoRotateSpeed: widget.autoRotateSpeed,
-          resumeAutoRotateAfterInteraction:
-              widget.resumeAutoRotateAfterInteraction,
-          autoRotateResumeDelay: widget.autoRotateResumeDelay,
-          onBikeTap: widget.onBikeTap,
-        );
-      }
-
       return _MunjaNativeDigitalTwinViewer(
         height: widget.height,
         isLive: widget.isLive,

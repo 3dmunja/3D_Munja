@@ -55,8 +55,24 @@ class Interactive3DPlatformView: NSObject, FlutterPlatformView, FlutterStreamHan
         // Wrap in WeakStreamHandler to break retain cycle with event channel
         eventChannel.setStreamHandler(WeakStreamHandler(delegate: self))
 
-        let tapGesture = UITapGestureRecognizer(target: self, action: #selector(handleTap(_:)))
+        // MUNJA iOS gesture fix
+        scnView.isUserInteractionEnabled = true
+        scnView.allowsCameraControl = true
+        scnView.cameraControlConfiguration.allowsTranslation = false
+
+        let tapGesture = UITapGestureRecognizer(
+            target: self,
+            action: #selector(handleTap(_:))
+        )
+
+        // Do not block SceneKit camera gestures.
+        tapGesture.cancelsTouchesInView = false
         scnView.addGestureRecognizer(tapGesture)
+
+        // Allow SceneKit camera recognizers and selection tap to coexist.
+        scnView.gestureRecognizers?.forEach { recognizer in
+            recognizer.cancelsTouchesInView = false
+        }
 
         scnView.scene = SCNScene()
     }
