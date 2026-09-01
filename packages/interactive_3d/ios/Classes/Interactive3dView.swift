@@ -74,6 +74,20 @@ class Interactive3DPlatformView: NSObject, FlutterPlatformView, FlutterStreamHan
             recognizer.cancelsTouchesInView = false
         }
 
+        // MUNJA Customize iOS rotation fix:
+        // Add an explicit one-finger pan recognizer that drives SceneKit's
+        // default camera controller. This keeps Interactive3d's material/frame
+        // system intact while restoring reliable 360-degree rotation on iPhone.
+        let panGesture = UIPanGestureRecognizer(
+            target: self,
+            action: #selector(handleCameraPan(_:))
+        )
+        panGesture.minimumNumberOfTouches = 1
+        panGesture.maximumNumberOfTouches = 1
+        panGesture.cancelsTouchesInView = false
+        panGesture.delegate = self
+        scnView.addGestureRecognizer(panGesture)
+
         scnView.scene = SCNScene()
     }
 
@@ -305,6 +319,39 @@ class Interactive3DPlatformView: NSObject, FlutterPlatformView, FlutterStreamHan
         }
     }
 
+    // MARK: - Camera Gesture Handling
+
+    @objc private func handleCameraPan(_ gesture: UIPanGestureRecognizer) {
+        guard !isDisposed else { return }
+
+        let translation = gesture.translation(in: scnView)
+
+        switch gesture.state {
+        case .began:
+            break
+
+        case .changed:
+            // Direct one-finger orbit for iPhone Customize.
+            // Horizontal drag = full orbit, vertical drag = gentler tilt.
+            let horizontal = -translation.x * 0.0055
+            let vertical = -translation.y * 0.0030
+
+            scnView.defaultCameraController.rotateBy(
+                x: horizontal,
+                y: vertical
+            )
+
+            gesture.setTranslation(.zero, in: scnView)
+            scnView.setNeedsDisplay()
+
+        case .ended, .cancelled, .failed:
+            gesture.setTranslation(.zero, in: scnView)
+
+        default:
+            break
+        }
+    }
+
     // MARK: - Tap Handling
 
     @objc private func handleTap(_ gesture: UITapGestureRecognizer) {
@@ -492,3 +539,17 @@ class Interactive3DPlatformView: NSObject, FlutterPlatformView, FlutterStreamHan
         pendingInitialOverrides = nil
     }
 }
+
+// MARK: - UIGestureRecognizerDelegate
+
+extension Interactive3DPlatformView: UIGestureRecognizerDelegate {
+    func gestureRecognizer(
+        _ gestureRecognizer: UIGestureRecognizer,
+        shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer
+    ) -> Bool {
+        // Keep pinch/zoom and selection taps available while the one-finger
+        // camera pan is active.
+        return true
+    }
+}
+
