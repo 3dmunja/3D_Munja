@@ -1,6 +1,8 @@
 import 'dart:async';
 import 'dart:io';
 
+import 'package:flutter/foundation.dart';
+import 'package:flutter/gestures.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
@@ -99,6 +101,11 @@ class Interactive3d extends StatefulWidget {
   /// visually; deselect restores the override.
   final List<MaterialOverride>? initialMaterialOverrides;
 
+  /// iOS only:
+  /// When true, the native UiKitView eagerly receives touch gestures.
+  /// Used by Munja Customize so one-finger drag reaches SceneKit reliably.
+  final bool iOSEagerGestures;
+
   const Interactive3d({
     super.key,
     this.modelPath,
@@ -125,6 +132,7 @@ class Interactive3d extends StatefulWidget {
     this.backgroundColor = Colors.black,
     this.loadingWidget,
     this.initialMaterialOverrides,
+    this.iOSEagerGestures = false,
   });
 
   @override
@@ -178,7 +186,10 @@ class Interactive3dState extends State<Interactive3d> {
       builder: (context, constraints) {
         final size = Size(constraints.maxWidth, constraints.maxHeight);
 
-        if (_textureId == null && !_isInitializing && size.width > 0 && size.height > 0) {
+        if (_textureId == null &&
+            !_isInitializing &&
+            size.width > 0 &&
+            size.height > 0) {
           final dpr = MediaQuery.of(context).devicePixelRatio;
           // High-end: near-native quality, Mid: balanced, Low: max performance
           // The native DeviceCapability tier is detected on init — here we approximate
@@ -196,7 +207,8 @@ class Interactive3dState extends State<Interactive3d> {
           color: widget.backgroundColor,
           child: _textureId != null
               ? _buildTextureWidget()
-              : (widget.loadingWidget ?? const Center(child: CircularProgressIndicator())),
+              : (widget.loadingWidget ??
+                  const Center(child: CircularProgressIndicator())),
         );
       },
     );
@@ -215,6 +227,13 @@ class Interactive3dState extends State<Interactive3d> {
         'solidBackgroundColor': widget.solidBackgroundColor,
       },
       creationParamsCodec: const StandardMessageCodec(),
+      gestureRecognizers: widget.iOSEagerGestures
+          ? <Factory<OneSequenceGestureRecognizer>>{
+              Factory<OneSequenceGestureRecognizer>(
+                () => EagerGestureRecognizer(),
+              ),
+            }
+          : const <Factory<OneSequenceGestureRecognizer>>{},
       onPlatformViewCreated: _onIOSPlatformViewCreated,
     );
   }
@@ -223,14 +242,16 @@ class Interactive3dState extends State<Interactive3d> {
     _iosMethodChannel = MethodChannel('interactive_3d_$viewId');
     final eventChannel = EventChannel('interactive_3d_events_$viewId');
 
-    _iosEventSubscription = eventChannel.receiveBroadcastStream().listen((event) {
+    _iosEventSubscription =
+        eventChannel.receiveBroadcastStream().listen((event) {
       final map = event as Map<dynamic, dynamic>;
       final String eventType = map['event'];
 
       if (eventType == 'selectionChanged') {
         final List<dynamic> selected = map['selectedEntities'];
         final entities = selected
-            .map((e) => EntityData(id: e['id'] as int, name: e['name'] as String))
+            .map((e) =>
+                EntityData(id: e['id'] as int, name: e['name'] as String))
             .toList();
         widget.onSelectionChanged?.call(entities);
       } else if (eventType == 'cacheSelectionChanged') {
@@ -277,28 +298,35 @@ class Interactive3dState extends State<Interactive3d> {
         'enableCache': widget.enableCache,
         'cacheColor': widget.cacheColor,
         'clearSelectionsOnHighlight': widget.clearSelectionOnHighlight,
-        'selectionSequence': widget.selectionSequence?.map((c) => c.toJson()).toList(),
+        'selectionSequence':
+            widget.selectionSequence?.map((c) => c.toJson()).toList(),
         'backgroundColor': widget.solidBackgroundColor,
         'initialMaterialOverrides':
             widget.initialMaterialOverrides?.map((o) => o.toMap()).toList(),
       });
 
       // iOS HDR/EXR background
-      if (widget.iOSBackgroundEnvPath != null || widget.iOSBackgroundEnvUrl != null) {
+      if (widget.iOSBackgroundEnvPath != null ||
+          widget.iOSBackgroundEnvUrl != null) {
         Uint8List? bgBytes;
         if (widget.iOSBackgroundEnvPath != null) {
-          bgBytes = (await rootBundle.load(widget.iOSBackgroundEnvPath!)).buffer.asUint8List();
+          bgBytes = (await rootBundle.load(widget.iOSBackgroundEnvPath!))
+              .buffer
+              .asUint8List();
         } else if (widget.iOSBackgroundEnvUrl != null) {
-          final response = await http.get(Uri.parse(widget.iOSBackgroundEnvUrl!));
+          final response =
+              await http.get(Uri.parse(widget.iOSBackgroundEnvUrl!));
           if (response.statusCode == 200) bgBytes = response.bodyBytes;
         }
         if (bgBytes != null) {
-          await channel.invokeMethod('loadHdrBackground', {'backgroundBytes': bgBytes});
+          await channel
+              .invokeMethod('loadHdrBackground', {'backgroundBytes': bgBytes});
         }
       }
 
       if (widget.defaultZoom != null) {
-        await channel.invokeMethod('setZoomLevel', {'zoom': widget.defaultZoom});
+        await channel
+            .invokeMethod('setZoomLevel', {'zoom': widget.defaultZoom});
       }
     } catch (e) {
       debugPrint('Error loading iOS model: $e');
@@ -375,9 +403,7 @@ class Interactive3dState extends State<Interactive3d> {
         'textureId=$_textureId',
       );
 
-      _selectionSubscription = _platform!
-          .selectionStream(_textureId!)
-          .listen(
+      _selectionSubscription = _platform!.selectionStream(_textureId!).listen(
         _onSelectionChanged,
         onError: (Object error, StackTrace stackTrace) {
           debugPrint(
@@ -398,9 +424,8 @@ class Interactive3dState extends State<Interactive3d> {
           'MUNJA INIT 7: BEFORE CACHE STREAM',
         );
 
-        _cacheSelectionSubscription = _platform!
-            .cacheSelectionStream(_textureId!)
-            .listen(
+        _cacheSelectionSubscription =
+            _platform!.cacheSelectionStream(_textureId!).listen(
           widget.onCacheSelectionChanged!,
           onError: (Object error, StackTrace stackTrace) {
             debugPrint(
@@ -469,10 +494,7 @@ class Interactive3dState extends State<Interactive3d> {
     try {
       Map<String, ByteData> resources = {};
 
-      final modelSource =
-          widget.modelPath ??
-          widget.modelUrl ??
-          '';
+      final modelSource = widget.modelPath ?? widget.modelUrl ?? '';
 
       debugPrint(
         'MUNJA ANDROID LOAD 2: SOURCE=$modelSource',
@@ -792,7 +814,6 @@ class Interactive3dState extends State<Interactive3d> {
     }
   }
 
-
   /// MUNJA EXCLUSIVE FRAME VISIBILITY
   ///
   /// Keeps exactly one of [entityNames] visible and hides the remaining
@@ -856,7 +877,8 @@ class Interactive3dState extends State<Interactive3d> {
       await _iosMethodChannel?.invokeMethod('unselectEntities', entityIds);
     } else {
       if (_platform == null || _textureId == null) return;
-      await _platform!.unselectEntities(textureId: _textureId!, entityIds: entityIds);
+      await _platform!
+          .unselectEntities(textureId: _textureId!, entityIds: entityIds);
     }
   }
 
@@ -1028,9 +1050,11 @@ class Interactive3dState extends State<Interactive3d> {
 
     String baseDir = '';
     if (widget.modelPath != null) {
-      baseDir = widget.modelPath!.substring(0, widget.modelPath!.lastIndexOf('/') + 1);
+      baseDir = widget.modelPath!
+          .substring(0, widget.modelPath!.lastIndexOf('/') + 1);
     } else if (widget.modelUrl != null) {
-      baseDir = widget.modelUrl!.substring(0, widget.modelUrl!.lastIndexOf('/') + 1);
+      baseDir =
+          widget.modelUrl!.substring(0, widget.modelUrl!.lastIndexOf('/') + 1);
     }
 
     for (final file in widget.resources) {

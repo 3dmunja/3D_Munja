@@ -2995,6 +2995,7 @@ import '../widgets/skin_unlock_celebration.dart';
                             key: const ValueKey<String>(
                               'munja-native-master-bike',
                             ),
+                            iOSEagerGestures: true,
                             controller: frameController,
                             modelPath: 'assets/models/kids_mtb_master.glb',
                             solidBackgroundColor: const <double>[
