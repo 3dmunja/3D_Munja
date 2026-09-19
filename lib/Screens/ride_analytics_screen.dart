@@ -33,10 +33,7 @@ class _RideAnalyticsScreenState extends State<RideAnalyticsScreen> {
 
     final loaded = await StorageService.loadTrips();
 
-    final analytics =
-        const AdvancedRideAnalyticsService().analyze(
-      loaded,
-    );
+    final analytics = const AdvancedRideAnalyticsService().analyze(loaded);
 
     if (!mounted) return;
 
@@ -54,10 +51,7 @@ class _RideAnalyticsScreenState extends State<RideAnalyticsScreen> {
   int get totalRides => trips.length;
 
   bool get isProAnalytics =>
-      MunjaProService.instance.hasFeature(
-        MunjaProFeature.advancedAnalytics,
-      );
-
+      MunjaProService.instance.hasFeature(MunjaProFeature.advancedAnalytics);
 
   Duration get totalDuration {
     return trips.fold(Duration.zero, (sum, t) => sum + t.duration);
@@ -177,9 +171,7 @@ class _RideAnalyticsScreenState extends State<RideAnalyticsScreen> {
 
   Future<void> _openMunjaPro() async {
     await Navigator.of(context).push<void>(
-      MaterialPageRoute<void>(
-        builder: (_) => const MunjaProScreen(),
-      ),
+      MaterialPageRoute<void>(builder: (_) => const MunjaProScreen()),
     );
 
     if (!mounted) {
@@ -209,12 +201,9 @@ class _RideAnalyticsScreenState extends State<RideAnalyticsScreen> {
 
     return ValueListenableBuilder<MunjaProState>(
       valueListenable: MunjaProService.instance.state,
-      builder: (
-        context,
-        proState,
-        _,
-      ) {
-        final isPro = proState.hasActivePro &&
+      builder: (context, proState, _) {
+        final isPro =
+            proState.hasActivePro &&
             MunjaProService.instance.hasFeature(
               MunjaProFeature.advancedAnalytics,
             );
@@ -223,306 +212,303 @@ class _RideAnalyticsScreenState extends State<RideAnalyticsScreen> {
           backgroundColor: MunjaColors.bg,
           body: SafeArea(
             child: RefreshIndicator(
-          onRefresh: _loadTrips,
-          color: MunjaColors.mint,
-          backgroundColor: const Color(0xFF07110E),
-          child: ListView(
-            padding: const EdgeInsets.fromLTRB(16, 14, 16, 300),
-            children: [
-              Row(
+              onRefresh: _loadTrips,
+              color: MunjaColors.mint,
+              backgroundColor: const Color(0xFF07110E),
+              child: ListView(
+                padding: const EdgeInsets.fromLTRB(16, 14, 16, 300),
                 children: [
-                  IconButton(
-                    onPressed: () => Navigator.pop(context),
-                    icon: const Icon(Icons.arrow_back_rounded),
+                  Row(
+                    children: [
+                      IconButton(
+                        onPressed: () => Navigator.pop(context),
+                        icon: const Icon(Icons.arrow_back_rounded),
+                      ),
+                      const Spacer(),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 7,
+                        ),
+                        decoration: BoxDecoration(
+                          color: MunjaColors.mint.withOpacity(0.14),
+                          borderRadius: BorderRadius.circular(999),
+                          border: Border.all(
+                            color: MunjaColors.mint.withOpacity(0.3),
+                          ),
+                        ),
+                        child: Text(
+                          isPro
+                              ? AppText.t('munjaProAnalyticsCaps')
+                              : AppText.t('munjaAnalyticsCaps'),
+                          style: const TextStyle(
+                            color: MunjaColors.mint,
+                            fontSize: 12,
+                            fontWeight: FontWeight.w900,
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
-                  const Spacer(),
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 12,
-                      vertical: 7,
+
+                  const SizedBox(height: 14),
+
+                  Text(
+                    AppText.t('analytics'),
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontSize: 34,
+                      height: 1,
+                      fontWeight: FontWeight.w900,
+                      letterSpacing: -1.1,
                     ),
+                  ),
+
+                  const SizedBox(height: 8),
+
+                  Text(
+                    AppText.t('personalRideIntelligence'),
+                    style: const TextStyle(
+                      color: MunjaColors.textSoft,
+                      fontSize: 15,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+
+                  const SizedBox(height: 22),
+
+                  Container(
+                    padding: const EdgeInsets.all(22),
                     decoration: BoxDecoration(
-                      color: MunjaColors.mint.withOpacity(0.14),
-                      borderRadius: BorderRadius.circular(999),
+                      color: MunjaColors.panel,
+                      borderRadius: BorderRadius.circular(34),
                       border: Border.all(
                         color: MunjaColors.mint.withOpacity(0.3),
                       ),
+                      boxShadow: [
+                        BoxShadow(
+                          color: MunjaColors.mint.withOpacity(0.14),
+                          blurRadius: 34,
+                          offset: const Offset(0, 18),
+                        ),
+                      ],
                     ),
-                    child: Text(
-                      isPro
-                          ? 'MUNJA PRO ANALYTICS'
-                          : 'MUNJA ANALYTICS',
-                      style: const TextStyle(
-                        color: MunjaColors.mint,
-                        fontSize: 12,
-                        fontWeight: FontWeight.w900,
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 14),
-
-              Text(
-                AppText.t('analytics'),
-                style: const TextStyle(
-                  color: Colors.white,
-                  fontSize: 34,
-                  height: 1,
-                  fontWeight: FontWeight.w900,
-                  letterSpacing: -1.1,
-                ),
-              ),
-
-              const SizedBox(height: 8),
-
-              Text(
-                AppText.t('personalRideIntelligence'),
-                style: const TextStyle(
-                  color: MunjaColors.textSoft,
-                  fontSize: 15,
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-
-              const SizedBox(height: 22),
-
-              Container(
-                padding: const EdgeInsets.all(22),
-                decoration: BoxDecoration(
-                  color: MunjaColors.panel,
-                  borderRadius: BorderRadius.circular(34),
-                  border: Border.all(color: MunjaColors.mint.withOpacity(0.3)),
-                  boxShadow: [
-                    BoxShadow(
-                      color: MunjaColors.mint.withOpacity(0.14),
-                      blurRadius: 34,
-                      offset: const Offset(0, 18),
-                    ),
-                  ],
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      AppText.t('distance'),
-                      style: const TextStyle(
-                        color: Colors.white54,
-                        fontSize: 13,
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    Row(
-                      crossAxisAlignment: CrossAxisAlignment.end,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Text(
-                          totalKm.toStringAsFixed(1),
+                          AppText.t('distance'),
                           style: const TextStyle(
-                            color: Colors.white,
-                            fontSize: 64,
-                            height: 0.92,
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: -3,
+                            color: Colors.white54,
+                            fontSize: 13,
+                            fontWeight: FontWeight.w800,
                           ),
                         ),
-                        const SizedBox(width: 8),
-                        const Padding(
-                          padding: EdgeInsets.only(bottom: 8),
-                          child: Text(
-                            'km',
-                            style: TextStyle(
-                              color: MunjaColors.mint,
-                              fontSize: 16,
-                              fontWeight: FontWeight.w900,
+                        const SizedBox(height: 8),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Text(
+                              totalKm.toStringAsFixed(1),
+                              style: const TextStyle(
+                                color: Colors.white,
+                                fontSize: 64,
+                                height: 0.92,
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: -3,
+                              ),
                             ),
-                          ),
+                            const SizedBox(width: 8),
+                            const Padding(
+                              padding: EdgeInsets.only(bottom: 8),
+                              child: Text(
+                                'km',
+                                style: TextStyle(
+                                  color: MunjaColors.mint,
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.w900,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 16),
-
-              Row(
-                children: [
-                  Expanded(
-                    child: _AnalyticsMetric(
-                      icon: Icons.directions_bike_rounded,
-                      label: AppText.t('rides'),
-                      value: '$totalRides',
-                      unit: '',
-                    ),
                   ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: _AnalyticsMetric(
-                      icon: Icons.timer_rounded,
-                      label: AppText.t('time'),
-                      value: _durationText(totalDuration),
-                      unit: '',
-                    ),
+
+                  const SizedBox(height: 16),
+
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _AnalyticsMetric(
+                          icon: Icons.directions_bike_rounded,
+                          label: AppText.t('rides'),
+                          value: '$totalRides',
+                          unit: '',
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: _AnalyticsMetric(
+                          icon: Icons.timer_rounded,
+                          label: AppText.t('time'),
+                          value: _durationText(totalDuration),
+                          unit: '',
+                        ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
 
-              const SizedBox(height: 10),
+                  const SizedBox(height: 10),
 
-              Row(
-                children: [
-                  Expanded(
-                    child: _AnalyticsMetric(
-                      icon: Icons.speed_rounded,
-                      label: AppText.t('avgSpeed'),
-                      value: avgSpeedKmh.toStringAsFixed(1),
-                      unit: 'km/h',
-                    ),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _AnalyticsMetric(
+                          icon: Icons.speed_rounded,
+                          label: AppText.t('avgSpeed'),
+                          value: avgSpeedKmh.toStringAsFixed(1),
+                          unit: 'km/h',
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: _AnalyticsMetric(
+                          icon: Icons.route_rounded,
+                          label: AppText.t('longest'),
+                          value: longestRideKm.toStringAsFixed(1),
+                          unit: 'km',
+                        ),
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: _AnalyticsMetric(
-                      icon: Icons.route_rounded,
-                      label: AppText.t('longest'),
-                      value: longestRideKm.toStringAsFixed(1),
-                      unit: 'km',
-                    ),
+
+                  const SizedBox(height: 10),
+
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _AnalyticsMetric(
+                          icon: Icons.local_fire_department_rounded,
+                          label: AppText.t('calories'),
+                          value: '$totalCalories',
+                          unit: 'kcal',
+                        ),
+                      ),
+                      const SizedBox(width: 10),
+                      Expanded(
+                        child: _AnalyticsMetric(
+                          icon: Icons.eco_rounded,
+                          label: AppText.t('co2Saved'),
+                          value: co2SavedKg.toStringAsFixed(1),
+                          unit: 'kg',
+                        ),
+                      ),
+                    ],
                   ),
-                ],
-              ),
 
-              const SizedBox(height: 10),
+                  const SizedBox(height: 16),
 
-              Row(
-                children: [
-                  Expanded(
-                    child: _AnalyticsMetric(
-                      icon: Icons.local_fire_department_rounded,
-                      label: AppText.t('calories'),
-                      value: '$totalCalories',
-                      unit: 'kcal',
-                    ),
-                  ),
-                  const SizedBox(width: 10),
-                  Expanded(
-                    child: _AnalyticsMetric(
-                      icon: Icons.eco_rounded,
-                      label: AppText.t('co2Saved'),
-                      value: co2SavedKg.toStringAsFixed(1),
-                      unit: 'kg',
-                    ),
-                  ),
-                ],
-              ),
-
-              const SizedBox(height: 16),
-
-              MunjaCard(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    SectionTitle(
-                      title: AppText.t('monthlyProgress'),
-                      subtitle: AppText.t('lastSixMonthsRiding'),
-                    ),
-                    const SizedBox(height: 18),
-                    _MonthlyBarChart(stats: monthlyStats),
-                  ],
-                ),
-              ),
-
-              const SizedBox(height: 16),
-
-              MunjaCard(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    SectionTitle(
-                      title: AppText.t('streak'),
-                      subtitle: AppText.t('consistencyCreatesResults'),
-                    ),
-                    const SizedBox(height: 16),
-                    Row(
+                  MunjaCard(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Container(
-                          width: 62,
-                          height: 62,
-                          decoration: BoxDecoration(
-                            color: MunjaColors.mint.withOpacity(0.13),
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: MunjaColors.mint.withOpacity(0.3),
-                            ),
-                          ),
-                          child: const Icon(
-                            Icons.bolt_rounded,
-                            color: MunjaColors.mint,
-                            size: 34,
-                          ),
+                        SectionTitle(
+                          title: AppText.t('monthlyProgress'),
+                          subtitle: AppText.t('lastSixMonthsRiding'),
                         ),
-                        const SizedBox(width: 14),
-                        Expanded(
-                          child: Text(
-                            _streakText(),
-                            style: const TextStyle(
-                              color: Colors.white,
-                              fontSize: 18,
-                              fontWeight: FontWeight.w900,
+                        const SizedBox(height: 18),
+                        _MonthlyBarChart(stats: monthlyStats),
+                      ],
+                    ),
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  MunjaCard(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        SectionTitle(
+                          title: AppText.t('streak'),
+                          subtitle: AppText.t('consistencyCreatesResults'),
+                        ),
+                        const SizedBox(height: 16),
+                        Row(
+                          children: [
+                            Container(
+                              width: 62,
+                              height: 62,
+                              decoration: BoxDecoration(
+                                color: MunjaColors.mint.withOpacity(0.13),
+                                shape: BoxShape.circle,
+                                border: Border.all(
+                                  color: MunjaColors.mint.withOpacity(0.3),
+                                ),
+                              ),
+                              child: const Icon(
+                                Icons.bolt_rounded,
+                                color: MunjaColors.mint,
+                                size: 34,
+                              ),
                             ),
-                          ),
+                            const SizedBox(width: 14),
+                            Expanded(
+                              child: Text(
+                                _streakText(),
+                                style: const TextStyle(
+                                  color: Colors.white,
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.w900,
+                                ),
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
+                  ),
+
+                  const SizedBox(height: 16),
+
+                  if (isPro && advancedAnalytics != null) ...[
+                    _ProAnalyticsPanel(analytics: advancedAnalytics!),
+                    const SizedBox(height: 16),
+                  ] else ...[
+                    _ProAnalyticsLockedCard(onTap: _openMunjaPro),
+                    const SizedBox(height: 16),
                   ],
-                ),
-              ),
 
-              const SizedBox(height: 16),
-
-              if (isPro &&
-                  advancedAnalytics != null) ...[
-                _ProAnalyticsPanel(
-                  analytics: advancedAnalytics!,
-                ),
-                const SizedBox(height: 16),
-              ] else ...[
-                _ProAnalyticsLockedCard(
-                  onTap: _openMunjaPro,
-                ),
-                const SizedBox(height: 16),
-              ],
-
-              MunjaCard(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    SectionTitle(
-                      title: AppText.t('recentRides'),
-                      subtitle: AppText.t('latestSavedTrips'),
+                  MunjaCard(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        SectionTitle(
+                          title: AppText.t('recentRides'),
+                          subtitle: AppText.t('latestSavedTrips'),
+                        ),
+                        const SizedBox(height: 14),
+                        if (trips.isEmpty)
+                          Text(
+                            AppText.t('noRidesSavedYet'),
+                            style: const TextStyle(color: MunjaColors.textSoft),
+                          )
+                        else
+                          ...trips
+                              .take(6)
+                              .map(
+                                (trip) => _RecentRideTile(
+                                  trip: trip,
+                                  dateText: _dateText(trip.startedAtMs),
+                                ),
+                              ),
+                      ],
                     ),
-                    const SizedBox(height: 14),
-                    if (trips.isEmpty)
-                      Text(
-                        AppText.t('noRidesSavedYet'),
-                        style: const TextStyle(color: MunjaColors.textSoft),
-                      )
-                    else
-                      ...trips
-                          .take(6)
-                          .map(
-                            (trip) => _RecentRideTile(
-                              trip: trip,
-                              dateText: _dateText(trip.startedAtMs),
-                            ),
-                          ),
-                  ],
-                ),
+                  ),
+                ],
               ),
-            ],
-          ),
-        ),
+            ),
           ),
         );
       },
@@ -531,15 +517,13 @@ class _RideAnalyticsScreenState extends State<RideAnalyticsScreen> {
 }
 
 class _ProAnalyticsPanel extends StatelessWidget {
-  const _ProAnalyticsPanel({
-    required this.analytics,
-  });
+  const _ProAnalyticsPanel({required this.analytics});
 
   final AdvancedAnalyticsResult analytics;
 
   String _change(double? value) {
     if (value == null) {
-      return 'NEW';
+      return AppText.t('analyticsNewCaps');
     }
 
     final prefix = value >= 0 ? '+' : '';
@@ -556,9 +540,7 @@ class _ProAnalyticsPanel extends StatelessWidget {
       decoration: BoxDecoration(
         color: MunjaColors.panel,
         borderRadius: BorderRadius.circular(30),
-        border: Border.all(
-          color: MunjaColors.mint.withOpacity(0.24),
-        ),
+        border: Border.all(color: MunjaColors.mint.withOpacity(0.24)),
         boxShadow: [
           BoxShadow(
             color: MunjaColors.mint.withOpacity(0.08),
@@ -570,16 +552,16 @@ class _ProAnalyticsPanel extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          const Row(
+          Row(
             children: [
-              Icon(
+              const Icon(
                 Icons.auto_graph_rounded,
                 color: MunjaColors.mint,
                 size: 21,
               ),
               SizedBox(width: 8),
               Text(
-                'ADVANCED ANALYTICS',
+                AppText.t('advancedAnalyticsCaps'),
                 style: TextStyle(
                   color: MunjaColors.mint,
                   fontSize: 10,
@@ -588,11 +570,7 @@ class _ProAnalyticsPanel extends StatelessWidget {
                 ),
               ),
               Spacer(),
-              Icon(
-                Icons.verified_rounded,
-                color: MunjaColors.mint,
-                size: 18,
-              ),
+              Icon(Icons.verified_rounded, color: MunjaColors.mint, size: 18),
             ],
           ),
           const SizedBox(height: 16),
@@ -600,21 +578,17 @@ class _ProAnalyticsPanel extends StatelessWidget {
             children: [
               Expanded(
                 child: _ProTrendMetric(
-                  label: 'THIS WEEK',
-                  value:
-                      '${week.currentDistanceKm.toStringAsFixed(1)} km',
-                  change:
-                      _change(week.distanceChangePercent),
+                  label: AppText.t('analyticsThisWeekCaps'),
+                  value: '${week.currentDistanceKm.toStringAsFixed(1)} km',
+                  change: _change(week.distanceChangePercent),
                 ),
               ),
               const SizedBox(width: 10),
               Expanded(
                 child: _ProTrendMetric(
-                  label: 'THIS MONTH',
-                  value:
-                      '${month.currentDistanceKm.toStringAsFixed(1)} km',
-                  change:
-                      _change(month.distanceChangePercent),
+                  label: AppText.t('analyticsThisMonthCaps'),
+                  value: '${month.currentDistanceKm.toStringAsFixed(1)} km',
+                  change: _change(month.distanceChangePercent),
                 ),
               ),
             ],
@@ -624,21 +598,19 @@ class _ProAnalyticsPanel extends StatelessWidget {
             children: [
               Expanded(
                 child: _ProTrendMetric(
-                  label: 'PACE TREND',
+                  label: AppText.t('analyticsPaceTrendCaps'),
                   value:
                       '${month.currentAverageSpeedKmh.toStringAsFixed(1)} km/h',
-                  change:
-                      _change(month.speedChangePercent),
+                  change: _change(month.speedChangePercent),
                 ),
               ),
               const SizedBox(width: 10),
               Expanded(
                 child: _ProTrendMetric(
-                  label: 'CONSISTENCY',
-                  value:
-                      '${analytics.consistencyScore}/100',
+                  label: AppText.t('analyticsConsistencyCaps'),
+                  value: '${analytics.consistencyScore}/100',
                   change:
-                      '${week.currentRideCount} RIDES',
+                      '${week.currentRideCount} ${AppText.t('rides').toUpperCase()}',
                 ),
               ),
             ],
@@ -650,9 +622,7 @@ class _ProAnalyticsPanel extends StatelessWidget {
             decoration: BoxDecoration(
               color: Colors.black.withOpacity(0.16),
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(
-                color: Colors.white.withOpacity(0.055),
-              ),
+              border: Border.all(color: Colors.white.withOpacity(0.055)),
             ),
             child: Row(
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -665,8 +635,7 @@ class _ProAnalyticsPanel extends StatelessWidget {
                 const SizedBox(width: 10),
                 Expanded(
                   child: Column(
-                    crossAxisAlignment:
-                        CrossAxisAlignment.start,
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
                         analytics.insightTitle,
@@ -695,8 +664,8 @@ class _ProAnalyticsPanel extends StatelessWidget {
           const SizedBox(height: 12),
           Row(
             children: [
-              const Text(
-                'BEST MONTH',
+              Text(
+                AppText.t('analyticsBestMonthCaps'),
                 style: TextStyle(
                   color: MunjaColors.textSoft,
                   fontSize: 9,
@@ -740,9 +709,7 @@ class _ProTrendMetric extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.black.withOpacity(0.16),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: Colors.white.withOpacity(0.055),
-        ),
+        border: Border.all(color: Colors.white.withOpacity(0.055)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -783,9 +750,7 @@ class _ProTrendMetric extends StatelessWidget {
 }
 
 class _ProAnalyticsLockedCard extends StatelessWidget {
-  const _ProAnalyticsLockedCard({
-    required this.onTap,
-  });
+  const _ProAnalyticsLockedCard({required this.onTap});
 
   final VoidCallback onTap;
 
@@ -801,9 +766,7 @@ class _ProAnalyticsLockedCard extends StatelessWidget {
           decoration: BoxDecoration(
             color: MunjaColors.panel,
             borderRadius: BorderRadius.circular(28),
-            border: Border.all(
-              color: MunjaColors.mint.withOpacity(0.16),
-            ),
+            border: Border.all(color: MunjaColors.mint.withOpacity(0.16)),
           ),
           child: Row(
             children: [
@@ -821,13 +784,12 @@ class _ProAnalyticsLockedCard extends StatelessWidget {
                 ),
               ),
               const SizedBox(width: 12),
-              const Expanded(
+              Expanded(
                 child: Column(
-                  crossAxisAlignment:
-                      CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'ADVANCED ANALYTICS',
+                      AppText.t('advancedAnalyticsCaps'),
                       style: TextStyle(
                         color: MunjaColors.mint,
                         fontSize: 9,
@@ -837,7 +799,7 @@ class _ProAnalyticsLockedCard extends StatelessWidget {
                     ),
                     SizedBox(height: 4),
                     Text(
-                      'Weekly trends, monthly comparison and personal insights',
+                      AppText.t('advancedAnalyticsDescription'),
                       style: TextStyle(
                         color: Colors.white,
                         fontSize: 12.5,
@@ -847,7 +809,7 @@ class _ProAnalyticsLockedCard extends StatelessWidget {
                     ),
                     SizedBox(height: 5),
                     Text(
-                      'UNLOCK WITH MUNJA PRO',
+                      AppText.t('unlockWithMunjaProCaps'),
                       style: TextStyle(
                         color: MunjaColors.mint,
                         fontSize: 9,
@@ -859,10 +821,7 @@ class _ProAnalyticsLockedCard extends StatelessWidget {
                 ),
               ),
               SizedBox(width: 8),
-              Icon(
-                Icons.chevron_right_rounded,
-                color: MunjaColors.mint,
-              ),
+              Icon(Icons.chevron_right_rounded, color: MunjaColors.mint),
             ],
           ),
         ),

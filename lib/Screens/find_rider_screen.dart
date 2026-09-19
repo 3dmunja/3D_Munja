@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../core/theme/munja_colors.dart';
+import '../Core/localization/app_text.dart';
 import '../models/social_rider_profile.dart';
 import '../services/friend_service.dart';
 import '../services/social_rider_service.dart';
@@ -40,9 +41,7 @@ class _FindRiderScreenState extends State<FindRiderScreen> {
     final result = _result;
     final currentUid = SocialRiderService.instance.currentUid;
 
-    return result != null &&
-        currentUid != null &&
-        result.uid == currentUid;
+    return result != null && currentUid != null && result.uid == currentUid;
   }
 
   Future<void> _search() async {
@@ -54,7 +53,7 @@ class _FindRiderScreenState extends State<FindRiderScreen> {
       setState(() {
         _hasSearched = false;
         _result = null;
-        _errorMessage = 'Enter a @username, e-mail or Munja Friend Code.';
+        _errorMessage = AppText.t('enterRiderSearch');
       });
       return;
     }
@@ -73,8 +72,7 @@ class _FindRiderScreenState extends State<FindRiderScreen> {
     });
 
     try {
-      final result =
-          await SocialRiderService.instance.findRider(query);
+      final result = await SocialRiderService.instance.findRider(query);
 
       if (!mounted) return;
 
@@ -84,23 +82,17 @@ class _FindRiderScreenState extends State<FindRiderScreen> {
 
       final currentUid = SocialRiderService.instance.currentUid;
 
-      if (result != null &&
-          currentUid != null &&
-          result.uid != currentUid) {
+      if (result != null && currentUid != null && result.uid != currentUid) {
         alreadyFriends = await FriendService.instance.areFriends(
           otherUid: result.uid,
         );
 
         if (!alreadyFriends) {
-          hasPendingOutgoingRequest =
-              await FriendService.instance.hasPendingOutgoingRequest(
-            toUid: result.uid,
-          );
+          hasPendingOutgoingRequest = await FriendService.instance
+              .hasPendingOutgoingRequest(toUid: result.uid);
 
-          hasPendingIncomingRequest =
-              await FriendService.instance.hasPendingIncomingRequest(
-            fromUid: result.uid,
-          );
+          hasPendingIncomingRequest = await FriendService.instance
+              .hasPendingIncomingRequest(fromUid: result.uid);
         }
       }
 
@@ -113,8 +105,7 @@ class _FindRiderScreenState extends State<FindRiderScreen> {
         _alreadyFriends = alreadyFriends;
 
         if (result == null) {
-          _errorMessage =
-              'No Munja rider was found with that username, e-mail or Friend Code.';
+          _errorMessage = AppText.t('riderNotFoundMessage');
         }
       });
     } catch (error, stackTrace) {
@@ -124,8 +115,7 @@ class _FindRiderScreenState extends State<FindRiderScreen> {
       if (!mounted) return;
 
       setState(() {
-        _errorMessage =
-            'Rider search failed. Please check your connection and try again.';
+        _errorMessage = AppText.t('riderSearchFailed');
       });
     } finally {
       if (mounted) {
@@ -171,9 +161,7 @@ class _FindRiderScreenState extends State<FindRiderScreen> {
     });
 
     try {
-      await FriendService.instance.sendFriendRequest(
-        toUid: result.uid,
-      );
+      await FriendService.instance.sendFriendRequest(toUid: result.uid);
 
       if (!mounted) return;
 
@@ -185,7 +173,9 @@ class _FindRiderScreenState extends State<FindRiderScreen> {
         SnackBar(
           backgroundColor: MunjaColors.panel,
           content: Text(
-            'Friend request sent to ${result.usernameWithAt}.',
+            AppText.t(
+              'friendRequestSentTo',
+            ).replaceAll('{rider}', result.usernameWithAt),
           ),
         ),
       );
@@ -201,10 +191,7 @@ class _FindRiderScreenState extends State<FindRiderScreen> {
       }
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          backgroundColor: MunjaColors.panel,
-          content: Text(message),
-        ),
+        SnackBar(backgroundColor: MunjaColors.panel, content: Text(message)),
       );
     } catch (error, stackTrace) {
       debugPrint('SEND FRIEND REQUEST ERROR: $error');
@@ -215,9 +202,7 @@ class _FindRiderScreenState extends State<FindRiderScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           backgroundColor: MunjaColors.panel,
-          content: const Text(
-            'Friend request could not be sent. Please try again.',
-          ),
+          content: Text(AppText.t('friendRequestSendFailed')),
         ),
       );
     } finally {
@@ -242,8 +227,8 @@ class _FindRiderScreenState extends State<FindRiderScreen> {
           onPressed: () => Navigator.of(context).pop(),
           icon: const Icon(Icons.arrow_back_ios_new_rounded),
         ),
-        title: const Text(
-          'Find Rider',
+        title: Text(
+          AppText.t('findRiderTitle'),
           style: TextStyle(
             color: Colors.white,
             fontSize: 20,
@@ -275,20 +260,19 @@ class _FindRiderScreenState extends State<FindRiderScreen> {
                 rider: _result!,
                 isCurrentUser: _isCurrentUser,
                 sendingFriendRequest: _sendingFriendRequest,
-                hasPendingOutgoingRequest:
-                    _hasPendingOutgoingRequest,
-                hasPendingIncomingRequest:
-                    _hasPendingIncomingRequest,
+                hasPendingOutgoingRequest: _hasPendingOutgoingRequest,
+                hasPendingIncomingRequest: _hasPendingIncomingRequest,
                 alreadyFriends: _alreadyFriends,
-                onAddFriend:
-                    _isCurrentUser ? null : _sendFriendRequest,
+                onAddFriend: _isCurrentUser ? null : _sendFriendRequest,
               )
             else if (_errorMessage != null)
               _SearchMessageCard(
                 icon: _hasSearched
                     ? Icons.person_search_rounded
                     : Icons.info_outline_rounded,
-                title: _hasSearched ? 'Rider not found' : 'Ready to search',
+                title: _hasSearched
+                    ? AppText.t('riderNotFound')
+                    : AppText.t('readyToSearch'),
                 message: _errorMessage!,
               )
             else
@@ -310,9 +294,7 @@ class _FindRiderIntro extends StatelessWidget {
       decoration: BoxDecoration(
         color: MunjaColors.panel.withOpacity(0.72),
         borderRadius: BorderRadius.circular(30),
-        border: Border.all(
-          color: MunjaColors.mint.withOpacity(0.14),
-        ),
+        border: Border.all(color: MunjaColors.mint.withOpacity(0.14)),
         boxShadow: [
           BoxShadow(
             color: MunjaColors.mint.withOpacity(0.06),
@@ -321,11 +303,11 @@ class _FindRiderIntro extends StatelessWidget {
           ),
         ],
       ),
-      child: const Column(
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'MUNJA SOCIAL',
+            AppText.t('munjaSocialCaps'),
             style: TextStyle(
               color: MunjaColors.mint,
               fontSize: 10,
@@ -335,7 +317,7 @@ class _FindRiderIntro extends StatelessWidget {
           ),
           SizedBox(height: 8),
           Text(
-            'Find another rider',
+            AppText.t('findAnotherRider'),
             style: TextStyle(
               color: Colors.white,
               fontSize: 28,
@@ -345,8 +327,7 @@ class _FindRiderIntro extends StatelessWidget {
           ),
           SizedBox(height: 8),
           Text(
-            'Search by @username, e-mail or a simple Munja Friend Code. '
-            'Use whichever method is easiest for you.',
+            AppText.t('findRiderSearchDescription'),
             style: TextStyle(
               color: MunjaColors.textSoft,
               fontSize: 13,
@@ -382,9 +363,7 @@ class _SearchCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: MunjaColors.panel.withOpacity(0.58),
         borderRadius: BorderRadius.circular(26),
-        border: Border.all(
-          color: Colors.white.withOpacity(0.065),
-        ),
+        border: Border.all(color: Colors.white.withOpacity(0.065)),
       ),
       child: Row(
         children: [
@@ -402,7 +381,7 @@ class _SearchCard extends StatelessWidget {
                 fontWeight: FontWeight.w800,
               ),
               decoration: InputDecoration(
-                hintText: '@username, e-mail or Friend Code',
+                hintText: AppText.t('riderSearchHint'),
                 hintStyle: const TextStyle(
                   color: Colors.white30,
                   fontWeight: FontWeight.w700,
@@ -432,9 +411,7 @@ class _SearchCard extends StatelessWidget {
                 ),
                 enabledBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(20),
-                  borderSide: BorderSide(
-                    color: Colors.white.withOpacity(0.05),
-                  ),
+                  borderSide: BorderSide(color: Colors.white.withOpacity(0.05)),
                 ),
                 focusedBorder: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(20),
@@ -491,20 +468,15 @@ class _SearchingCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: MunjaColors.panel.withOpacity(0.45),
         borderRadius: BorderRadius.circular(28),
-        border: Border.all(
-          color: Colors.white.withOpacity(0.05),
-        ),
+        border: Border.all(color: Colors.white.withOpacity(0.05)),
       ),
-      child: const Column(
+      child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
-          CircularProgressIndicator(
-            color: MunjaColors.mint,
-            strokeWidth: 2.5,
-          ),
+          CircularProgressIndicator(color: MunjaColors.mint, strokeWidth: 2.5),
           SizedBox(height: 14),
           Text(
-            'Searching Munja riders...',
+            AppText.t('searchingRiders'),
             style: TextStyle(
               color: MunjaColors.textSoft,
               fontSize: 12,
@@ -541,11 +513,9 @@ class _RiderResultCard extends StatelessWidget {
       return OutlinedButton.icon(
         onPressed: null,
         icon: const Icon(Icons.person_rounded),
-        label: const Text(
-          'This is you',
-          style: TextStyle(
-            fontWeight: FontWeight.w900,
-          ),
+        label: Text(
+          AppText.t('thisIsYou'),
+          style: TextStyle(fontWeight: FontWeight.w900),
         ),
       );
     }
@@ -554,11 +524,9 @@ class _RiderResultCard extends StatelessWidget {
       return OutlinedButton.icon(
         onPressed: null,
         icon: const Icon(Icons.people_alt_rounded),
-        label: const Text(
-          'Friends',
-          style: TextStyle(
-            fontWeight: FontWeight.w900,
-          ),
+        label: Text(
+          AppText.t('friendsTitle'),
+          style: TextStyle(fontWeight: FontWeight.w900),
         ),
       );
     }
@@ -567,11 +535,9 @@ class _RiderResultCard extends StatelessWidget {
       return OutlinedButton.icon(
         onPressed: null,
         icon: const Icon(Icons.mark_email_unread_rounded),
-        label: const Text(
-          'Request received',
-          style: TextStyle(
-            fontWeight: FontWeight.w900,
-          ),
+        label: Text(
+          AppText.t('requestReceived'),
+          style: TextStyle(fontWeight: FontWeight.w900),
         ),
       );
     }
@@ -580,11 +546,9 @@ class _RiderResultCard extends StatelessWidget {
       return OutlinedButton.icon(
         onPressed: null,
         icon: const Icon(Icons.schedule_send_rounded),
-        label: const Text(
-          'Request sent',
-          style: TextStyle(
-            fontWeight: FontWeight.w900,
-          ),
+        label: Text(
+          AppText.t('requestSent'),
+          style: TextStyle(fontWeight: FontWeight.w900),
         ),
       );
     }
@@ -602,10 +566,8 @@ class _RiderResultCard extends StatelessWidget {
             )
           : const Icon(Icons.person_add_alt_1_rounded),
       label: Text(
-        sendingFriendRequest ? 'Sending...' : 'Add Friend',
-        style: const TextStyle(
-          fontWeight: FontWeight.w900,
-        ),
+        sendingFriendRequest ? AppText.t('sending') : AppText.t('addFriend'),
+        style: const TextStyle(fontWeight: FontWeight.w900),
       ),
     );
   }
@@ -620,9 +582,7 @@ class _RiderResultCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: MunjaColors.panel.withOpacity(0.82),
         borderRadius: BorderRadius.circular(30),
-        border: Border.all(
-          color: MunjaColors.mint.withOpacity(0.18),
-        ),
+        border: Border.all(color: MunjaColors.mint.withOpacity(0.18)),
         boxShadow: [
           BoxShadow(
             color: MunjaColors.mint.withOpacity(0.08),
@@ -708,7 +668,10 @@ class _RiderResultCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Friend Code: ${rider.riderId.replaceFirst('MUNJA-', '')}',
+                      AppText.t('friendCodeValue').replaceAll(
+                        '{code}',
+                        rider.riderId.replaceFirst('MUNJA-', ''),
+                      ),
                       style: const TextStyle(
                         color: Colors.white38,
                         fontSize: 10,
@@ -747,7 +710,7 @@ class _RiderResultCard extends StatelessWidget {
             children: [
               Expanded(
                 child: _ResultMetric(
-                  label: 'LEVEL',
+                  label: AppText.t('levelCaps'),
                   value: '${rider.level}',
                   icon: Icons.workspace_premium_rounded,
                 ),
@@ -755,7 +718,7 @@ class _RiderResultCard extends StatelessWidget {
               const SizedBox(width: 10),
               Expanded(
                 child: _ResultMetric(
-                  label: 'TOTAL XP',
+                  label: AppText.t('totalXpCaps'),
                   value: '${rider.totalXp}',
                   icon: Icons.bolt_rounded,
                 ),
@@ -780,11 +743,7 @@ class _FallbackAvatar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return const Center(
-      child: Icon(
-        Icons.person_rounded,
-        color: MunjaColors.mint,
-        size: 34,
-      ),
+      child: Icon(Icons.person_rounded, color: MunjaColors.mint, size: 34),
     );
   }
 }
@@ -808,17 +767,11 @@ class _ResultMetric extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.black.withOpacity(0.16),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: Colors.white.withOpacity(0.055),
-        ),
+        border: Border.all(color: Colors.white.withOpacity(0.055)),
       ),
       child: Row(
         children: [
-          Icon(
-            icon,
-            color: MunjaColors.mint,
-            size: 20,
-          ),
+          Icon(icon, color: MunjaColors.mint, size: 20),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
@@ -872,9 +825,7 @@ class _SearchMessageCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: MunjaColors.panel.withOpacity(0.48),
         borderRadius: BorderRadius.circular(28),
-        border: Border.all(
-          color: Colors.white.withOpacity(0.055),
-        ),
+        border: Border.all(color: Colors.white.withOpacity(0.055)),
       ),
       child: Column(
         children: [
@@ -885,11 +836,7 @@ class _SearchMessageCard extends StatelessWidget {
               color: MunjaColors.mint.withOpacity(0.10),
               shape: BoxShape.circle,
             ),
-            child: Icon(
-              icon,
-              color: MunjaColors.mint,
-              size: 27,
-            ),
+            child: Icon(icon, color: MunjaColors.mint, size: 27),
           ),
           const SizedBox(height: 14),
           Text(
@@ -928,15 +875,13 @@ class _SearchTipsCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: MunjaColors.panel.withOpacity(0.42),
         borderRadius: BorderRadius.circular(28),
-        border: Border.all(
-          color: Colors.white.withOpacity(0.05),
-        ),
+        border: Border.all(color: Colors.white.withOpacity(0.05)),
       ),
-      child: const Column(
+      child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            'SEARCH WITH',
+            AppText.t('searchWithCaps'),
             style: TextStyle(
               color: MunjaColors.mint,
               fontSize: 9,
@@ -959,7 +904,7 @@ class _SearchTipsCard extends StatelessWidget {
           SizedBox(height: 12),
           _SearchTip(
             icon: Icons.badge_rounded,
-            title: 'Friend Code',
+            title: AppText.t('friendCode'),
             example: '7KQ2-X9PD',
           ),
         ],
@@ -990,11 +935,7 @@ class _SearchTip extends StatelessWidget {
             color: MunjaColors.mint.withOpacity(0.10),
             borderRadius: BorderRadius.circular(14),
           ),
-          child: Icon(
-            icon,
-            color: MunjaColors.mint,
-            size: 20,
-          ),
+          child: Icon(icon, color: MunjaColors.mint, size: 20),
         ),
         const SizedBox(width: 12),
         Expanded(

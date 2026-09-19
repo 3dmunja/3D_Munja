@@ -244,12 +244,43 @@ class BikeProvider extends ChangeNotifier {
       return false;
     }
 
+    final bikeToDelete = bikeById(bikeId);
+    final wasActive = bikeToDelete?.active == true;
+
+    String? fallbackBikeId;
+    if (wasActive) {
+      for (final bike in _bikes) {
+        if (bike.id != bikeId) {
+          fallbackBikeId = bike.id;
+          break;
+        }
+      }
+    }
+
     _isDeleting = true;
     clearError(notify: false);
     _safeNotifyListeners();
 
     try {
       await _bikeService.deleteBike(bikeId);
+
+      if (wasActive && fallbackBikeId != null) {
+        try {
+          await _bikeService.setActiveBike(fallbackBikeId);
+          debugPrint(
+            'BIKE PROVIDER DELETE: fallback active bike=$fallbackBikeId',
+          );
+        } catch (error, stackTrace) {
+          // The bike itself was successfully deleted.
+          // Do not report the deletion as failed just because automatic
+          // fallback activation could not be completed.
+          debugPrint(
+            'BIKE PROVIDER DELETE FALLBACK ACTIVATION WARNING: $error',
+          );
+          debugPrintStack(stackTrace: stackTrace);
+        }
+      }
+
       return true;
     } catch (error, stackTrace) {
       _setErrorFromException(error);

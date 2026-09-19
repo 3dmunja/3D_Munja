@@ -60,23 +60,71 @@ class SceneManager {
         cleanupPreviousModel()
 
         let scene: SCNScene
+
+        // MUNJA iOS:
+        // Prefer GLTFSceneKit for GLB/glTF.
+        //
+        // Apple's SCNSceneSource can successfully open the GLB while losing
+        // important glTF node/material structure. That caused the Munja
+        // material keeper nodes to appear unnamed and prevented skin lookup.
         do {
-            let sceneSource = SCNSceneSource(data: modelBytes, options: [
-                SCNSceneSource.LoadingOption.createNormalsIfAbsent: true,
-                SCNSceneSource.LoadingOption.checkConsistency: true
-            ])
-            guard let loadedScene = sceneSource?.scene(options: nil) else {
-                throw NSError(domain: "SceneManager", code: -1,
-                              userInfo: [NSLocalizedDescriptionKey: "SCNSceneSource failed"])
+            let tempPath = NSTemporaryDirectory()
+                .appending("munja_model.glb")
+
+            try modelBytes.write(
+                to: URL(fileURLWithPath: tempPath)
+            )
+
+            defer {
+                try? FileManager.default.removeItem(
+                    atPath: tempPath
+                )
             }
-            scene = loadedScene
-        } catch {
-            // Fallback: write to temp file and load via GLTFSceneSource
-            let tempPath = NSTemporaryDirectory().appending("model.glb")
-            try modelBytes.write(to: URL(fileURLWithPath: tempPath))
-            defer { try? FileManager.default.removeItem(atPath: tempPath) }
-            let gltfSource = try GLTFSceneSource(url: URL(fileURLWithPath: tempPath))
+
+            let gltfSource = try GLTFSceneSource(
+                url: URL(fileURLWithPath: tempPath)
+            )
+
             scene = try gltfSource.scene()
+
+            print(
+                "MUNJA iOS MODEL LOADER: GLTFSceneSource"
+            )
+
+        } catch {
+            print(
+                "MUNJA iOS GLTFSceneSource FAILED: \(error)"
+            )
+
+            // Safety fallback to Apple's SceneKit loader.
+            let sceneSource = SCNSceneSource(
+                data: modelBytes,
+                options: [
+                    SCNSceneSource.LoadingOption
+                        .createNormalsIfAbsent: true,
+                    SCNSceneSource.LoadingOption
+                        .checkConsistency: true
+                ]
+            )
+
+            guard let loadedScene = sceneSource?.scene(
+                options: nil
+            ) else {
+                throw NSError(
+                    domain: "SceneManager",
+                    code: -1,
+                    userInfo: [
+                        NSLocalizedDescriptionKey:
+                            "Both GLTFSceneSource and SCNSceneSource failed"
+                    ]
+                )
+            }
+
+            scene = loadedScene
+
+            print(
+                "MUNJA iOS MODEL LOADER: SCNSceneSource FALLBACK"
+            )
         }
 
         // Apply fallback materials to nodes without diffuse content

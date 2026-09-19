@@ -7,7 +7,6 @@ import '../models/social_rider_profile.dart';
 import '../services/challenge_service.dart';
 import '../services/social_rider_service.dart';
 
-
 String _t(String key) => AppText.t(key);
 
 class ChallengeRequestsScreen extends StatefulWidget {
@@ -18,16 +17,14 @@ class ChallengeRequestsScreen extends StatefulWidget {
       _ChallengeRequestsScreenState();
 }
 
-class _ChallengeRequestsScreenState
-    extends State<ChallengeRequestsScreen> {
+class _ChallengeRequestsScreenState extends State<ChallengeRequestsScreen> {
   bool _loading = true;
   bool _refreshing = false;
   String? _errorMessage;
 
   final Set<String> _processingChallengeIds = <String>{};
 
-  List<_IncomingChallengeItem> _items =
-      const <_IncomingChallengeItem>[];
+  List<_IncomingChallengeItem> _items = const <_IncomingChallengeItem>[];
 
   List<_OutgoingChallengeItem> _outgoingItems =
       const <_OutgoingChallengeItem>[];
@@ -38,9 +35,7 @@ class _ChallengeRequestsScreenState
     Future.microtask(_loadChallenges);
   }
 
-  Future<void> _loadChallenges({
-    bool showRefreshState = false,
-  }) async {
+  Future<void> _loadChallenges({bool showRefreshState = false}) async {
     if (showRefreshState && mounted) {
       setState(() {
         _refreshing = true;
@@ -48,19 +43,18 @@ class _ChallengeRequestsScreenState
     }
 
     try {
-      final incomingChallenges =
-          await ChallengeService.instance.getIncomingChallenges();
+      final incomingChallenges = await ChallengeService.instance
+          .getIncomingChallenges();
 
-      final outgoingChallenges =
-          await ChallengeService.instance.getOutgoingChallenges();
+      final outgoingChallenges = await ChallengeService.instance
+          .getOutgoingChallenges();
 
       final loadedItems = <_IncomingChallengeItem>[];
       final loadedOutgoingItems = <_OutgoingChallengeItem>[];
 
       for (final challenge in incomingChallenges) {
         try {
-          final rider =
-              await SocialRiderService.instance.getProfileByUid(
+          final rider = await SocialRiderService.instance.getProfileByUid(
             challenge.creatorUid,
           );
 
@@ -69,23 +63,17 @@ class _ChallengeRequestsScreenState
           }
 
           loadedItems.add(
-            _IncomingChallengeItem(
-              challenge: challenge,
-              rider: rider,
-            ),
+            _IncomingChallengeItem(challenge: challenge, rider: rider),
           );
         } catch (error, stackTrace) {
-          debugPrint(
-            'CHALLENGE CREATOR PROFILE LOAD ERROR: $error',
-          );
+          debugPrint('CHALLENGE CREATOR PROFILE LOAD ERROR: $error');
           debugPrint('$stackTrace');
         }
       }
 
       for (final challenge in outgoingChallenges) {
         try {
-          final rider =
-              await SocialRiderService.instance.getProfileByUid(
+          final rider = await SocialRiderService.instance.getProfileByUid(
             challenge.opponentUid,
           );
 
@@ -94,15 +82,10 @@ class _ChallengeRequestsScreenState
           }
 
           loadedOutgoingItems.add(
-            _OutgoingChallengeItem(
-              challenge: challenge,
-              rider: rider,
-            ),
+            _OutgoingChallengeItem(challenge: challenge, rider: rider),
           );
         } catch (error, stackTrace) {
-          debugPrint(
-            'CHALLENGE OPPONENT PROFILE LOAD ERROR: $error',
-          );
+          debugPrint('CHALLENGE OPPONENT PROFILE LOAD ERROR: $error');
           debugPrint('$stackTrace');
         }
       }
@@ -126,8 +109,7 @@ class _ChallengeRequestsScreenState
       }
 
       setState(() {
-        _errorMessage =
-            _t('requestsLoadFailed');
+        _errorMessage = _t('requestsLoadFailed');
         _loading = false;
       });
     } finally {
@@ -139,9 +121,7 @@ class _ChallengeRequestsScreenState
     }
   }
 
-  Future<void> _acceptChallenge(
-    _IncomingChallengeItem item,
-  ) async {
+  Future<void> _acceptChallenge(_IncomingChallengeItem item) async {
     final challengeId = item.challenge.id;
 
     if (_processingChallengeIds.contains(challengeId)) {
@@ -155,9 +135,7 @@ class _ChallengeRequestsScreenState
     });
 
     try {
-      await ChallengeService.instance.acceptChallenge(
-        challengeId: challengeId,
-      );
+      await ChallengeService.instance.acceptChallenge(challengeId: challengeId);
 
       if (!mounted) {
         return;
@@ -165,10 +143,7 @@ class _ChallengeRequestsScreenState
 
       setState(() {
         _items = _items
-            .where(
-              (current) =>
-                  current.challenge.id != challengeId,
-            )
+            .where((current) => current.challenge.id != challengeId)
             .toList();
       });
 
@@ -204,9 +179,7 @@ class _ChallengeRequestsScreenState
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           backgroundColor: MunjaColors.panel,
-          content: Text(
-            _t('acceptFailed'),
-          ),
+          content: Text(_t('acceptFailed')),
         ),
       );
     } finally {
@@ -218,9 +191,7 @@ class _ChallengeRequestsScreenState
     }
   }
 
-  Future<void> _declineChallenge(
-    _IncomingChallengeItem item,
-  ) async {
+  Future<void> _declineChallenge(_IncomingChallengeItem item) async {
     final challengeId = item.challenge.id;
 
     if (_processingChallengeIds.contains(challengeId)) {
@@ -244,19 +215,14 @@ class _ChallengeRequestsScreenState
 
       setState(() {
         _items = _items
-            .where(
-              (current) =>
-                  current.challenge.id != challengeId,
-            )
+            .where((current) => current.challenge.id != challengeId)
             .toList();
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           backgroundColor: MunjaColors.panel,
-          content: Text(
-            '${item.rider.usernameWithAt} · ${_t('decline')}',
-          ),
+          content: Text('${item.rider.usernameWithAt} · ${_t('decline')}'),
         ),
       );
     } on StateError catch (error) {
@@ -283,9 +249,7 @@ class _ChallengeRequestsScreenState
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           backgroundColor: MunjaColors.panel,
-          content: Text(
-            _t('declineFailed'),
-          ),
+          content: Text(_t('declineFailed')),
         ),
       );
     } finally {
@@ -297,9 +261,7 @@ class _ChallengeRequestsScreenState
     }
   }
 
-  Future<void> _confirmDecline(
-    _IncomingChallengeItem item,
-  ) async {
+  Future<void> _confirmDecline(_IncomingChallengeItem item) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) {
@@ -311,10 +273,7 @@ class _ChallengeRequestsScreenState
           ),
           title: Text(
             _t('declineChallengeQ'),
-            style: TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.w900,
-            ),
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900),
           ),
           content: Text(
             'Decline the ${item.challenge.targetDistanceKm.toStringAsFixed(0)} km '
@@ -342,9 +301,7 @@ class _ChallengeRequestsScreenState
               ),
               child: Text(
                 _t('decline'),
-                style: TextStyle(
-                  fontWeight: FontWeight.w900,
-                ),
+                style: TextStyle(fontWeight: FontWeight.w900),
               ),
             ),
           ],
@@ -357,9 +314,7 @@ class _ChallengeRequestsScreenState
     }
   }
 
-  Future<void> _cancelChallenge(
-    _OutgoingChallengeItem item,
-  ) async {
+  Future<void> _cancelChallenge(_OutgoingChallengeItem item) async {
     final challengeId = item.challenge.id;
 
     if (_processingChallengeIds.contains(challengeId)) {
@@ -373,9 +328,7 @@ class _ChallengeRequestsScreenState
     });
 
     try {
-      await ChallengeService.instance.cancelChallenge(
-        challengeId: challengeId,
-      );
+      await ChallengeService.instance.cancelChallenge(challengeId: challengeId);
 
       if (!mounted) {
         return;
@@ -383,10 +336,7 @@ class _ChallengeRequestsScreenState
 
       setState(() {
         _outgoingItems = _outgoingItems
-            .where(
-              (current) =>
-                  current.challenge.id != challengeId,
-            )
+            .where((current) => current.challenge.id != challengeId)
             .toList();
       });
 
@@ -422,9 +372,7 @@ class _ChallengeRequestsScreenState
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           backgroundColor: MunjaColors.panel,
-          content: Text(
-            _t('cancelFailed'),
-          ),
+          content: Text(_t('cancelFailed')),
         ),
       );
     } finally {
@@ -436,9 +384,7 @@ class _ChallengeRequestsScreenState
     }
   }
 
-  Future<void> _confirmCancel(
-    _OutgoingChallengeItem item,
-  ) async {
+  Future<void> _confirmCancel(_OutgoingChallengeItem item) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) {
@@ -450,15 +396,15 @@ class _ChallengeRequestsScreenState
           ),
           title: Text(
             _t('cancelChallengeQ'),
-            style: TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.w900,
-            ),
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900),
           ),
           content: Text(
-            'Cancel the ${item.challenge.targetDistanceKm.toStringAsFixed(0)} km '
-            'challenge sent to ${item.rider.usernameWithAt}? '
-            'This removes the pending invitation.',
+            _t('cancelChallengeMessage')
+                .replaceAll(
+                  '{distance}',
+                  item.challenge.targetDistanceKm.toStringAsFixed(0),
+                )
+                .replaceAll('{rider}', item.rider.usernameWithAt),
             style: const TextStyle(
               color: MunjaColors.textSoft,
               height: 1.4,
@@ -482,9 +428,7 @@ class _ChallengeRequestsScreenState
               ),
               child: Text(
                 _t('cancelChallenge'),
-                style: TextStyle(
-                  fontWeight: FontWeight.w900,
-                ),
+                style: TextStyle(fontWeight: FontWeight.w900),
               ),
             ),
           ],
@@ -508,9 +452,7 @@ class _ChallengeRequestsScreenState
         foregroundColor: Colors.white,
         leading: IconButton(
           onPressed: () => Navigator.of(context).pop(),
-          icon: const Icon(
-            Icons.arrow_back_ios_new_rounded,
-          ),
+          icon: const Icon(Icons.arrow_back_ios_new_rounded),
         ),
         title: Text(
           _t('challengeRequests'),
@@ -525,9 +467,7 @@ class _ChallengeRequestsScreenState
       body: SafeArea(
         top: false,
         child: RefreshIndicator(
-          onRefresh: () => _loadChallenges(
-            showRefreshState: true,
-          ),
+          onRefresh: () => _loadChallenges(showRefreshState: true),
           color: MunjaColors.mint,
           backgroundColor: MunjaColors.panel,
           child: _buildBody(),
@@ -554,12 +494,7 @@ class _ChallengeRequestsScreenState
 
     return ListView(
       physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.fromLTRB(
-        20,
-        12,
-        20,
-        360,
-      ),
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 360),
       children: [
         _ChallengeRequestsHeader(
           count: _items.length,
@@ -574,54 +509,44 @@ class _ChallengeRequestsScreenState
             title: _t('requestsForYou'),
           ),
           const SizedBox(height: 12),
-          ..._items.map(
-            (item) {
-              final processing =
-                  _processingChallengeIds.contains(
-                item.challenge.id,
-              );
+          ..._items.map((item) {
+            final processing = _processingChallengeIds.contains(
+              item.challenge.id,
+            );
 
-              return Padding(
-                padding: const EdgeInsets.only(
-                  bottom: 14,
-                ),
-                child: _ChallengeRequestCard(
-                  item: item,
-                  processing: processing,
-                  onAccept: () => _acceptChallenge(item),
-                  onDecline: () => _confirmDecline(item),
-                ),
-              );
-            },
-          ),
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 14),
+              child: _ChallengeRequestCard(
+                item: item,
+                processing: processing,
+                onAccept: () => _acceptChallenge(item),
+                onDecline: () => _confirmDecline(item),
+              ),
+            );
+          }),
         ],
 
         if (_outgoingItems.isNotEmpty) ...[
           const SizedBox(height: 6),
           _ChallengeSectionTitle(
             eyebrow: _t('outgoing'),
-            title: 'Sent challenges',
+            title: _t('sentChallenges'),
           ),
           const SizedBox(height: 12),
-          ..._outgoingItems.map(
-            (item) {
-              final processing =
-                  _processingChallengeIds.contains(
-                item.challenge.id,
-              );
+          ..._outgoingItems.map((item) {
+            final processing = _processingChallengeIds.contains(
+              item.challenge.id,
+            );
 
-              return Padding(
-                padding: const EdgeInsets.only(
-                  bottom: 14,
-                ),
-                child: _OutgoingChallengeCard(
-                  item: item,
-                  processing: processing,
-                  onCancel: () => _confirmCancel(item),
-                ),
-              );
-            },
-          ),
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 14),
+              child: _OutgoingChallengeCard(
+                item: item,
+                processing: processing,
+                onCancel: () => _confirmCancel(item),
+              ),
+            );
+          }),
         ],
       ],
     );
@@ -629,20 +554,14 @@ class _ChallengeRequestsScreenState
 }
 
 class _IncomingChallengeItem {
-  _IncomingChallengeItem({
-    required this.challenge,
-    required this.rider,
-  });
+  _IncomingChallengeItem({required this.challenge, required this.rider});
 
   final MunjaChallenge challenge;
   final SocialRiderProfile rider;
 }
 
 class _OutgoingChallengeItem {
-  _OutgoingChallengeItem({
-    required this.challenge,
-    required this.rider,
-  });
+  _OutgoingChallengeItem({required this.challenge, required this.rider});
 
   final MunjaChallenge challenge;
   final SocialRiderProfile rider;
@@ -666,9 +585,7 @@ class _ChallengeRequestsHeader extends StatelessWidget {
       decoration: BoxDecoration(
         color: MunjaColors.panel.withOpacity(0.72),
         borderRadius: BorderRadius.circular(30),
-        border: Border.all(
-          color: MunjaColors.mint.withOpacity(0.14),
-        ),
+        border: Border.all(color: MunjaColors.mint.withOpacity(0.14)),
         boxShadow: [
           BoxShadow(
             color: MunjaColors.mint.withOpacity(0.06),
@@ -708,8 +625,11 @@ class _ChallengeRequestsHeader extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  '${count + outgoingCount} pending '
-                  '${count + outgoingCount == 1 ? 'challenge' : 'challenges'}',
+                  _t(
+                    count + outgoingCount == 1
+                        ? 'pendingChallengeSingular'
+                        : 'pendingChallengesPlural',
+                  ).replaceAll('{count}', '${count + outgoingCount}'),
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 20,
@@ -720,10 +640,14 @@ class _ChallengeRequestsHeader extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(
                   count > 0 && outgoingCount > 0
-                      ? '$count incoming · $outgoingCount sent'
+                      ? _t('challengeIncomingSent')
+                            .replaceAll('{incoming}', '$count')
+                            .replaceAll('{sent}', '$outgoingCount')
                       : count > 0
-                          ? '$count incoming'
-                          : '$outgoingCount sent',
+                      ? _t('challengeIncoming').replaceAll('{count}', '$count')
+                      : _t(
+                          'challengeSent',
+                        ).replaceAll('{count}', '$outgoingCount'),
                   style: TextStyle(
                     color: MunjaColors.textSoft,
                     fontSize: 12,
@@ -750,10 +674,7 @@ class _ChallengeRequestsHeader extends StatelessWidget {
 }
 
 class _ChallengeSectionTitle extends StatelessWidget {
-  _ChallengeSectionTitle({
-    required this.eyebrow,
-    required this.title,
-  });
+  _ChallengeSectionTitle({required this.eyebrow, required this.title});
 
   final String eyebrow;
   final String title;
@@ -804,17 +725,14 @@ class _OutgoingChallengeCard extends StatelessWidget {
     final challenge = item.challenge;
 
     final hasPhoto =
-        rider.photoUrl != null &&
-        rider.photoUrl!.trim().isNotEmpty;
+        rider.photoUrl != null && rider.photoUrl!.trim().isNotEmpty;
 
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: MunjaColors.panel.withOpacity(0.72),
         borderRadius: BorderRadius.circular(28),
-        border: Border.all(
-          color: Colors.white.withOpacity(0.06),
-        ),
+        border: Border.all(color: Colors.white.withOpacity(0.06)),
       ),
       child: Column(
         children: [
@@ -826,17 +744,14 @@ class _OutgoingChallengeCard extends StatelessWidget {
                 decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: MunjaColors.mint.withOpacity(0.10),
-                  border: Border.all(
-                    color: MunjaColors.mint.withOpacity(0.28),
-                  ),
+                  border: Border.all(color: MunjaColors.mint.withOpacity(0.28)),
                 ),
                 clipBehavior: Clip.antiAlias,
                 child: hasPhoto
                     ? Image.network(
                         rider.photoUrl!,
                         fit: BoxFit.cover,
-                        errorBuilder: (_, __, ___) =>
-                            _FallbackAvatar(),
+                        errorBuilder: (_, __, ___) => _FallbackAvatar(),
                       )
                     : _FallbackAvatar(),
               ),
@@ -904,8 +819,7 @@ class _OutgoingChallengeCard extends StatelessWidget {
                 child: _ChallengeMetric(
                   icon: Icons.route_rounded,
                   label: _t('distance'),
-                  value:
-                      '${challenge.targetDistanceKm.toStringAsFixed(0)} km',
+                  value: '${challenge.targetDistanceKm.toStringAsFixed(0)} km',
                 ),
               ),
               const SizedBox(width: 10),
@@ -933,22 +847,14 @@ class _OutgoingChallengeCard extends StatelessWidget {
                         color: MunjaColors.danger,
                       ),
                     )
-                  : const Icon(
-                      Icons.cancel_outlined,
-                    ),
+                  : const Icon(Icons.cancel_outlined),
               label: Text(
-                processing
-                    ? _t('cancelling')
-                    : _t('cancelChallenge'),
-                style: const TextStyle(
-                  fontWeight: FontWeight.w900,
-                ),
+                processing ? _t('cancelling') : _t('cancelChallenge'),
+                style: const TextStyle(fontWeight: FontWeight.w900),
               ),
               style: OutlinedButton.styleFrom(
                 foregroundColor: MunjaColors.danger,
-                side: BorderSide(
-                  color: MunjaColors.danger.withOpacity(0.30),
-                ),
+                side: BorderSide(color: MunjaColors.danger.withOpacity(0.30)),
               ),
             ),
           ),
@@ -977,17 +883,14 @@ class _ChallengeRequestCard extends StatelessWidget {
     final challenge = item.challenge;
 
     final hasPhoto =
-        rider.photoUrl != null &&
-        rider.photoUrl!.trim().isNotEmpty;
+        rider.photoUrl != null && rider.photoUrl!.trim().isNotEmpty;
 
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: MunjaColors.panel.withOpacity(0.78),
         borderRadius: BorderRadius.circular(28),
-        border: Border.all(
-          color: Colors.white.withOpacity(0.06),
-        ),
+        border: Border.all(color: Colors.white.withOpacity(0.06)),
       ),
       child: Column(
         children: [
@@ -1009,11 +912,7 @@ class _ChallengeRequestCard extends StatelessWidget {
                     ? Image.network(
                         rider.photoUrl!,
                         fit: BoxFit.cover,
-                        errorBuilder: (
-                          context,
-                          error,
-                          stackTrace,
-                        ) {
+                        errorBuilder: (context, error, stackTrace) {
                           return _FallbackAvatar();
                         },
                       )
@@ -1022,8 +921,7 @@ class _ChallengeRequestCard extends StatelessWidget {
               const SizedBox(width: 14),
               Expanded(
                 child: Column(
-                  crossAxisAlignment:
-                      CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
                       children: [
@@ -1041,15 +939,13 @@ class _ChallengeRequestCard extends StatelessWidget {
                           ),
                         ),
                         Container(
-                          padding:
-                              const EdgeInsets.symmetric(
+                          padding: const EdgeInsets.symmetric(
                             horizontal: 9,
                             vertical: 6,
                           ),
                           decoration: BoxDecoration(
                             color: MunjaColors.mint,
-                            borderRadius:
-                                BorderRadius.circular(999),
+                            borderRadius: BorderRadius.circular(999),
                           ),
                           child: Text(
                             'LVL ${rider.level}',
@@ -1095,8 +991,7 @@ class _ChallengeRequestCard extends StatelessWidget {
                 child: _ChallengeMetric(
                   icon: Icons.route_rounded,
                   label: _t('distance'),
-                  value:
-                      '${challenge.targetDistanceKm.toStringAsFixed(0)} km',
+                  value: '${challenge.targetDistanceKm.toStringAsFixed(0)} km',
                 ),
               ),
               const SizedBox(width: 10),
@@ -1104,8 +999,7 @@ class _ChallengeRequestCard extends StatelessWidget {
                 child: _ChallengeMetric(
                   icon: Icons.calendar_month_rounded,
                   label: _t('duration'),
-                  value:
-                      '${challenge.durationDays} days',
+                  value: '${challenge.durationDays} days',
                 ),
               ),
             ],
@@ -1117,9 +1011,7 @@ class _ChallengeRequestCard extends StatelessWidget {
             decoration: BoxDecoration(
               color: Colors.black.withOpacity(0.16),
               borderRadius: BorderRadius.circular(20),
-              border: Border.all(
-                color: MunjaColors.mint.withOpacity(0.11),
-              ),
+              border: Border.all(color: MunjaColors.mint.withOpacity(0.11)),
             ),
             child: Row(
               children: [
@@ -1152,24 +1044,15 @@ class _ChallengeRequestCard extends StatelessWidget {
                 child: SizedBox(
                   height: 50,
                   child: OutlinedButton.icon(
-                    onPressed:
-                        processing ? null : onDecline,
-                    icon: const Icon(
-                      Icons.close_rounded,
-                    ),
+                    onPressed: processing ? null : onDecline,
+                    icon: const Icon(Icons.close_rounded),
                     label: Text(
                       _t('decline'),
-                      style: TextStyle(
-                        fontWeight: FontWeight.w900,
-                      ),
+                      style: TextStyle(fontWeight: FontWeight.w900),
                     ),
                     style: OutlinedButton.styleFrom(
-                      foregroundColor:
-                          MunjaColors.textSoft,
-                      side: BorderSide(
-                        color:
-                            Colors.white.withOpacity(0.10),
-                      ),
+                      foregroundColor: MunjaColors.textSoft,
+                      side: BorderSide(color: Colors.white.withOpacity(0.10)),
                     ),
                   ),
                 ),
@@ -1179,28 +1062,20 @@ class _ChallengeRequestCard extends StatelessWidget {
                 child: SizedBox(
                   height: 50,
                   child: FilledButton.icon(
-                    onPressed:
-                        processing ? null : onAccept,
+                    onPressed: processing ? null : onAccept,
                     icon: processing
                         ? const SizedBox(
                             width: 17,
                             height: 17,
-                            child:
-                                CircularProgressIndicator(
+                            child: CircularProgressIndicator(
                               strokeWidth: 2.1,
                               color: Colors.black,
                             ),
                           )
-                        : const Icon(
-                            Icons.check_rounded,
-                          ),
+                        : const Icon(Icons.check_rounded),
                     label: Text(
-                      processing
-                          ? _t('working')
-                          : _t('accept'),
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w900,
-                      ),
+                      processing ? _t('working') : _t('accept'),
+                      style: const TextStyle(fontWeight: FontWeight.w900),
                     ),
                   ),
                 ),
@@ -1228,30 +1103,20 @@ class _ChallengeMetric extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       height: 72,
-      padding: const EdgeInsets.symmetric(
-        horizontal: 12,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 12),
       decoration: BoxDecoration(
         color: Colors.black.withOpacity(0.16),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: Colors.white.withOpacity(0.055),
-        ),
+        border: Border.all(color: Colors.white.withOpacity(0.055)),
       ),
       child: Row(
         children: [
-          Icon(
-            icon,
-            color: MunjaColors.mint,
-            size: 20,
-          ),
+          Icon(icon, color: MunjaColors.mint, size: 20),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
-              mainAxisAlignment:
-                  MainAxisAlignment.center,
-              crossAxisAlignment:
-                  CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   value,
@@ -1288,11 +1153,7 @@ class _FallbackAvatar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return const Center(
-      child: Icon(
-        Icons.person_rounded,
-        color: MunjaColors.mint,
-        size: 32,
-      ),
+      child: Icon(Icons.person_rounded, color: MunjaColors.mint, size: 32),
     );
   }
 }
@@ -1303,21 +1164,13 @@ class _ChallengeRequestsLoading extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListView(
-      physics:
-          const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.fromLTRB(
-        20,
-        80,
-        20,
-        360,
-      ),
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: const EdgeInsets.fromLTRB(20, 80, 20, 360),
       children: [
         Center(
           child: Column(
             children: [
-              const CircularProgressIndicator(
-                color: MunjaColors.mint,
-              ),
+              const CircularProgressIndicator(color: MunjaColors.mint),
               const SizedBox(height: 16),
               Text(
                 _t('loadingRequests'),
@@ -1336,38 +1189,23 @@ class _ChallengeRequestsLoading extends StatelessWidget {
 }
 
 class _ChallengeRequestsError extends StatelessWidget {
-  _ChallengeRequestsError({
-    required this.message,
-    required this.onRetry,
-  });
+  _ChallengeRequestsError({required this.message, required this.onRetry});
 
   final String message;
-  final Future<void> Function({
-    bool showRefreshState,
-  }) onRetry;
+  final Future<void> Function({bool showRefreshState}) onRetry;
 
   @override
   Widget build(BuildContext context) {
     return ListView(
-      physics:
-          const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.fromLTRB(
-        20,
-        50,
-        20,
-        360,
-      ),
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: const EdgeInsets.fromLTRB(20, 50, 20, 360),
       children: [
         Container(
           padding: const EdgeInsets.all(22),
           decoration: BoxDecoration(
-            color:
-                MunjaColors.panel.withOpacity(0.55),
+            color: MunjaColors.panel.withOpacity(0.55),
             borderRadius: BorderRadius.circular(28),
-            border: Border.all(
-              color:
-                  MunjaColors.danger.withOpacity(0.20),
-            ),
+            border: Border.all(color: MunjaColors.danger.withOpacity(0.20)),
           ),
           child: Column(
             children: [
@@ -1399,18 +1237,12 @@ class _ChallengeRequestsError extends StatelessWidget {
               const SizedBox(height: 16),
               FilledButton.icon(
                 onPressed: () {
-                  onRetry(
-                    showRefreshState: false,
-                  );
+                  onRetry(showRefreshState: false);
                 },
-                icon: const Icon(
-                  Icons.refresh_rounded,
-                ),
+                icon: const Icon(Icons.refresh_rounded),
                 label: Text(
                   _t('tryAgain'),
-                  style: TextStyle(
-                    fontWeight: FontWeight.w900,
-                  ),
+                  style: TextStyle(fontWeight: FontWeight.w900),
                 ),
               ),
             ],
@@ -1427,31 +1259,17 @@ class _EmptyChallengeRequests extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListView(
-      physics:
-          const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.fromLTRB(
-        20,
-        60,
-        20,
-        360,
-      ),
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: const EdgeInsets.fromLTRB(20, 60, 20, 360),
       children: [
         Container(
-          padding: const EdgeInsets.fromLTRB(
-            24,
-            30,
-            24,
-            30,
-          ),
+          padding: const EdgeInsets.fromLTRB(24, 30, 24, 30),
           decoration: BoxDecoration(
-            color:
-                MunjaColors.panel.withOpacity(0.50),
+            color: MunjaColors.panel.withOpacity(0.50),
             borderRadius: BorderRadius.circular(30),
-            border: Border.all(
-              color: Colors.white.withOpacity(0.055),
-            ),
+            border: Border.all(color: Colors.white.withOpacity(0.055)),
           ),
-          child: const Column(
+          child: Column(
             children: [
               Icon(
                 Icons.emoji_events_outlined,
@@ -1460,7 +1278,7 @@ class _EmptyChallengeRequests extends StatelessWidget {
               ),
               SizedBox(height: 16),
               Text(
-                'No pending challenges',
+                _t('noPendingChallenges'),
                 style: TextStyle(
                   color: Colors.white,
                   fontSize: 20,
@@ -1469,8 +1287,7 @@ class _EmptyChallengeRequests extends StatelessWidget {
               ),
               SizedBox(height: 7),
               Text(
-                'When a Munja friend challenges you, '
-                'the invitation will appear here.',
+                _t('challengeInvitationAppearHere'),
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   color: MunjaColors.textSoft,

@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../core/theme/munja_colors.dart';
+import '../Core/localization/app_text.dart';
 import '../models/social_rider_profile.dart';
 import '../services/friend_service.dart';
 import '../services/social_rider_service.dart';
@@ -10,8 +11,7 @@ class FriendRequestsScreen extends StatefulWidget {
   const FriendRequestsScreen({super.key});
 
   @override
-  State<FriendRequestsScreen> createState() =>
-      _FriendRequestsScreenState();
+  State<FriendRequestsScreen> createState() => _FriendRequestsScreenState();
 }
 
 class _FriendRequestsScreenState extends State<FriendRequestsScreen> {
@@ -30,9 +30,7 @@ class _FriendRequestsScreenState extends State<FriendRequestsScreen> {
     Future.microtask(_loadRequests);
   }
 
-  Future<void> _loadRequests({
-    bool showRefreshState = false,
-  }) async {
+  Future<void> _loadRequests({bool showRefreshState = false}) async {
     if (showRefreshState && mounted) {
       setState(() {
         _refreshing = true;
@@ -40,15 +38,13 @@ class _FriendRequestsScreenState extends State<FriendRequestsScreen> {
     }
 
     try {
-      final requests =
-          await FriendService.instance.getIncomingRequests();
+      final requests = await FriendService.instance.getIncomingRequests();
 
       final loadedItems = <_IncomingFriendRequestItem>[];
 
       for (final request in requests) {
         try {
-          final rider =
-              await SocialRiderService.instance.getProfileByUid(
+          final rider = await SocialRiderService.instance.getProfileByUid(
             request.fromUid,
           );
 
@@ -57,15 +53,10 @@ class _FriendRequestsScreenState extends State<FriendRequestsScreen> {
           }
 
           loadedItems.add(
-            _IncomingFriendRequestItem(
-              request: request,
-              rider: rider,
-            ),
+            _IncomingFriendRequestItem(request: request, rider: rider),
           );
         } catch (error, stackTrace) {
-          debugPrint(
-            'FRIEND REQUEST SENDER PROFILE LOAD ERROR: $error',
-          );
+          debugPrint('FRIEND REQUEST SENDER PROFILE LOAD ERROR: $error');
           debugPrint('$stackTrace');
         }
       }
@@ -88,8 +79,7 @@ class _FriendRequestsScreenState extends State<FriendRequestsScreen> {
       }
 
       setState(() {
-        _errorMessage =
-            'Friend requests could not be loaded. Please try again.';
+        _errorMessage = AppText.t('friendRequestsLoadFailed');
         _loading = false;
       });
     } finally {
@@ -101,9 +91,7 @@ class _FriendRequestsScreenState extends State<FriendRequestsScreen> {
     }
   }
 
-  Future<void> _acceptRequest(
-    _IncomingFriendRequestItem item,
-  ) async {
+  Future<void> _acceptRequest(_IncomingFriendRequestItem item) async {
     final requestId = item.request.id;
 
     if (_processingRequestIds.contains(requestId)) {
@@ -117,9 +105,7 @@ class _FriendRequestsScreenState extends State<FriendRequestsScreen> {
     });
 
     try {
-      await FriendService.instance.acceptFriendRequest(
-        requestId: requestId,
-      );
+      await FriendService.instance.acceptFriendRequest(requestId: requestId);
 
       if (!mounted) {
         return;
@@ -127,10 +113,7 @@ class _FriendRequestsScreenState extends State<FriendRequestsScreen> {
 
       setState(() {
         _items = _items
-            .where(
-              (current) =>
-                  current.request.id != requestId,
-            )
+            .where((current) => current.request.id != requestId)
             .toList();
       });
 
@@ -138,7 +121,9 @@ class _FriendRequestsScreenState extends State<FriendRequestsScreen> {
         SnackBar(
           backgroundColor: MunjaColors.panel,
           content: Text(
-            'You and ${item.rider.usernameWithAt} are now friends.',
+            AppText.t(
+              'nowFriendsWith',
+            ).replaceAll('{rider}', item.rider.usernameWithAt),
           ),
         ),
       );
@@ -166,9 +151,7 @@ class _FriendRequestsScreenState extends State<FriendRequestsScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           backgroundColor: MunjaColors.panel,
-          content: const Text(
-            'Friend request could not be accepted. Please try again.',
-          ),
+          content: Text(AppText.t('friendRequestAcceptFailed')),
         ),
       );
     } finally {
@@ -180,9 +163,7 @@ class _FriendRequestsScreenState extends State<FriendRequestsScreen> {
     }
   }
 
-  Future<void> _declineRequest(
-    _IncomingFriendRequestItem item,
-  ) async {
+  Future<void> _declineRequest(_IncomingFriendRequestItem item) async {
     final requestId = item.request.id;
 
     if (_processingRequestIds.contains(requestId)) {
@@ -196,9 +177,7 @@ class _FriendRequestsScreenState extends State<FriendRequestsScreen> {
     });
 
     try {
-      await FriendService.instance.declineFriendRequest(
-        requestId: requestId,
-      );
+      await FriendService.instance.declineFriendRequest(requestId: requestId);
 
       if (!mounted) {
         return;
@@ -206,10 +185,7 @@ class _FriendRequestsScreenState extends State<FriendRequestsScreen> {
 
       setState(() {
         _items = _items
-            .where(
-              (current) =>
-                  current.request.id != requestId,
-            )
+            .where((current) => current.request.id != requestId)
             .toList();
       });
 
@@ -217,7 +193,9 @@ class _FriendRequestsScreenState extends State<FriendRequestsScreen> {
         SnackBar(
           backgroundColor: MunjaColors.panel,
           content: Text(
-            'Friend request from ${item.rider.usernameWithAt} declined.',
+            AppText.t(
+              'friendRequestDeclined',
+            ).replaceAll('{rider}', item.rider.usernameWithAt),
           ),
         ),
       );
@@ -245,9 +223,7 @@ class _FriendRequestsScreenState extends State<FriendRequestsScreen> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           backgroundColor: MunjaColors.panel,
-          content: const Text(
-            'Friend request could not be declined. Please try again.',
-          ),
+          content: Text(AppText.t('friendRequestDeclineFailed')),
         ),
       );
     } finally {
@@ -259,9 +235,7 @@ class _FriendRequestsScreenState extends State<FriendRequestsScreen> {
     }
   }
 
-  Future<void> _confirmDecline(
-    _IncomingFriendRequestItem item,
-  ) async {
+  Future<void> _confirmDecline(_IncomingFriendRequestItem item) async {
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (dialogContext) {
@@ -271,16 +245,14 @@ class _FriendRequestsScreenState extends State<FriendRequestsScreen> {
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(28),
           ),
-          title: const Text(
-            'Decline request?',
-            style: TextStyle(
-              color: Colors.white,
-              fontWeight: FontWeight.w900,
-            ),
+          title: Text(
+            AppText.t('declineRequestTitle'),
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.w900),
           ),
           content: Text(
-            'Decline the friend request from '
-            '${item.rider.usernameWithAt}?',
+            AppText.t(
+              'declineRequestMessage',
+            ).replaceAll('{rider}', item.rider.usernameWithAt),
             style: const TextStyle(
               color: MunjaColors.textSoft,
               height: 1.4,
@@ -292,7 +264,7 @@ class _FriendRequestsScreenState extends State<FriendRequestsScreen> {
               onPressed: () {
                 Navigator.of(dialogContext).pop(false);
               },
-              child: const Text('Cancel'),
+              child: Text(AppText.t('cancel')),
             ),
             FilledButton(
               onPressed: () {
@@ -302,11 +274,9 @@ class _FriendRequestsScreenState extends State<FriendRequestsScreen> {
                 backgroundColor: MunjaColors.danger,
                 foregroundColor: Colors.white,
               ),
-              child: const Text(
-                'Decline',
-                style: TextStyle(
-                  fontWeight: FontWeight.w900,
-                ),
+              child: Text(
+                AppText.t('decline'),
+                style: TextStyle(fontWeight: FontWeight.w900),
               ),
             ),
           ],
@@ -330,12 +300,10 @@ class _FriendRequestsScreenState extends State<FriendRequestsScreen> {
         foregroundColor: Colors.white,
         leading: IconButton(
           onPressed: () => Navigator.of(context).pop(),
-          icon: const Icon(
-            Icons.arrow_back_ios_new_rounded,
-          ),
+          icon: const Icon(Icons.arrow_back_ios_new_rounded),
         ),
-        title: const Text(
-          'Friend Requests',
+        title: Text(
+          AppText.t('friendRequestsTitle'),
           style: TextStyle(
             color: Colors.white,
             fontSize: 20,
@@ -347,9 +315,7 @@ class _FriendRequestsScreenState extends State<FriendRequestsScreen> {
       body: SafeArea(
         top: false,
         child: RefreshIndicator(
-          onRefresh: () => _loadRequests(
-            showRefreshState: true,
-          ),
+          onRefresh: () => _loadRequests(showRefreshState: true),
           color: MunjaColors.mint,
           backgroundColor: MunjaColors.panel,
           child: _buildBody(),
@@ -376,37 +342,23 @@ class _FriendRequestsScreenState extends State<FriendRequestsScreen> {
 
     return ListView(
       physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.fromLTRB(
-        20,
-        12,
-        20,
-        44,
-      ),
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 44),
       children: [
-        _RequestsHeader(
-          count: _items.length,
-          refreshing: _refreshing,
-        ),
+        _RequestsHeader(count: _items.length, refreshing: _refreshing),
         const SizedBox(height: 18),
-        ..._items.map(
-          (item) {
-            final processing = _processingRequestIds.contains(
-              item.request.id,
-            );
+        ..._items.map((item) {
+          final processing = _processingRequestIds.contains(item.request.id);
 
-            return Padding(
-              padding: const EdgeInsets.only(
-                bottom: 14,
-              ),
-              child: _FriendRequestCard(
-                item: item,
-                processing: processing,
-                onAccept: () => _acceptRequest(item),
-                onDecline: () => _confirmDecline(item),
-              ),
-            );
-          },
-        ),
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 14),
+            child: _FriendRequestCard(
+              item: item,
+              processing: processing,
+              onAccept: () => _acceptRequest(item),
+              onDecline: () => _confirmDecline(item),
+            ),
+          );
+        }),
       ],
     );
   }
@@ -423,10 +375,7 @@ class _IncomingFriendRequestItem {
 }
 
 class _RequestsHeader extends StatelessWidget {
-  const _RequestsHeader({
-    required this.count,
-    required this.refreshing,
-  });
+  const _RequestsHeader({required this.count, required this.refreshing});
 
   final int count;
   final bool refreshing;
@@ -438,9 +387,7 @@ class _RequestsHeader extends StatelessWidget {
       decoration: BoxDecoration(
         color: MunjaColors.panel.withOpacity(0.72),
         borderRadius: BorderRadius.circular(30),
-        border: Border.all(
-          color: MunjaColors.mint.withOpacity(0.14),
-        ),
+        border: Border.all(color: MunjaColors.mint.withOpacity(0.14)),
         boxShadow: [
           BoxShadow(
             color: MunjaColors.mint.withOpacity(0.06),
@@ -469,8 +416,8 @@ class _RequestsHeader extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'MUNJA SOCIAL',
+                Text(
+                  AppText.t('munjaSocialCaps'),
                   style: TextStyle(
                     color: MunjaColors.mint,
                     fontSize: 9,
@@ -480,7 +427,7 @@ class _RequestsHeader extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  '$count pending ${count == 1 ? 'request' : 'requests'}',
+                  '$count ${count == 1 ? AppText.t('pendingRequestSingular') : AppText.t('pendingRequestsPlural')}',
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 20,
@@ -489,8 +436,8 @@ class _RequestsHeader extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 4),
-                const Text(
-                  'Accept riders you know and build your Munja crew.',
+                Text(
+                  AppText.t('acceptRidersBuildCrew'),
                   style: TextStyle(
                     color: MunjaColors.textSoft,
                     fontSize: 12,
@@ -534,17 +481,14 @@ class _FriendRequestCard extends StatelessWidget {
     final rider = item.rider;
 
     final hasPhoto =
-        rider.photoUrl != null &&
-        rider.photoUrl!.trim().isNotEmpty;
+        rider.photoUrl != null && rider.photoUrl!.trim().isNotEmpty;
 
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: MunjaColors.panel.withOpacity(0.78),
         borderRadius: BorderRadius.circular(28),
-        border: Border.all(
-          color: Colors.white.withOpacity(0.06),
-        ),
+        border: Border.all(color: Colors.white.withOpacity(0.06)),
       ),
       child: Column(
         children: [
@@ -566,11 +510,7 @@ class _FriendRequestCard extends StatelessWidget {
                     ? Image.network(
                         rider.photoUrl!,
                         fit: BoxFit.cover,
-                        errorBuilder: (
-                          context,
-                          error,
-                          stackTrace,
-                        ) {
+                        errorBuilder: (context, error, stackTrace) {
                           return const _FallbackAvatar();
                         },
                       )
@@ -579,8 +519,7 @@ class _FriendRequestCard extends StatelessWidget {
               const SizedBox(width: 14),
               Expanded(
                 child: Column(
-                  crossAxisAlignment:
-                      CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
                       children: [
@@ -588,8 +527,7 @@ class _FriendRequestCard extends StatelessWidget {
                           child: Text(
                             rider.displayName,
                             maxLines: 1,
-                            overflow:
-                                TextOverflow.ellipsis,
+                            overflow: TextOverflow.ellipsis,
                             style: const TextStyle(
                               color: Colors.white,
                               fontSize: 19,
@@ -599,15 +537,13 @@ class _FriendRequestCard extends StatelessWidget {
                           ),
                         ),
                         Container(
-                          padding:
-                              const EdgeInsets.symmetric(
+                          padding: const EdgeInsets.symmetric(
                             horizontal: 9,
                             vertical: 6,
                           ),
                           decoration: BoxDecoration(
                             color: MunjaColors.mint,
-                            borderRadius:
-                                BorderRadius.circular(999),
+                            borderRadius: BorderRadius.circular(999),
                           ),
                           child: Text(
                             'LVL ${rider.level}',
@@ -646,8 +582,7 @@ class _FriendRequestCard extends StatelessWidget {
               ),
             ],
           ),
-          if (rider.city != null &&
-              rider.city!.trim().isNotEmpty) ...[
+          if (rider.city != null && rider.city!.trim().isNotEmpty) ...[
             const SizedBox(height: 14),
             Row(
               children: [
@@ -675,24 +610,15 @@ class _FriendRequestCard extends StatelessWidget {
                 child: SizedBox(
                   height: 50,
                   child: OutlinedButton.icon(
-                    onPressed:
-                        processing ? null : onDecline,
-                    icon: const Icon(
-                      Icons.close_rounded,
-                    ),
-                    label: const Text(
-                      'Decline',
-                      style: TextStyle(
-                        fontWeight: FontWeight.w900,
-                      ),
+                    onPressed: processing ? null : onDecline,
+                    icon: const Icon(Icons.close_rounded),
+                    label: Text(
+                      AppText.t('decline'),
+                      style: TextStyle(fontWeight: FontWeight.w900),
                     ),
                     style: OutlinedButton.styleFrom(
-                      foregroundColor:
-                          MunjaColors.textSoft,
-                      side: BorderSide(
-                        color:
-                            Colors.white.withOpacity(0.10),
-                      ),
+                      foregroundColor: MunjaColors.textSoft,
+                      side: BorderSide(color: Colors.white.withOpacity(0.10)),
                     ),
                   ),
                 ),
@@ -702,28 +628,20 @@ class _FriendRequestCard extends StatelessWidget {
                 child: SizedBox(
                   height: 50,
                   child: FilledButton.icon(
-                    onPressed:
-                        processing ? null : onAccept,
+                    onPressed: processing ? null : onAccept,
                     icon: processing
                         ? const SizedBox(
                             width: 17,
                             height: 17,
-                            child:
-                                CircularProgressIndicator(
+                            child: CircularProgressIndicator(
                               strokeWidth: 2.1,
                               color: Colors.black,
                             ),
                           )
-                        : const Icon(
-                            Icons.check_rounded,
-                          ),
+                        : const Icon(Icons.check_rounded),
                     label: Text(
-                      processing
-                          ? 'Working...'
-                          : 'Accept',
-                      style: const TextStyle(
-                        fontWeight: FontWeight.w900,
-                      ),
+                      processing ? AppText.t('working') : AppText.t('accept'),
+                      style: const TextStyle(fontWeight: FontWeight.w900),
                     ),
                   ),
                 ),
@@ -742,11 +660,7 @@ class _FallbackAvatar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return const Center(
-      child: Icon(
-        Icons.person_rounded,
-        color: MunjaColors.mint,
-        size: 32,
-      ),
+      child: Icon(Icons.person_rounded, color: MunjaColors.mint, size: 32),
     );
   }
 }
@@ -758,22 +672,15 @@ class _FriendRequestsLoading extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListView(
       physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.fromLTRB(
-        20,
-        80,
-        20,
-        44,
-      ),
-      children: const [
+      padding: const EdgeInsets.fromLTRB(20, 80, 20, 44),
+      children: [
         Center(
           child: Column(
             children: [
-              CircularProgressIndicator(
-                color: MunjaColors.mint,
-              ),
+              CircularProgressIndicator(color: MunjaColors.mint),
               SizedBox(height: 16),
               Text(
-                'Loading friend requests...',
+                AppText.t('loadingFriendRequests'),
                 style: TextStyle(
                   color: MunjaColors.textSoft,
                   fontSize: 12,
@@ -789,35 +696,23 @@ class _FriendRequestsLoading extends StatelessWidget {
 }
 
 class _FriendRequestsError extends StatelessWidget {
-  const _FriendRequestsError({
-    required this.message,
-    required this.onRetry,
-  });
+  const _FriendRequestsError({required this.message, required this.onRetry});
 
   final String message;
-  final Future<void> Function({
-    bool showRefreshState,
-  }) onRetry;
+  final Future<void> Function({bool showRefreshState}) onRetry;
 
   @override
   Widget build(BuildContext context) {
     return ListView(
       physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.fromLTRB(
-        20,
-        50,
-        20,
-        44,
-      ),
+      padding: const EdgeInsets.fromLTRB(20, 50, 20, 44),
       children: [
         Container(
           padding: const EdgeInsets.all(22),
           decoration: BoxDecoration(
             color: MunjaColors.panel.withOpacity(0.55),
             borderRadius: BorderRadius.circular(28),
-            border: Border.all(
-              color: MunjaColors.danger.withOpacity(0.20),
-            ),
+            border: Border.all(color: MunjaColors.danger.withOpacity(0.20)),
           ),
           child: Column(
             children: [
@@ -827,8 +722,8 @@ class _FriendRequestsError extends StatelessWidget {
                 size: 34,
               ),
               const SizedBox(height: 14),
-              const Text(
-                'Could not load requests',
+              Text(
+                AppText.t('couldNotLoadRequests'),
                 style: TextStyle(
                   color: Colors.white,
                   fontSize: 18,
@@ -849,18 +744,12 @@ class _FriendRequestsError extends StatelessWidget {
               const SizedBox(height: 16),
               FilledButton.icon(
                 onPressed: () {
-                  onRetry(
-                    showRefreshState: false,
-                  );
+                  onRetry(showRefreshState: false);
                 },
-                icon: const Icon(
-                  Icons.refresh_rounded,
-                ),
-                label: const Text(
-                  'Try again',
-                  style: TextStyle(
-                    fontWeight: FontWeight.w900,
-                  ),
+                icon: const Icon(Icons.refresh_rounded),
+                label: Text(
+                  AppText.t('tryAgain'),
+                  style: TextStyle(fontWeight: FontWeight.w900),
                 ),
               ),
             ],
@@ -878,28 +767,16 @@ class _EmptyFriendRequests extends StatelessWidget {
   Widget build(BuildContext context) {
     return ListView(
       physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.fromLTRB(
-        20,
-        60,
-        20,
-        44,
-      ),
+      padding: const EdgeInsets.fromLTRB(20, 60, 20, 44),
       children: [
         Container(
-          padding: const EdgeInsets.fromLTRB(
-            24,
-            30,
-            24,
-            30,
-          ),
+          padding: const EdgeInsets.fromLTRB(24, 30, 24, 30),
           decoration: BoxDecoration(
             color: MunjaColors.panel.withOpacity(0.50),
             borderRadius: BorderRadius.circular(30),
-            border: Border.all(
-              color: Colors.white.withOpacity(0.055),
-            ),
+            border: Border.all(color: Colors.white.withOpacity(0.055)),
           ),
-          child: const Column(
+          child: Column(
             children: [
               Icon(
                 Icons.people_outline_rounded,
@@ -908,7 +785,7 @@ class _EmptyFriendRequests extends StatelessWidget {
               ),
               SizedBox(height: 16),
               Text(
-                'No pending requests',
+                AppText.t('noPendingRequests'),
                 style: TextStyle(
                   color: Colors.white,
                   fontSize: 20,
@@ -917,8 +794,7 @@ class _EmptyFriendRequests extends StatelessWidget {
               ),
               SizedBox(height: 7),
               Text(
-                'When another Munja rider sends you a friend request, '
-                'it will appear here.',
+                AppText.t('friendRequestsAppearHere'),
                 textAlign: TextAlign.center,
                 style: TextStyle(
                   color: MunjaColors.textSoft,

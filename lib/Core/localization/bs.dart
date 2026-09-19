@@ -58,7 +58,6 @@ const Map<String, String> bs = {
   'routes': 'Rute',
   'coach': 'Trener',
   'analytics': 'Analitika',
-
   'ready': 'Spremno',
   'live': 'Uživo',
   'route': 'Ruta',
@@ -161,7 +160,6 @@ const Map<String, String> bs = {
   'rideRoute': 'Ruta vožnje',
   'start': 'Start',
   'finish': 'Cilj',
-
   'bikeChallenge': 'Biciklistički ciljevi',
   'yourChallenge': 'Tvoj cilj',
   'yourChallengeSubtitle': 'Postavi rok i napravi od biciklizma stalnu naviku.',
@@ -266,7 +264,7 @@ const Map<String, String> bs = {
   'consistencyCreatesResults': 'Dosljednost stvara rezultate.',
   'latestSavedTrips': 'Tvoje zadnje sačuvane vožnje.',
   'longest': 'Najduža',
-  'achievements': 'Postignuća',
+  'achievements': 'Dostignuća',
   'progressUnlocked': 'Napredak otključan iz ove vožnje.',
   'yourRidePathWasSaved': 'Tvoja ruta vožnje je sačuvana.',
 
@@ -446,9 +444,8 @@ const Map<String, String> bs = {
   // Ride Summary + Auto Ride
   'rideSummaryAiAnalysis': 'AI analiza vožnje',
   'rideSummaryAiProSubtitle':
-      'Personalizovana Pro analiza na osnovu ove vožnje i tvoje historije.',
-  'rideSummaryAiFreeSubtitle':
-      'Jednostavan pregled vožnje. MUNJA PRO dodaje ličnu historiju i dublje preporuke.',
+      'Lična analiza na osnovu tvoje vožnje i historije.',
+  'rideSummaryAiFreeSubtitle': 'Brzi pregled tvoje završene vožnje.',
   'rideSummaryAnalyzing': 'Analiziram tvoju vožnju...',
   'rideSummaryAnalysisUnavailable': 'Analiza vožnje trenutno nije dostupna.',
   'rideSummaryProAnalysis': 'MUNJA PRO ANALIZA',
@@ -458,7 +455,7 @@ const Map<String, String> bs = {
   'rideSummaryFaster': 'BRŽE',
   'rideSummaryLonger': 'DUŽE',
   'rideSummarySteady': 'STABILNO',
-  'rideSummaryHeader': 'MUNJA PREGLED',
+  'rideSummaryHeader': 'MUNJA PREGLED VOŽNJE',
   'rideRewards': 'NAGRADE ZA VOŽNJU',
   'loadingEarnedRewards': 'Učitavam osvojene nagrade...',
   'noCrystalRewardRide': 'Ova vožnja nije donijela Crystal nagradu.',
@@ -891,4 +888,203 @@ const Map<String, String> bs = {
   'wheelSize': 'Veličina točka',
   'wrist': 'Zglob',
   'yourDigitalTwin': 'Tvoj Digital Twin',
+  'noSkinsAvailableYet': 'Još nema dostupnih skinova',
+  'skinsAvailableLater':
+      'Skinovi za ovaj bicikl će se pojaviti ovdje kada budu dostupni.',
+  'noFramesAvailableYet': 'Još nema dostupnih ramova',
+  'framesAvailableLater':
+      'Ramovi za ovaj bicikl će se pojaviti ovdje kada budu dostupni.',
+  'findAndManageRiders': 'Pronađi i upravljaj vozačima',
+  'unlockProExperience': 'Otključaj Pro iskustvo',
+  'munjaProIsActive': 'Munja Pro je aktivan',
+  'unlockMoreOfMunja': 'Otključaj više u Munji',
+  'proFeaturesUnlocked':
+      'Tvoje Pro funkcije, mjesečne ponude i odabrani premium kozmetički sadržaji su otključani.',
+  'proFeaturesDescription':
+      'AI Coach, napredna analitika, Pro izazovi i ekskluzivni kozmetički sadržaji.',
+  'socialCaps': 'DRUŠTVENO',
+  'competeCaps': 'TAKMIČENJE',
+  'profileSignOutDescription': 'Vratit ćeš se na ekran za prijavu.',
+  'profileSignOutDialogTitle': 'Odjaviti se iz Munja aplikacije?',
+  'profileSignOutDialogMessage':
+      'Tvoje lokalne vožnje i postavke ostaju na ovom uređaju.',
+  'profileSignOutFailed': 'Odjava nije uspjela. Pokušaj ponovo.',
+  'friendsTitle': 'Prijatelji',
+  'munjaCrewCaps': 'MUNJA EKIPA',
+  'levelCaps': 'NIVO',
+  'totalXpCaps': 'UKUPNO XP',
+  'couldNotLoadFriends': 'Nije moguće učitati prijatelje',
+  'noFriendsYet': 'Još nema prijatelja',
+  'challengeWithRider':
+      '1 na 1 izazov sa {rider} je sljedeći korak u Munja Social.',
+  'munjaRidersReady':
+      'Tvoji Munja vozači su spremni za vožnje, napredak i buduće izazove.',
+  'findRiderBuildCrew':
+      'Pronađi drugog Munja vozača, pošalji zahtjev i izgradi svoju ekipu.',
+  'friendSingular': 'prijatelj',
+  'friendsPlural': 'prijatelja',
+  'friendRequestsLoadFailed':
+      'Zahtjevi za prijateljstvo se nisu mogli učitati. Pokušaj ponovo.',
+  'friendRequestAcceptFailed':
+      'Zahtjev za prijateljstvo nije moguće prihvatiti. Pokušaj ponovo.',
+  'friendRequestDeclineFailed':
+      'Zahtjev za prijateljstvo nije moguće odbiti. Pokušaj ponovo.',
+  'declineRequestTitle': 'Odbiti zahtjev?',
+  'friendRequestsTitle': 'Zahtjevi za prijateljstvo',
+  'munjaSocialCaps': 'MUNJA SOCIAL',
+  'acceptRidersBuildCrew':
+      'Prihvati vozače koje poznaješ i izgradi svoju Munja ekipu.',
+  'loadingFriendRequests': 'Učitavanje zahtjeva za prijateljstvo...',
+  'noPendingRequests': 'Nema zahtjeva na čekanju',
+  'nowFriendsWith': 'Ti i {rider} ste sada prijatelji.',
+  'friendRequestDeclined': 'Zahtjev za prijateljstvo od {rider} je odbijen.',
+  'declineRequestMessage':
+      'Želiš li odbiti zahtjev za prijateljstvo od {rider}?',
+  'friendRequestsAppearHere':
+      'Kada ti drugi Munja vozač pošalje zahtjev za prijateljstvo, pojavit će se ovdje.',
+  'pendingRequestSingular': 'zahtjev na čekanju',
+  'pendingRequestsPlural': 'zahtjeva na čekanju',
+  'enterRiderSearch': 'Unesi @korisničko ime, e-mail ili Munja Friend Code.',
+  'riderNotFoundMessage':
+      'Nije pronađen Munja vozač s tim korisničkim imenom, e-mailom ili Friend Codeom.',
+  'riderSearchFailed':
+      'Pretraga vozača nije uspjela. Provjeri vezu i pokušaj ponovo.',
+  'friendRequestSendFailed':
+      'Zahtjev za prijateljstvo nije moguće poslati. Pokušaj ponovo.',
+  'findRiderTitle': 'Pronađi vozača',
+  'riderNotFound': 'Vozač nije pronađen',
+  'readyToSearch': 'Spremno za pretragu',
+  'findAnotherRider': 'Pronađi drugog vozača',
+  'findRiderSearchDescription':
+      'Pretraži pomoću @korisničkog imena, e-maila ili jednostavnog Munja Friend Codea. Koristi način koji ti najviše odgovara.',
+  'riderSearchHint': '@korisničko ime, e-mail ili Friend Code',
+  'searchingRiders': 'Pretraživanje Munja vozača...',
+  'thisIsYou': 'Ovo si ti',
+  'requestReceived': 'Zahtjev primljen',
+  'requestSent': 'Zahtjev poslan',
+  'addFriend': 'Dodaj prijatelja',
+  'searchWithCaps': 'PRETRAŽI POMOĆU',
+  'friendCode': 'Friend Code',
+  'friendRequestSentTo':
+      'Zahtjev za prijateljstvo poslan je korisniku {rider}.',
+  'friendCodeValue': 'Friend Code: {code}',
+  'kmRace': '{distance} KM UTRKA',
+  'firstRiderWins': 'Prvi vozač koji stigne do {distance} km pobjeđuje.',
+  'challengeDays': '{count} dana',
+  'challengeHoursLeft': 'Preostalo {count} h',
+  'youLeadBy': 'Vodiš za {distance} km.',
+  'otherLeadsBy': '{name} vodi za {distance} km.',
+  'munjaRidesCaps': 'MUNJA VOŽNJE',
+  'rideHistoryTitle': 'Historija vožnji',
+  'rideHistorySubtitle': 'Sve tvoje sačuvane vožnje na jednom mjestu.',
+  'score': 'Rezultat',
+  'analyticsNewCaps': 'NOVO',
+  'advancedAnalyticsCaps': 'NAPREDNA ANALITIKA',
+  'analyticsThisWeekCaps': 'OVE SEDMICE',
+  'analyticsThisMonthCaps': 'OVOG MJESECA',
+  'analyticsPaceTrendCaps': 'TREND TEMPA',
+  'analyticsConsistencyCaps': 'DOSLJEDNOST',
+  'analyticsBestMonthCaps': 'NAJBOLJI MJESEC',
+  'advancedAnalyticsDescription':
+      'Sedmični trendovi, mjesečno poređenje i lični uvidi',
+  'unlockWithMunjaProCaps': 'OTKLJUČAJ UZ MUNJA PRO',
+  'rideSaved': 'Vožnja sačuvana',
+  'rideScore': 'Rezultat vožnje',
+  'quickRide': 'Brza vožnja',
+  'routeSavedSubtitle': 'Ruta tvoje vožnje je sačuvana.',
+  'noRouteSaved': 'Ruta nije sačuvana',
+  'noRouteSavedSubtitle': 'Ova vožnja nema sačuvane tačke rute.',
+  'achievementsSubtitle': 'Dostignuća ostvarena tokom ove vožnje.',
+  'firstKilometer': 'Prvi kilometar',
+  'routeRecorded': 'Ruta snimljena',
+  'done': 'Gotovo',
+  'mCrystals': 'M-Crystals',
+  'rideAnalysisStrongEndurance': 'Snažna vožnja izdržljivosti',
+  'rideAnalysisFastRide': 'Brza vožnja',
+  'rideAnalysisSolidRide': 'Dobra vožnja',
+  'rideAnalysisRideComplete': 'Vožnja završena',
+  'rideAnalysisFreeSummary':
+      'Završio si {distance} km za {minutes} min uz prosječnu brzinu od {speed} km/h.',
+  'rideAnalysisAddSteadyKilometres':
+      'Na sljedećoj vožnji pokušaj dodati još nekoliko mirnih kilometara.',
+  'rideAnalysisSmoothSustainablePace':
+      'Fokusiraj se na ujednačen i održiv tempo umjesto kratkih ubrzanja.',
+  'rideAnalysisBuildConsistency':
+      'Nastavi graditi dosljednost i postepeno povećavaj udaljenost.',
+  'rideAnalysisAboveNormalPerformance': 'Iznad tvog uobičajenog nivoa',
+  'rideAnalysisFasterThanUsual': 'Brže od tvog uobičajenog tempa',
+  'rideAnalysisLongerThanUsual': 'Duže od tvoje uobičajene vožnje',
+  'rideAnalysisVeryConsistent': 'Vrlo ujednačena vožnja',
+  'rideAnalysisPersonalAnalysis': 'Lična analiza vožnje',
+  'rideAnalysisProBaseSummary':
+      'Ova vožnja je bila {distance} km uz prosječnu brzinu od {speed} km/h.',
+  'rideAnalysisDistanceAbove':
+      'Udaljenost je bila {percent}% iznad tvog nedavnog prosjeka.',
+  'rideAnalysisDistanceBelow':
+      'Udaljenost je bila {percent}% ispod tvog nedavnog prosjeka.',
+  'rideAnalysisSpeedAbove':
+      'Prosječna brzina je bila {percent}% iznad tvog uobičajenog tempa.',
+  'rideAnalysisSpeedBelow':
+      'Prosječna brzina je bila {percent}% ispod tvog uobičajenog tempa.',
+  'rideAnalysisConsistencyScore': 'Rezultat ujednačenosti vožnje: {score}/100.',
+  'rideAnalysisExtendedDistanceAndPace':
+      'Povećao si i udaljenost i tempo u istoj vožnji.',
+  'rideAnalysisSmootherBraking':
+      'Na sljedećoj vožnji fokusiraj se na mirniju kontrolu brzine i ranije kočenje.',
+  'rideAnalysisRecoverySession':
+      'Neka sljedeća vožnja bude lakša vožnja za oporavak kako bi izbalansirao opterećenje.',
+  'rideAnalysisStartEasier':
+      'Pokušaj krenuti malo lakše i zadržati ujednačeniji tempo kroz sredinu vožnje.',
+  'rideAnalysisPaceProgressing':
+      'Tvoj tempo napreduje. Sljedeću vožnju drži pod kontrolom i ponovi isti napor.',
+  'rideAnalysisAddDistance':
+      'Nadogradi ovu vožnju povećanjem udaljenosti za 5–10% uz isti ujednačen tempo.',
+
+  'recentRiderSingular': '{count} nedavni vozač',
+  'recentRidersPlural': '{count} nedavna vozača',
+  'munjaCompeteCaps': 'MUNJA TAKMIČENJE',
+  'noActiveChallenges': 'Nema aktivnih izazova',
+  'acceptedChallengesAppearHere': 'Prihvaćeni izazovi će se pojaviti ovdje.',
+  'munjaAnalyticsCaps': 'MUNJA ANALITIKA',
+  'munjaProAnalyticsCaps': 'MUNJA PRO ANALITIKA',
+  'removePendingChallengeInvitation': 'Ovo uklanja poziv na čekanju.',
+  'sentChallenges': 'Poslani izazovi',
+  'noPendingChallenges': 'Nema izazova na čekanju',
+  'challengeInvitationAppearHere':
+      'Kada te Munja prijatelj izazove, poziv će se pojaviti ovdje.',
+  'monthlySpecialStartFailed':
+      'Monthly Special nije mogao biti pokrenut. Pokušaj ponovo.',
+  'monthlySpecialStarted': '{title} je pokrenut. Sada imaš punih 30 dana.',
+  'monthlySpecialAlreadyActive': '{title} je već aktivan.',
+  'challengeDaysLeftPlural': 'Preostalo {count} dana',
+  'challengeDaysLeftSingular': 'Preostao {count} dan',
+  'challengeHoursLeftPlural': 'Preostalo {count} sati',
+  'challengeHoursLeftSingular': 'Preostao {count} sat',
+  'challengeMinutesLeft': 'Preostalo {count} min',
+  'endsSoon': 'Uskoro završava',
+  'startingCaps': 'POKREĆEM...',
+  'monthJanuary': 'Januar',
+  'monthFebruary': 'Februar',
+  'monthMarch': 'Mart',
+  'monthApril': 'April',
+  'monthMay': 'Maj',
+  'monthJune': 'Juni',
+  'monthJuly': 'Juli',
+  'monthAugust': 'August',
+  'monthSeptember': 'Septembar',
+  'monthOctober': 'Oktobar',
+  'monthNovember': 'Novembar',
+  'monthDecember': 'Decembar',
+  'monthSpecialLabel': '{month} SPECIAL',
+  'startMonthSpecial': 'POKRENI {month} SPECIAL',
+  'signOut': 'Odjavi se',
+  'savedRides': 'sačuvanih vožnji',
+  'analyticsSubtitle':
+      'Pregledaj statistiku, napredak i uvide iz svojih vožnji.',
+  'fastPace': 'Brz tempo',
+  'pendingChallengeSingular': '{count} izazov na čekanju',
+  'pendingChallengesPlural': '{count} izazova na čekanju',
+  'challengeIncomingSent': '{incoming} primljeno · {sent} poslano',
+  'challengeIncoming': '{count} primljeno',
+  'challengeSent': '{count} poslano',
 };

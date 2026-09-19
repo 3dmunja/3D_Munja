@@ -11,15 +11,9 @@ import '../services/monthly_special_service.dart';
 import 'munja_pro_screen.dart';
 import '../services/social_rider_service.dart';
 
-
 String _t(String key) => AppText.t(key);
 
-enum _ChallengeKind {
-  distance,
-  rides,
-  rideTime,
-  streak,
-}
+enum _ChallengeKind { distance, rides, rideTime, streak }
 
 class _ChallengeTypeData {
   _ChallengeTypeData({
@@ -38,31 +32,24 @@ class _ChallengeTypeData {
 }
 
 class CreateChallengeScreen extends StatefulWidget {
-  const CreateChallengeScreen({
-    super.key,
-    this.preselectedFriendUid,
-  });
+  const CreateChallengeScreen({super.key, this.preselectedFriendUid});
 
   final String? preselectedFriendUid;
 
   @override
-  State<CreateChallengeScreen> createState() =>
-      _CreateChallengeScreenState();
+  State<CreateChallengeScreen> createState() => _CreateChallengeScreenState();
 }
 
-class _CreateChallengeScreenState
-    extends State<CreateChallengeScreen> {
+class _CreateChallengeScreenState extends State<CreateChallengeScreen> {
   bool _loading = true;
   bool _submitting = false;
   String? _errorMessage;
 
-  List<SocialRiderProfile> _friends =
-      const <SocialRiderProfile>[];
+  List<SocialRiderProfile> _friends = const <SocialRiderProfile>[];
 
   SocialRiderProfile? _selectedFriend;
 
-  _ChallengeKind _selectedKind =
-      _ChallengeKind.distance;
+  _ChallengeKind _selectedKind = _ChallengeKind.distance;
 
   double _selectedDistanceKm = 25;
   int _selectedDurationDays = 7;
@@ -70,41 +57,17 @@ class _CreateChallengeScreenState
   int _selectedRideTimeMinutes = 180;
   int _selectedStreakDays = 5;
 
-  static const List<double> _distanceOptions =
-      <double>[
-    10,
-    25,
-    50,
-  ];
+  static const List<double> _distanceOptions = <double>[10, 25, 50];
 
-  static const List<int> _durationOptions =
-      <int>[
-    3,
-    7,
-    14,
-  ];
+  static const List<int> _durationOptions = <int>[3, 7, 14];
 
-  static const List<int> _rideCountOptions = <int>[
-    3,
-    5,
-    10,
-  ];
+  static const List<int> _rideCountOptions = <int>[3, 5, 10];
 
-  static const List<int> _rideTimeOptions = <int>[
-    60,
-    180,
-    300,
-  ];
+  static const List<int> _rideTimeOptions = <int>[60, 180, 300];
 
-  static const List<int> _streakOptions = <int>[
-    3,
-    5,
-    7,
-  ];
+  static const List<int> _streakOptions = <int>[3, 5, 7];
 
-  static final List<_ChallengeTypeData>
-      _challengeTypes =
-      <_ChallengeTypeData>[
+  static final List<_ChallengeTypeData> _challengeTypes = <_ChallengeTypeData>[
     _ChallengeTypeData(
       kind: _ChallengeKind.distance,
       title: _t('distance'),
@@ -143,44 +106,33 @@ class _CreateChallengeScreenState
 
   Future<void> _loadFriends() async {
     try {
-      final friendUids =
-          await FriendService.instance.getFriendUids();
+      final friendUids = await FriendService.instance.getFriendUids();
 
-      final loadedFriends =
-          <SocialRiderProfile>[];
+      final loadedFriends = <SocialRiderProfile>[];
 
       for (final uid in friendUids) {
         try {
-          final rider =
-              await SocialRiderService.instance
-                  .getProfileByUid(uid);
+          final rider = await SocialRiderService.instance.getProfileByUid(uid);
 
           if (rider != null) {
             loadedFriends.add(rider);
           }
         } catch (error, stackTrace) {
-          debugPrint(
-            'CREATE CHALLENGE FRIEND PROFILE LOAD ERROR: $error',
-          );
+          debugPrint('CREATE CHALLENGE FRIEND PROFILE LOAD ERROR: $error');
           debugPrint('$stackTrace');
         }
       }
 
       loadedFriends.sort(
-        (a, b) => a.displayName
-            .toLowerCase()
-            .compareTo(
-              b.displayName.toLowerCase(),
-            ),
+        (a, b) =>
+            a.displayName.toLowerCase().compareTo(b.displayName.toLowerCase()),
       );
 
       SocialRiderProfile? selectedFriend;
 
-      final preferredUid =
-          widget.preselectedFriendUid?.trim();
+      final preferredUid = widget.preselectedFriendUid?.trim();
 
-      if (preferredUid != null &&
-          preferredUid.isNotEmpty) {
+      if (preferredUid != null && preferredUid.isNotEmpty) {
         for (final rider in loadedFriends) {
           if (rider.uid == preferredUid) {
             selectedFriend = rider;
@@ -198,26 +150,20 @@ class _CreateChallengeScreenState
         _errorMessage = null;
       });
     } catch (error, stackTrace) {
-      debugPrint(
-        'CREATE CHALLENGE FRIENDS LOAD ERROR: $error',
-      );
+      debugPrint('CREATE CHALLENGE FRIENDS LOAD ERROR: $error');
       debugPrint('$stackTrace');
 
       if (!mounted) return;
 
       setState(() {
-        _errorMessage =
-            _t('friendsLoadFailed');
+        _errorMessage = _t('friendsLoadFailed');
         _loading = false;
       });
     }
   }
 
-  void _selectChallengeType(
-    _ChallengeTypeData data,
-  ) {
+  void _selectChallengeType(_ChallengeTypeData data) {
     HapticFeedback.selectionClick();
-
 
     setState(() {
       _selectedKind = data.kind;
@@ -278,7 +224,7 @@ class _CreateChallengeScreenState
         }
         return '$_selectedRideTimeMinutes min';
       case _ChallengeKind.streak:
-        return '$_selectedStreakDays ${_t('homeDaysLeftPlural').replaceAll(' tilbage','').replaceAll(' left','').replaceAll(' preostalo','')}';
+        return '$_selectedStreakDays ${_t('homeDaysLeftPlural').replaceAll(' tilbage', '').replaceAll(' left', '').replaceAll(' preostalo', '')}';
     }
   }
 
@@ -326,37 +272,29 @@ class _CreateChallengeScreenState
 
       switch (_selectedKind) {
         case _ChallengeKind.distance:
-          challengeId =
-              await ChallengeService.instance
-                  .createDistanceChallenge(
+          challengeId = await ChallengeService.instance.createDistanceChallenge(
             opponentUid: friend.uid,
             targetDistanceKm: _selectedDistanceKm,
             durationDays: _selectedDurationDays,
           );
           break;
         case _ChallengeKind.rides:
-          challengeId =
-              await ChallengeService.instance
-                  .createRideCountChallenge(
-            opponentUid: friend.uid,
-            targetRideCount: _selectedRideCount,
-            durationDays: _selectedDurationDays,
-          );
+          challengeId = await ChallengeService.instance
+              .createRideCountChallenge(
+                opponentUid: friend.uid,
+                targetRideCount: _selectedRideCount,
+                durationDays: _selectedDurationDays,
+              );
           break;
         case _ChallengeKind.rideTime:
-          challengeId =
-              await ChallengeService.instance
-                  .createRideTimeChallenge(
+          challengeId = await ChallengeService.instance.createRideTimeChallenge(
             opponentUid: friend.uid,
-            targetRideTimeMinutes:
-                _selectedRideTimeMinutes,
+            targetRideTimeMinutes: _selectedRideTimeMinutes,
             durationDays: _selectedDurationDays,
           );
           break;
         case _ChallengeKind.streak:
-          challengeId =
-              await ChallengeService.instance
-                  .createStreakChallenge(
+          challengeId = await ChallengeService.instance.createStreakChallenge(
             opponentUid: friend.uid,
             targetStreakDays: _selectedStreakDays,
             durationDays: _selectedDurationDays,
@@ -366,60 +304,41 @@ class _CreateChallengeScreenState
 
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context)
-          .showSnackBar(
+      ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          backgroundColor:
-              MunjaColors.panel,
-          content: Text(
-            '${_t('sendChallenge')} · ${friend.usernameWithAt}',
-          ),
+          backgroundColor: MunjaColors.panel,
+          content: Text('${_t('sendChallenge')} · ${friend.usernameWithAt}'),
         ),
       );
 
-      Navigator.of(context).pop(
-        challengeId,
-      );
+      Navigator.of(context).pop(challengeId);
     } on StateError catch (error) {
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context)
-          .showSnackBar(
+      ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          backgroundColor:
-              MunjaColors.panel,
-          content: Text(
-            error.message,
-          ),
+          backgroundColor: MunjaColors.panel,
+          content: Text(error.message),
         ),
       );
     } on ArgumentError catch (error) {
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context)
-          .showSnackBar(
+      ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          backgroundColor:
-              MunjaColors.panel,
-          content: Text(
-            error.message?.toString() ??
-                _t('couldNotCreate'),
-          ),
+          backgroundColor: MunjaColors.panel,
+          content: Text(error.message?.toString() ?? _t('couldNotCreate')),
         ),
       );
     } catch (error, stackTrace) {
-      debugPrint(
-        'CREATE CHALLENGE ERROR: $error',
-      );
+      debugPrint('CREATE CHALLENGE ERROR: $error');
       debugPrint('$stackTrace');
 
       if (!mounted) return;
 
-      ScaffoldMessenger.of(context)
-          .showSnackBar(
+      ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          backgroundColor:
-              MunjaColors.panel,
+          backgroundColor: MunjaColors.panel,
           content: Text(_t('couldNotCreate')),
         ),
       );
@@ -437,35 +356,25 @@ class _CreateChallengeScreenState
     return Scaffold(
       backgroundColor: MunjaColors.bg,
       appBar: AppBar(
-        backgroundColor:
-            MunjaColors.bg,
+        backgroundColor: MunjaColors.bg,
         elevation: 0,
         scrolledUnderElevation: 0,
         foregroundColor: Colors.white,
         leading: IconButton(
-          onPressed: _submitting
-              ? null
-              : () =>
-                  Navigator.of(context).pop(),
-          icon: const Icon(
-            Icons.arrow_back_ios_new_rounded,
-          ),
+          onPressed: _submitting ? null : () => Navigator.of(context).pop(),
+          icon: const Icon(Icons.arrow_back_ios_new_rounded),
         ),
         title: Text(
           _t('newChallenge'),
           style: TextStyle(
             color: Colors.white,
             fontSize: 20,
-            fontWeight:
-                FontWeight.w900,
+            fontWeight: FontWeight.w900,
             letterSpacing: -0.3,
           ),
         ),
       ),
-      body: SafeArea(
-        top: false,
-        child: _buildBody(),
-      ),
+      body: SafeArea(top: false, child: _buildBody()),
     );
   }
 
@@ -486,51 +395,36 @@ class _CreateChallengeScreenState
     }
 
     return ListView(
-      padding: const EdgeInsets.fromLTRB(
-        20,
-        10,
-        20,
-        360,
-      ),
-      physics:
-          const BouncingScrollPhysics(),
+      padding: const EdgeInsets.fromLTRB(20, 10, 20, 360),
+      physics: const BouncingScrollPhysics(),
       children: [
         _ChallengeIntroCard(),
         const SizedBox(height: 18),
 
-        _MonthlySpecialPreview(
-          proService: MunjaProService.instance,
-        ),
+        _MonthlySpecialPreview(proService: MunjaProService.instance),
         const SizedBox(height: 24),
 
-        _SectionTitle(
-          title: _t('challengeType'),
-        ),
+        _SectionTitle(title: _t('challengeType')),
         const SizedBox(height: 10),
 
         _ChallengeTypeSelector(
           items: _challengeTypes,
           selected: _selectedKind,
           enabled: !_submitting,
-          onSelected:
-              _selectChallengeType,
+          onSelected: _selectChallengeType,
         ),
 
         const SizedBox(height: 24),
 
-        _SectionTitle(
-          title: _t('chooseRider'),
-        ),
+        _SectionTitle(title: _t('chooseRider')),
         const SizedBox(height: 10),
 
         _FriendPicker(
           friends: _friends,
-          selectedFriend:
-              _selectedFriend,
+          selectedFriend: _selectedFriend,
           enabled: !_submitting,
           onSelected: (rider) {
-            HapticFeedback
-                .selectionClick();
+            HapticFeedback.selectionClick();
 
             setState(() {
               _selectedFriend = rider;
@@ -540,9 +434,7 @@ class _CreateChallengeScreenState
 
         const SizedBox(height: 24),
 
-        _SectionTitle(
-          title: _goalSectionTitle,
-        ),
+        _SectionTitle(title: _goalSectionTitle),
         const SizedBox(height: 10),
 
         if (_selectedKind == _ChallengeKind.distance)
@@ -580,9 +472,7 @@ class _CreateChallengeScreenState
             enabled: !_submitting,
             icon: Icons.timer_rounded,
             labelBuilder: (value) =>
-                value % 60 == 0
-                    ? '${value ~/ 60} H'
-                    : '$value MIN',
+                value % 60 == 0 ? '${value ~/ 60} H' : '$value MIN',
             onSelected: (value) {
               HapticFeedback.selectionClick();
               setState(() {
@@ -607,9 +497,7 @@ class _CreateChallengeScreenState
           ),
 
         const SizedBox(height: 24),
-        _SectionTitle(
-          title: _t('duration'),
-        ),
+        _SectionTitle(title: _t('duration')),
         const SizedBox(height: 10),
         _DurationSelector(
           options: _durationOptions,
@@ -639,10 +527,9 @@ class _CreateChallengeScreenState
         SizedBox(
           height: 58,
           child: FilledButton.icon(
-            onPressed:
-                _selectedFriend == null || _submitting
-                    ? null
-                    : _sendChallenge,
+            onPressed: _selectedFriend == null || _submitting
+                ? null
+                : _sendChallenge,
             icon: _submitting
                 ? const SizedBox(
                     width: 19,
@@ -652,16 +539,10 @@ class _CreateChallengeScreenState
                       color: Colors.black,
                     ),
                   )
-                : const Icon(
-                    Icons.bolt_rounded,
-                  ),
+                : const Icon(Icons.bolt_rounded),
             label: Text(
-              _submitting
-                  ? _t('sending')
-                  : _t('sendChallenge'),
-              style: const TextStyle(
-                fontWeight: FontWeight.w900,
-              ),
+              _submitting ? _t('sending') : _t('sendChallenge'),
+              style: const TextStyle(fontWeight: FontWeight.w900),
             ),
           ),
         ),
@@ -681,8 +562,7 @@ class _CreateChallengeScreenState
   }
 }
 
-class _ChallengeIntroCard
-    extends StatelessWidget {
+class _ChallengeIntroCard extends StatelessWidget {
   _ChallengeIntroCard();
 
   @override
@@ -691,21 +571,14 @@ class _ChallengeIntroCard
       padding: const EdgeInsets.all(20),
       decoration: _premiumDecoration(),
       child: Row(
-        crossAxisAlignment:
-            CrossAxisAlignment.center,
+        crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           Container(
             width: 58,
             height: 58,
             decoration: BoxDecoration(
-              color:
-                  MunjaColors.mint.withOpacity(
-                0.11,
-              ),
-              borderRadius:
-                  BorderRadius.circular(
-                20,
-              ),
+              color: MunjaColors.mint.withOpacity(0.11),
+              borderRadius: BorderRadius.circular(20),
             ),
             child: const Icon(
               Icons.emoji_events_rounded,
@@ -716,17 +589,14 @@ class _ChallengeIntroCard
           const SizedBox(width: 15),
           Expanded(
             child: Column(
-              crossAxisAlignment:
-                  CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   _t('challengesTitle'),
                   style: TextStyle(
-                    color:
-                        MunjaColors.mint,
+                    color: MunjaColors.mint,
                     fontSize: 9,
-                    fontWeight:
-                        FontWeight.w900,
+                    fontWeight: FontWeight.w900,
                     letterSpacing: 1.2,
                   ),
                 ),
@@ -736,8 +606,7 @@ class _ChallengeIntroCard
                   style: TextStyle(
                     color: Colors.white,
                     fontSize: 21,
-                    fontWeight:
-                        FontWeight.w900,
+                    fontWeight: FontWeight.w900,
                     letterSpacing: -0.4,
                   ),
                 ),
@@ -745,12 +614,10 @@ class _ChallengeIntroCard
                 Text(
                   _t('challengeIntro'),
                   style: TextStyle(
-                    color:
-                        MunjaColors.textSoft,
+                    color: MunjaColors.textSoft,
                     fontSize: 12,
                     height: 1.35,
-                    fontWeight:
-                        FontWeight.w600,
+                    fontWeight: FontWeight.w600,
                   ),
                 ),
               ],
@@ -763,21 +630,16 @@ class _ChallengeIntroCard
 }
 
 class _MonthlySpecialPreview extends StatefulWidget {
-  _MonthlySpecialPreview({
-    required this.proService,
-  });
+  _MonthlySpecialPreview({required this.proService});
 
   final MunjaProService proService;
 
   @override
-  State<_MonthlySpecialPreview> createState() =>
-      _MonthlySpecialPreviewState();
+  State<_MonthlySpecialPreview> createState() => _MonthlySpecialPreviewState();
 }
 
-class _MonthlySpecialPreviewState
-    extends State<_MonthlySpecialPreview> {
-  final MonthlySpecialService _specialService =
-      MonthlySpecialService.instance;
+class _MonthlySpecialPreviewState extends State<_MonthlySpecialPreview> {
+  final MonthlySpecialService _specialService = MonthlySpecialService.instance;
 
   MonthlySpecialActivation? _activation;
   bool _loadingActivation = true;
@@ -791,18 +653,14 @@ class _MonthlySpecialPreviewState
     Future.microtask(_loadActivation);
   }
 
-  MonthlySpecial get _offeredSpecial =>
-      _specialService.current();
+  MonthlySpecial get _offeredSpecial => _specialService.current();
 
   MonthlySpecial get _displaySpecial {
     final activation = _activation;
 
     if (activation != null &&
-        activation.status !=
-            MonthlySpecialActivationStatus.expired) {
-      return _specialService.specialForActivation(
-        activation,
-      );
+        activation.status != MonthlySpecialActivationStatus.expired) {
+      return _specialService.specialForActivation(activation);
     }
 
     return _offeredSpecial;
@@ -815,14 +673,12 @@ class _MonthlySpecialPreviewState
       return false;
     }
 
-    return activation.status ==
-            MonthlySpecialActivationStatus.active &&
+    return activation.status == MonthlySpecialActivationStatus.active &&
         activation.endsAt.isAfter(DateTime.now());
   }
 
   bool get _hasCompletedSpecial {
-    return _activation?.status ==
-        MonthlySpecialActivationStatus.completed;
+    return _activation?.status == MonthlySpecialActivationStatus.completed;
   }
 
   bool get _rewardClaimed {
@@ -838,8 +694,7 @@ class _MonthlySpecialPreviewState
     }
 
     try {
-      final activation =
-          await _specialService.getActiveActivation();
+      final activation = await _specialService.getActiveActivation();
 
       if (!mounted) return;
 
@@ -848,24 +703,19 @@ class _MonthlySpecialPreviewState
         _loadingActivation = false;
       });
     } catch (error, stackTrace) {
-      debugPrint(
-        'MONTHLY SPECIAL LOAD ERROR: $error',
-      );
+      debugPrint('MONTHLY SPECIAL LOAD ERROR: $error');
       debugPrint('$stackTrace');
 
       if (!mounted) return;
 
       setState(() {
         _loadingActivation = false;
-        _activationError =
-            _t('monthlyLoadFailed');
+        _activationError = _t('monthlyLoadFailed');
       });
     }
   }
 
-  Future<void> _startSpecial(
-    BuildContext context,
-  ) async {
+  Future<void> _startSpecial(BuildContext context) async {
     if (_startingSpecial) {
       return;
     }
@@ -878,8 +728,7 @@ class _MonthlySpecialPreviewState
     });
 
     try {
-      final result =
-          await _specialService.activateCurrentSpecial();
+      final result = await _specialService.activateCurrentSpecial();
 
       if (!mounted) return;
 
@@ -888,10 +737,7 @@ class _MonthlySpecialPreviewState
         _startingSpecial = false;
       });
 
-      final special =
-          _specialService.specialForActivation(
-        result.activation,
-      );
+      final special = _specialService.specialForActivation(result.activation);
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
@@ -904,33 +750,26 @@ class _MonthlySpecialPreviewState
         ),
       );
     } catch (error, stackTrace) {
-      debugPrint(
-        'MONTHLY SPECIAL START ERROR: $error',
-      );
+      debugPrint('MONTHLY SPECIAL START ERROR: $error');
       debugPrint('$stackTrace');
 
       if (!mounted) return;
 
       setState(() {
         _startingSpecial = false;
-        _activationError =
-            'Monthly Special could not be started. Please try again.';
+        _activationError = _t('monthlySpecialStartFailed');
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
+        SnackBar(
           backgroundColor: MunjaColors.panel,
-          content: Text(
-            'Monthly Special could not be started. Please try again.',
-          ),
+          content: Text(_t('monthlySpecialStartFailed')),
         ),
       );
     }
   }
 
-  Future<void> _claimReward(
-    BuildContext context,
-  ) async {
+  Future<void> _claimReward(BuildContext context) async {
     final activation = _activation;
 
     if (activation == null ||
@@ -948,8 +787,7 @@ class _MonthlySpecialPreviewState
     });
 
     try {
-      final result =
-          await _specialService.claimCompletedReward(
+      final result = await _specialService.claimCompletedReward(
         activationId: activation.id,
       );
 
@@ -978,52 +816,37 @@ class _MonthlySpecialPreviewState
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             backgroundColor: MunjaColors.panel,
-            content: Text(
-              _t('rewardAlreadyClaimed'),
-            ),
+            content: Text(_t('rewardAlreadyClaimed')),
           ),
         );
         return;
       }
 
       final message = switch (result.status) {
-        MonthlySpecialClaimStatus.notCompleted =>
-          _t('completeBeforeClaim'),
-        MonthlySpecialClaimStatus.activationNotFound =>
-          _t('monthlyNotFound'),
-        MonthlySpecialClaimStatus.userNotFound =>
-          _t('profileNotFound'),
-        MonthlySpecialClaimStatus.success =>
-          _t('rewardClaimed'),
-        MonthlySpecialClaimStatus.alreadyClaimed =>
-          _t('rewardAlreadyClaimed'),
+        MonthlySpecialClaimStatus.notCompleted => _t('completeBeforeClaim'),
+        MonthlySpecialClaimStatus.activationNotFound => _t('monthlyNotFound'),
+        MonthlySpecialClaimStatus.userNotFound => _t('profileNotFound'),
+        MonthlySpecialClaimStatus.success => _t('rewardClaimed'),
+        MonthlySpecialClaimStatus.alreadyClaimed => _t('rewardAlreadyClaimed'),
       };
 
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          backgroundColor: MunjaColors.panel,
-          content: Text(message),
-        ),
+        SnackBar(backgroundColor: MunjaColors.panel, content: Text(message)),
       );
     } catch (error, stackTrace) {
-      debugPrint(
-        'MONTHLY SPECIAL CLAIM ERROR: $error',
-      );
+      debugPrint('MONTHLY SPECIAL CLAIM ERROR: $error');
       debugPrint('$stackTrace');
 
       if (!mounted) return;
 
       setState(() {
-        _activationError =
-            _t('rewardClaimFailed');
+        _activationError = _t('rewardClaimFailed');
       });
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           backgroundColor: MunjaColors.panel,
-          content: Text(
-            _t('rewardClaimFailed'),
-          ),
+          content: Text(_t('rewardClaimFailed')),
         ),
       );
     } finally {
@@ -1033,6 +856,49 @@ class _MonthlySpecialPreviewState
         });
       }
     }
+  }
+
+  String _localizedMonthName(int month) {
+    switch (month) {
+      case 1:
+        return _t('monthJanuary');
+      case 2:
+        return _t('monthFebruary');
+      case 3:
+        return _t('monthMarch');
+      case 4:
+        return _t('monthApril');
+      case 5:
+        return _t('monthMay');
+      case 6:
+        return _t('monthJune');
+      case 7:
+        return _t('monthJuly');
+      case 8:
+        return _t('monthAugust');
+      case 9:
+        return _t('monthSeptember');
+      case 10:
+        return _t('monthOctober');
+      case 11:
+        return _t('monthNovember');
+      case 12:
+        return _t('monthDecember');
+      default:
+        return '';
+    }
+  }
+
+  String _monthlySpecialLabel(MonthlySpecial special) {
+    return _t(
+      'monthSpecialLabel',
+    ).replaceAll('{month}', _localizedMonthName(special.month).toUpperCase());
+  }
+
+  String _startMonthlySpecialLabel(MonthlySpecial special) {
+    return _t(
+      'startMonthSpecial',
+    ).replaceAll('{month}', _localizedMonthName(special.month).toUpperCase());
   }
 
   String _timeLeftLabel() {
@@ -1050,8 +916,7 @@ class _MonthlySpecialPreviewState
 
     final activation = _activation!;
 
-    final remaining =
-        _specialService.timeRemainingForActivation(
+    final remaining = _specialService.timeRemainingForActivation(
       activation: activation,
     );
 
@@ -1062,39 +927,36 @@ class _MonthlySpecialPreviewState
     // Ceil the day count so a freshly activated 30-day Special displays
     // "30 days left" instead of immediately dropping to 29.
     final totalMinutes = remaining.inMinutes;
-    final days =
-        (totalMinutes / Duration.minutesPerDay).ceil();
+    final days = (totalMinutes / Duration.minutesPerDay).ceil();
 
     if (days > 1) {
-      return '$days days left';
+      return _t('challengeDaysLeftPlural').replaceAll('{count}', '$days');
     }
 
     if (days == 1) {
-      return '1 day left';
+      return _t('challengeDaysLeftSingular').replaceAll('{count}', '1');
     }
 
     final hours = remaining.inHours;
 
     if (hours > 1) {
-      return '$hours hours left';
+      return _t('challengeHoursLeftPlural').replaceAll('{count}', '$hours');
     }
 
     if (hours == 1) {
-      return '1 hour left';
+      return _t('challengeHoursLeftSingular').replaceAll('{count}', '1');
     }
 
     final minutes = remaining.inMinutes;
 
     if (minutes > 1) {
-      return '$minutes min left';
+      return _t('challengeMinutesLeft').replaceAll('{count}', '$minutes');
     }
 
-    return 'Ends soon';
+    return _t('endsSoon');
   }
 
-  String _statusLabel({
-    required bool isPro,
-  }) {
+  String _statusLabel({required bool isPro}) {
     if (!isPro) {
       return _t('proCaps');
     }
@@ -1108,21 +970,17 @@ class _MonthlySpecialPreviewState
     }
 
     if (_hasActiveSpecial) {
-      return 'ACTIVE';
+      return _t('activeCaps');
     }
 
     return _t('proCaps');
   }
 
-  Future<void> _openPro(
-    BuildContext context,
-  ) async {
+  Future<void> _openPro(BuildContext context) async {
     HapticFeedback.selectionClick();
 
     await Navigator.of(context).push<void>(
-      MaterialPageRoute<void>(
-        builder: (_) => const MunjaProScreen(),
-      ),
+      MaterialPageRoute<void>(builder: (_) => const MunjaProScreen()),
     );
 
     if (mounted) {
@@ -1131,9 +989,7 @@ class _MonthlySpecialPreviewState
     }
   }
 
-  IconData _rewardIcon(
-    MonthlySpecialRewardType type,
-  ) {
+  IconData _rewardIcon(MonthlySpecialRewardType type) {
     switch (type) {
       case MonthlySpecialRewardType.badge:
         return Icons.workspace_premium_rounded;
@@ -1144,10 +1000,7 @@ class _MonthlySpecialPreviewState
     }
   }
 
-  void _showSpecialInfo(
-    BuildContext context, {
-    required bool isPro,
-  }) {
+  void _showSpecialInfo(BuildContext context, {required bool isPro}) {
     HapticFeedback.selectionClick();
 
     final special = _displaySpecial;
@@ -1160,17 +1013,11 @@ class _MonthlySpecialPreviewState
       useSafeArea: true,
       builder: (sheetContext) {
         return StatefulBuilder(
-          builder: (
-            sheetContext,
-            setSheetState,
-          ) {
+          builder: (sheetContext, setSheetState) {
             final active = _hasActiveSpecial;
-            final completed =
-                _hasCompletedSpecial;
-            final claimed =
-                _rewardClaimed;
-            final timeLeft =
-                _timeLeftLabel();
+            final completed = _hasCompletedSpecial;
+            final claimed = _rewardClaimed;
+            final timeLeft = _timeLeftLabel();
 
             Future<void> startFromSheet() async {
               Navigator.of(sheetContext).pop();
@@ -1184,26 +1031,16 @@ class _MonthlySpecialPreviewState
 
             return Container(
               margin: const EdgeInsets.all(14),
-              padding: const EdgeInsets.fromLTRB(
-                20,
-                20,
-                20,
-                18,
-              ),
+              padding: const EdgeInsets.fromLTRB(20, 20, 20, 18),
               decoration: BoxDecoration(
                 color: MunjaColors.panel,
-                borderRadius:
-                    BorderRadius.circular(30),
-                border: Border.all(
-                  color: MunjaColors.mint
-                      .withOpacity(0.24),
-                ),
+                borderRadius: BorderRadius.circular(30),
+                border: Border.all(color: MunjaColors.mint.withOpacity(0.24)),
               ),
               child: SingleChildScrollView(
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment:
-                      CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
                       children: [
@@ -1212,15 +1049,12 @@ class _MonthlySpecialPreviewState
                           height: 48,
                           decoration: BoxDecoration(
                             shape: BoxShape.circle,
-                            color: MunjaColors.mint
-                                .withOpacity(0.12),
+                            color: MunjaColors.mint.withOpacity(0.12),
                           ),
                           child: Icon(
                             active
-                                ? Icons
-                                    .electric_bolt_rounded
-                                : Icons
-                                    .auto_awesome_rounded,
+                                ? Icons.electric_bolt_rounded
+                                : Icons.auto_awesome_rounded,
                             color: MunjaColors.mint,
                             size: 23,
                           ),
@@ -1228,31 +1062,24 @@ class _MonthlySpecialPreviewState
                         const SizedBox(width: 12),
                         Expanded(
                           child: Column(
-                            crossAxisAlignment:
-                                CrossAxisAlignment
-                                    .start,
+                            crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               Text(
-                                '${special.monthName.toUpperCase()} SPECIAL',
-                                style:
-                                    const TextStyle(
-                                  color:
-                                      MunjaColors.mint,
+                                _monthlySpecialLabel(special),
+                                style: const TextStyle(
+                                  color: MunjaColors.mint,
                                   fontSize: 9,
-                                  fontWeight:
-                                      FontWeight.w900,
+                                  fontWeight: FontWeight.w900,
                                   letterSpacing: 1.15,
                                 ),
                               ),
                               const SizedBox(height: 4),
                               Text(
                                 special.title,
-                                style:
-                                    const TextStyle(
+                                style: const TextStyle(
                                   color: Colors.white,
                                   fontSize: 17,
-                                  fontWeight:
-                                      FontWeight.w900,
+                                  fontWeight: FontWeight.w900,
                                 ),
                               ),
                             ],
@@ -1260,11 +1087,8 @@ class _MonthlySpecialPreviewState
                         ),
                         const SizedBox(width: 8),
                         _SpecialStatusBadge(
-                          label: _statusLabel(
-                            isPro: isPro,
-                          ),
-                          active:
-                              isPro && active,
+                          label: _statusLabel(isPro: isPro),
+                          active: isPro && active,
                         ),
                       ],
                     ),
@@ -1295,13 +1119,10 @@ class _MonthlySpecialPreviewState
                       goal: special.goalLabel,
                       timeLeft: timeLeft,
                     ),
-                    if (active ||
-                        completed) ...[
+                    if (active || completed) ...[
                       const SizedBox(height: 12),
                       _MonthlySpecialProgressCard(
-                        currentValue:
-                            _activation?.progressValue ??
-                                0,
+                        currentValue: _activation?.progressValue ?? 0,
                         special: special,
                         completed: completed,
                       ),
@@ -1310,23 +1131,17 @@ class _MonthlySpecialPreviewState
                     Row(
                       children: [
                         Expanded(
-                          child:
-                              _MonthlySpecialMiniReward(
-                            icon:
-                                Icons.bolt_rounded,
-                            value:
-                                '+${special.xpReward}',
+                          child: _MonthlySpecialMiniReward(
+                            icon: Icons.bolt_rounded,
+                            value: '+${special.xpReward}',
                             label: 'XP',
                           ),
                         ),
                         const SizedBox(width: 9),
                         Expanded(
-                          child:
-                              _MonthlySpecialMiniReward(
-                            icon:
-                                Icons.diamond_rounded,
-                            value:
-                                '+${special.crystalReward}',
+                          child: _MonthlySpecialMiniReward(
+                            icon: Icons.diamond_rounded,
+                            value: '+${special.crystalReward}',
                             label: 'CRYSTALS',
                           ),
                         ),
@@ -1334,24 +1149,19 @@ class _MonthlySpecialPreviewState
                     ),
                     const SizedBox(height: 9),
                     _SpecialRewardRow(
-                      icon: _rewardIcon(
-                        special.specialReward.type,
-                      ),
-                      title:
-                          special.specialReward.name,
+                      icon: _rewardIcon(special.specialReward.type),
+                      title: special.specialReward.name,
                       subtitle:
                           '${special.specialReward.typeLabel} unlocked when this Monthly Special is completed.',
                     ),
-                    if (_activationError !=
-                        null) ...[
+                    if (_activationError != null) ...[
                       const SizedBox(height: 12),
                       Text(
                         _activationError!,
                         style: const TextStyle(
                           color: Colors.redAccent,
                           fontSize: 10,
-                          fontWeight:
-                              FontWeight.w700,
+                          fontWeight: FontWeight.w700,
                         ),
                       ),
                     ],
@@ -1360,72 +1170,55 @@ class _MonthlySpecialPreviewState
                       width: double.infinity,
                       height: 52,
                       child: FilledButton.icon(
-                        onPressed:
-                            _startingSpecial ||
-                                    _claimingReward
-                                ? null
-                                : !isPro
-                                    ? () {
-                                        Navigator.of(
-                                          sheetContext,
-                                        ).pop();
-                                        _openPro(
-                                          context,
-                                        );
-                                      }
+                        onPressed: _startingSpecial || _claimingReward
+                            ? null
+                            : !isPro
+                            ? () {
+                                Navigator.of(sheetContext).pop();
+                                _openPro(context);
+                              }
+                            : active
+                            ? null
+                            : completed
+                            ? claimed
+                                  ? null
+                                  : claimFromSheet
+                            : startFromSheet,
+                        icon: _startingSpecial || _claimingReward
+                            ? const SizedBox(
+                                width: 18,
+                                height: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.black,
+                                ),
+                              )
+                            : Icon(
+                                !isPro
+                                    ? Icons.lock_open_rounded
+                                    : completed
+                                    ? claimed
+                                          ? Icons.verified_rounded
+                                          : Icons.redeem_rounded
                                     : active
-                                        ? null
-                                        : completed
-                                            ? claimed
-                                                ? null
-                                                : claimFromSheet
-                                            : startFromSheet,
-                        icon:
-                            _startingSpecial ||
-                                    _claimingReward
-                                ? const SizedBox(
-                                    width: 18,
-                                    height: 18,
-                                    child:
-                                        CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                      color: Colors.black,
-                                    ),
-                                  )
-                                : Icon(
-                                    !isPro
-                                        ? Icons
-                                            .lock_open_rounded
-                                        : completed
-                                            ? claimed
-                                                ? Icons
-                                                    .verified_rounded
-                                                : Icons
-                                                    .redeem_rounded
-                                            : active
-                                                ? Icons
-                                                    .electric_bolt_rounded
-                                                : Icons
-                                                    .play_arrow_rounded,
-                                  ),
+                                    ? Icons.electric_bolt_rounded
+                                    : Icons.play_arrow_rounded,
+                              ),
                         label: Text(
                           _startingSpecial
-                              ? 'STARTING...'
+                              ? _t('startingCaps')
                               : _claimingReward
-                                  ? 'CLAIMING...'
-                                  : !isPro
-                                      ? _t('unlockPro')
-                                      : completed
-                                          ? claimed
-                                              ? _t('rewardClaimedCaps')
-                                              : _t('claimReward')
-                                          : active
-                                              ? _t('specialActive')
-                                              : 'START ${special.monthName.toUpperCase()} SPECIAL',
-                          style: const TextStyle(
-                            fontWeight:
-                                FontWeight.w900,
-                          ),
+                              ? _t('claiming')
+                              : !isPro
+                              ? _t('unlockPro')
+                              : completed
+                              ? claimed
+                                    ? _t('rewardClaimedCaps')
+                                    : _t('claimReward')
+                              : active
+                              ? _t('specialActive')
+                              : _startMonthlySpecialLabel(special),
+                          style: const TextStyle(fontWeight: FontWeight.w900),
                         ),
                       ),
                     ),
@@ -1447,34 +1240,20 @@ class _MonthlySpecialPreviewState
         final isPro = proState.hasActivePro;
         final special = _displaySpecial;
         final active = _hasActiveSpecial;
-        final completed =
-            _hasCompletedSpecial;
+        final completed = _hasCompletedSpecial;
 
         return Material(
           color: Colors.transparent,
           child: InkWell(
-            onTap: () => _showSpecialInfo(
-              context,
-              isPro: isPro,
-            ),
+            onTap: () => _showSpecialInfo(context, isPro: isPro),
             borderRadius: BorderRadius.circular(26),
             child: Ink(
-              padding: const EdgeInsets.fromLTRB(
-                18,
-                16,
-                18,
-                16,
-              ),
+              padding: const EdgeInsets.fromLTRB(18, 16, 18, 16),
               decoration: BoxDecoration(
-                color: MunjaColors.mint
-                    .withOpacity(0.065),
-                borderRadius:
-                    BorderRadius.circular(26),
+                color: MunjaColors.mint.withOpacity(0.065),
+                borderRadius: BorderRadius.circular(26),
                 border: Border.all(
-                  color: MunjaColors.mint
-                      .withOpacity(
-                    active ? 0.38 : 0.22,
-                  ),
+                  color: MunjaColors.mint.withOpacity(active ? 0.38 : 0.22),
                 ),
               ),
               child: Row(
@@ -1484,20 +1263,16 @@ class _MonthlySpecialPreviewState
                     height: 46,
                     decoration: BoxDecoration(
                       shape: BoxShape.circle,
-                      color: MunjaColors.mint
-                          .withOpacity(0.12),
+                      color: MunjaColors.mint.withOpacity(0.12),
                     ),
                     child: Icon(
                       !isPro
                           ? Icons.lock_rounded
                           : completed
-                              ? Icons
-                                  .check_circle_rounded
-                              : active
-                                  ? Icons
-                                      .electric_bolt_rounded
-                                  : Icons
-                                      .auto_awesome_rounded,
+                          ? Icons.check_circle_rounded
+                          : active
+                          ? Icons.electric_bolt_rounded
+                          : Icons.auto_awesome_rounded,
                       color: MunjaColors.mint,
                       size: 22,
                     ),
@@ -1505,21 +1280,17 @@ class _MonthlySpecialPreviewState
                   const SizedBox(width: 12),
                   Expanded(
                     child: Column(
-                      crossAxisAlignment:
-                          CrossAxisAlignment.start,
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Row(
                           children: [
                             Expanded(
                               child: Text(
-                                '${special.monthName.toUpperCase()} SPECIAL',
-                                style:
-                                    const TextStyle(
-                                  color:
-                                      MunjaColors.mint,
+                                _monthlySpecialLabel(special),
+                                style: const TextStyle(
+                                  color: MunjaColors.mint,
                                   fontSize: 9,
-                                  fontWeight:
-                                      FontWeight.w900,
+                                  fontWeight: FontWeight.w900,
                                   letterSpacing: 1.15,
                                 ),
                               ),
@@ -1531,8 +1302,7 @@ class _MonthlySpecialPreviewState
                                     ? MunjaColors.mint
                                     : Colors.white38,
                                 fontSize: 8.5,
-                                fontWeight:
-                                    FontWeight.w800,
+                                fontWeight: FontWeight.w800,
                               ),
                             ),
                           ],
@@ -1541,28 +1311,23 @@ class _MonthlySpecialPreviewState
                         Text(
                           special.title,
                           maxLines: 1,
-                          overflow:
-                              TextOverflow.ellipsis,
+                          overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
                             color: Colors.white,
                             fontSize: 14,
-                            fontWeight:
-                                FontWeight.w900,
+                            fontWeight: FontWeight.w900,
                           ),
                         ),
                         const SizedBox(height: 4),
                         Text(
                           '${special.goalLabel}  ·  +${special.xpReward} XP  ·  +${special.crystalReward} Crystals',
                           maxLines: 1,
-                          overflow:
-                              TextOverflow.ellipsis,
+                          overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
-                            color:
-                                MunjaColors.textSoft,
+                            color: MunjaColors.textSoft,
                             fontSize: 9.5,
                             height: 1.3,
-                            fontWeight:
-                                FontWeight.w700,
+                            fontWeight: FontWeight.w700,
                           ),
                         ),
                         const SizedBox(height: 3),
@@ -1570,18 +1335,16 @@ class _MonthlySpecialPreviewState
                           active
                               ? 'Progress ${_formatSpecialProgress(_activation?.progressValue ?? 0, special)}'
                               : completed
-                                  ? _rewardClaimed
-                                      ? 'Claimed · ${special.specialReward.name} unlocked'
-                                      : 'Completed · reward ready to claim'
-                                  : '${special.specialReward.typeLabel}: ${special.specialReward.name}',
+                              ? _rewardClaimed
+                                    ? 'Claimed · ${special.specialReward.name} unlocked'
+                                    : 'Completed · reward ready to claim'
+                              : '${special.specialReward.typeLabel}: ${special.specialReward.name}',
                           maxLines: 1,
-                          overflow:
-                              TextOverflow.ellipsis,
+                          overflow: TextOverflow.ellipsis,
                           style: const TextStyle(
                             color: Colors.white54,
                             fontSize: 9,
-                            fontWeight:
-                                FontWeight.w700,
+                            fontWeight: FontWeight.w700,
                           ),
                         ),
                       ],
@@ -1589,9 +1352,7 @@ class _MonthlySpecialPreviewState
                   ),
                   const SizedBox(width: 8),
                   _SpecialStatusBadge(
-                    label: _statusLabel(
-                      isPro: isPro,
-                    ),
+                    label: _statusLabel(isPro: isPro),
                     active: isPro && active,
                   ),
                 ],
@@ -1605,10 +1366,7 @@ class _MonthlySpecialPreviewState
 }
 
 class _SpecialStatusBadge extends StatelessWidget {
-  _SpecialStatusBadge({
-    required this.label,
-    required this.active,
-  });
+  _SpecialStatusBadge({required this.label, required this.active});
 
   final String label;
   final bool active;
@@ -1616,10 +1374,7 @@ class _SpecialStatusBadge extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 10,
-        vertical: 7,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(999),
         color: active
@@ -1634,9 +1389,7 @@ class _SpecialStatusBadge extends StatelessWidget {
       child: Text(
         label,
         style: TextStyle(
-          color: active
-              ? MunjaColors.mint
-              : Colors.white54,
+          color: active ? MunjaColors.mint : Colors.white54,
           fontSize: 9,
           fontWeight: FontWeight.w900,
           letterSpacing: 0.5,
@@ -1646,8 +1399,7 @@ class _SpecialStatusBadge extends StatelessWidget {
   }
 }
 
-class _MonthlySpecialProgressCard
-    extends StatelessWidget {
+class _MonthlySpecialProgressCard extends StatelessWidget {
   _MonthlySpecialProgressCard({
     required this.currentValue,
     required this.special,
@@ -1660,8 +1412,7 @@ class _MonthlySpecialProgressCard
 
   @override
   Widget build(BuildContext context) {
-    final progress =
-        MonthlySpecialService.instance.progress(
+    final progress = MonthlySpecialService.instance.progress(
       special: special,
       currentValue: currentValue,
     );
@@ -1672,13 +1423,10 @@ class _MonthlySpecialProgressCard
       decoration: BoxDecoration(
         color: Colors.black.withOpacity(0.15),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: MunjaColors.mint.withOpacity(0.14),
-        ),
+        border: Border.all(color: MunjaColors.mint.withOpacity(0.14)),
       ),
       child: Column(
-        crossAxisAlignment:
-            CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
@@ -1693,9 +1441,7 @@ class _MonthlySpecialProgressCard
               ),
               const Spacer(),
               Text(
-                completed
-                    ? '100%'
-                    : '${(progress * 100).round()}%',
+                completed ? '100%' : '${(progress * 100).round()}%',
                 style: const TextStyle(
                   color: MunjaColors.mint,
                   fontSize: 10,
@@ -1710,20 +1456,13 @@ class _MonthlySpecialProgressCard
             child: LinearProgressIndicator(
               value: progress,
               minHeight: 7,
-              backgroundColor:
-                  Colors.white.withOpacity(0.06),
-              valueColor:
-                  const AlwaysStoppedAnimation<Color>(
-                MunjaColors.mint,
-              ),
+              backgroundColor: Colors.white.withOpacity(0.06),
+              valueColor: const AlwaysStoppedAnimation<Color>(MunjaColors.mint),
             ),
           ),
           const SizedBox(height: 8),
           Text(
-            _formatSpecialProgress(
-              currentValue,
-              special,
-            ),
+            _formatSpecialProgress(currentValue, special),
             style: const TextStyle(
               color: Colors.white70,
               fontSize: 10,
@@ -1736,13 +1475,8 @@ class _MonthlySpecialProgressCard
   }
 }
 
-String _formatSpecialProgress(
-  double currentValue,
-  MonthlySpecial special,
-) {
-  final safeCurrent = currentValue
-      .clamp(0.0, special.goalValue)
-      .toDouble();
+String _formatSpecialProgress(double currentValue, MonthlySpecial special) {
+  final safeCurrent = currentValue.clamp(0.0, special.goalValue).toDouble();
 
   switch (special.goalType) {
     case MonthlySpecialGoalType.distanceKm:
@@ -1756,12 +1490,8 @@ String _formatSpecialProgress(
   }
 }
 
-class _MonthlySpecialGoalCard
-    extends StatelessWidget {
-  _MonthlySpecialGoalCard({
-    required this.goal,
-    required this.timeLeft,
-  });
+class _MonthlySpecialGoalCard extends StatelessWidget {
+  _MonthlySpecialGoalCard({required this.goal, required this.timeLeft});
 
   final String goal;
   final String timeLeft;
@@ -1774,22 +1504,15 @@ class _MonthlySpecialGoalCard
       decoration: BoxDecoration(
         color: MunjaColors.mint.withOpacity(0.07),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: MunjaColors.mint.withOpacity(0.16),
-        ),
+        border: Border.all(color: MunjaColors.mint.withOpacity(0.16)),
       ),
       child: Row(
         children: [
-          const Icon(
-            Icons.flag_rounded,
-            color: MunjaColors.mint,
-            size: 22,
-          ),
+          const Icon(Icons.flag_rounded, color: MunjaColors.mint, size: 22),
           const SizedBox(width: 11),
           Expanded(
             child: Column(
-              crossAxisAlignment:
-                  CrossAxisAlignment.start,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   _t('monthlyGoal'),
@@ -1826,8 +1549,7 @@ class _MonthlySpecialGoalCard
   }
 }
 
-class _MonthlySpecialMiniReward
-    extends StatelessWidget {
+class _MonthlySpecialMiniReward extends StatelessWidget {
   _MonthlySpecialMiniReward({
     required this.icon,
     required this.value,
@@ -1842,30 +1564,20 @@ class _MonthlySpecialMiniReward
   Widget build(BuildContext context) {
     return Container(
       height: 66,
-      padding: const EdgeInsets.symmetric(
-        horizontal: 12,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 12),
       decoration: BoxDecoration(
         color: Colors.black.withOpacity(0.15),
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(
-          color: Colors.white.withOpacity(0.05),
-        ),
+        border: Border.all(color: Colors.white.withOpacity(0.05)),
       ),
       child: Row(
         children: [
-          Icon(
-            icon,
-            color: MunjaColors.mint,
-            size: 19,
-          ),
+          Icon(icon, color: MunjaColors.mint, size: 19),
           const SizedBox(width: 9),
           Expanded(
             child: Column(
-              mainAxisAlignment:
-                  MainAxisAlignment.center,
-              crossAxisAlignment:
-                  CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   value,
@@ -1895,19 +1607,14 @@ class _MonthlySpecialMiniReward
 }
 
 class _ProStatusBadge extends StatelessWidget {
-  _ProStatusBadge({
-    required this.active,
-  });
+  _ProStatusBadge({required this.active});
 
   final bool active;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 10,
-        vertical: 7,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 7),
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(999),
         color: active
@@ -1950,17 +1657,11 @@ class _SpecialRewardRow extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.black.withOpacity(0.15),
         borderRadius: BorderRadius.circular(18),
-        border: Border.all(
-          color: Colors.white.withOpacity(0.05),
-        ),
+        border: Border.all(color: Colors.white.withOpacity(0.05)),
       ),
       child: Row(
         children: [
-          Icon(
-            icon,
-            color: MunjaColors.mint,
-            size: 20,
-          ),
+          Icon(icon, color: MunjaColors.mint, size: 20),
           const SizedBox(width: 11),
           Expanded(
             child: Column(
@@ -1993,11 +1694,8 @@ class _SpecialRewardRow extends StatelessWidget {
   }
 }
 
-class _SectionTitle
-    extends StatelessWidget {
-  _SectionTitle({
-    required this.title,
-  });
+class _SectionTitle extends StatelessWidget {
+  _SectionTitle({required this.title});
 
   final String title;
 
@@ -2015,8 +1713,7 @@ class _SectionTitle
   }
 }
 
-class _ChallengeTypeSelector
-    extends StatelessWidget {
+class _ChallengeTypeSelector extends StatelessWidget {
   _ChallengeTypeSelector({
     required this.items,
     required this.selected,
@@ -2027,18 +1724,15 @@ class _ChallengeTypeSelector
   final List<_ChallengeTypeData> items;
   final _ChallengeKind selected;
   final bool enabled;
-  final ValueChanged<_ChallengeTypeData>
-      onSelected;
+  final ValueChanged<_ChallengeTypeData> onSelected;
 
   @override
   Widget build(BuildContext context) {
     return GridView.builder(
       itemCount: items.length,
       shrinkWrap: true,
-      physics:
-          const NeverScrollableScrollPhysics(),
-      gridDelegate:
-          const SliverGridDelegateWithFixedCrossAxisCount(
+      physics: const NeverScrollableScrollPhysics(),
+      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
         crossAxisSpacing: 10,
         mainAxisSpacing: 10,
@@ -2046,53 +1740,35 @@ class _ChallengeTypeSelector
       ),
       itemBuilder: (context, index) {
         final item = items[index];
-        final active =
-            selected == item.kind;
+        final active = selected == item.kind;
 
         return Material(
           color: Colors.transparent,
           child: InkWell(
-            onTap: enabled
-                ? () => onSelected(item)
-                : null,
-            borderRadius:
-                BorderRadius.circular(24),
+            onTap: enabled ? () => onSelected(item) : null,
+            borderRadius: BorderRadius.circular(24),
             child: AnimatedContainer(
-              duration:
-                  const Duration(
-                milliseconds: 220,
-              ),
-              padding:
-                  const EdgeInsets.all(15),
+              duration: const Duration(milliseconds: 220),
+              padding: const EdgeInsets.all(15),
               decoration: BoxDecoration(
                 color: active
-                    ? MunjaColors.mint
-                        .withOpacity(0.11)
-                    : MunjaColors.panel
-                        .withOpacity(0.62),
-                borderRadius:
-                    BorderRadius.circular(
-                  24,
-                ),
+                    ? MunjaColors.mint.withOpacity(0.11)
+                    : MunjaColors.panel.withOpacity(0.62),
+                borderRadius: BorderRadius.circular(24),
                 border: Border.all(
                   color: active
-                      ? MunjaColors.mint
-                          .withOpacity(0.42)
-                      : Colors.white
-                          .withOpacity(0.055),
+                      ? MunjaColors.mint.withOpacity(0.42)
+                      : Colors.white.withOpacity(0.055),
                 ),
               ),
               child: Column(
-                crossAxisAlignment:
-                    CrossAxisAlignment.start,
+                crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Row(
                     children: [
                       Icon(
                         item.icon,
-                        color: item.enabled
-                            ? MunjaColors.mint
-                            : Colors.white30,
+                        color: item.enabled ? MunjaColors.mint : Colors.white30,
                         size: 21,
                       ),
                       const Spacer(),
@@ -2102,28 +1778,21 @@ class _ChallengeTypeSelector
                   Text(
                     item.title,
                     style: TextStyle(
-                      color: item.enabled
-                          ? Colors.white
-                          : Colors.white54,
+                      color: item.enabled ? Colors.white : Colors.white54,
                       fontSize: 14,
-                      fontWeight:
-                          FontWeight.w900,
+                      fontWeight: FontWeight.w900,
                     ),
                   ),
                   const SizedBox(height: 3),
                   Text(
                     item.subtitle,
                     maxLines: 2,
-                    overflow:
-                        TextOverflow.ellipsis,
-                    style:
-                        const TextStyle(
-                      color:
-                          MunjaColors.textSoft,
+                    overflow: TextOverflow.ellipsis,
+                    style: const TextStyle(
+                      color: MunjaColors.textSoft,
                       fontSize: 9,
                       height: 1.25,
-                      fontWeight:
-                          FontWeight.w600,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                 ],
@@ -2136,8 +1805,7 @@ class _ChallengeTypeSelector
   }
 }
 
-class _FriendPicker
-    extends StatelessWidget {
+class _FriendPicker extends StatelessWidget {
   _FriendPicker({
     required this.friends,
     required this.selectedFriend,
@@ -2145,44 +1813,32 @@ class _FriendPicker
     required this.onSelected,
   });
 
-  final List<SocialRiderProfile>
-      friends;
-  final SocialRiderProfile?
-      selectedFriend;
+  final List<SocialRiderProfile> friends;
+  final SocialRiderProfile? selectedFriend;
   final bool enabled;
-  final ValueChanged<SocialRiderProfile>
-      onSelected;
+  final ValueChanged<SocialRiderProfile> onSelected;
 
   @override
   Widget build(BuildContext context) {
     return Column(
-      children: friends.map(
-        (rider) {
-          final selected =
-              selectedFriend?.uid ==
-                  rider.uid;
+      children: friends.map((rider) {
+        final selected = selectedFriend?.uid == rider.uid;
 
-          return Padding(
-            padding:
-                const EdgeInsets.only(
-              bottom: 10,
-            ),
-            child: _FriendChoiceCard(
-              rider: rider,
-              selected: selected,
-              enabled: enabled,
-              onTap: () =>
-                  onSelected(rider),
-            ),
-          );
-        },
-      ).toList(),
+        return Padding(
+          padding: const EdgeInsets.only(bottom: 10),
+          child: _FriendChoiceCard(
+            rider: rider,
+            selected: selected,
+            enabled: enabled,
+            onTap: () => onSelected(rider),
+          ),
+        );
+      }).toList(),
     );
   }
 }
 
-class _FriendChoiceCard
-    extends StatelessWidget {
+class _FriendChoiceCard extends StatelessWidget {
   _FriendChoiceCard({
     required this.rider,
     required this.selected,
@@ -2198,41 +1854,26 @@ class _FriendChoiceCard
   @override
   Widget build(BuildContext context) {
     final hasPhoto =
-        rider.photoUrl != null &&
-            rider.photoUrl!
-                .trim()
-                .isNotEmpty;
+        rider.photoUrl != null && rider.photoUrl!.trim().isNotEmpty;
 
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap:
-            enabled ? onTap : null,
-        borderRadius:
-            BorderRadius.circular(25),
+        onTap: enabled ? onTap : null,
+        borderRadius: BorderRadius.circular(25),
         child: AnimatedContainer(
-          duration:
-              const Duration(
-            milliseconds: 220,
-          ),
-          padding:
-              const EdgeInsets.all(15),
+          duration: const Duration(milliseconds: 220),
+          padding: const EdgeInsets.all(15),
           decoration: BoxDecoration(
             color: selected
-                ? MunjaColors.mint
-                    .withOpacity(0.10)
-                : MunjaColors.panel
-                    .withOpacity(0.66),
-            borderRadius:
-                BorderRadius.circular(25),
+                ? MunjaColors.mint.withOpacity(0.10)
+                : MunjaColors.panel.withOpacity(0.66),
+            borderRadius: BorderRadius.circular(25),
             border: Border.all(
               color: selected
-                  ? MunjaColors.mint
-                      .withOpacity(0.42)
-                  : Colors.white
-                      .withOpacity(0.06),
-              width:
-                  selected ? 1.4 : 1,
+                  ? MunjaColors.mint.withOpacity(0.42)
+                  : Colors.white.withOpacity(0.06),
+              width: selected ? 1.4 : 1,
             ),
           ),
           child: Row(
@@ -2240,34 +1881,21 @@ class _FriendChoiceCard
               Container(
                 width: 58,
                 height: 58,
-                decoration:
-                    BoxDecoration(
+                decoration: BoxDecoration(
                   shape: BoxShape.circle,
-                  color: MunjaColors.mint
-                      .withOpacity(0.09),
+                  color: MunjaColors.mint.withOpacity(0.09),
                   border: Border.all(
                     color: selected
-                        ? MunjaColors.mint
-                            .withOpacity(
-                              0.48,
-                            )
-                        : MunjaColors.mint
-                            .withOpacity(
-                              0.20,
-                            ),
+                        ? MunjaColors.mint.withOpacity(0.48)
+                        : MunjaColors.mint.withOpacity(0.20),
                   ),
                 ),
-                clipBehavior:
-                    Clip.antiAlias,
+                clipBehavior: Clip.antiAlias,
                 child: hasPhoto
                     ? Image.network(
                         rider.photoUrl!,
                         fit: BoxFit.cover,
-                        errorBuilder: (
-                          context,
-                          error,
-                          stackTrace,
-                        ) {
+                        errorBuilder: (context, error, stackTrace) {
                           return _FallbackAvatar();
                         },
                       )
@@ -2276,54 +1904,34 @@ class _FriendChoiceCard
               const SizedBox(width: 13),
               Expanded(
                 child: Column(
-                  crossAxisAlignment:
-                      CrossAxisAlignment
-                          .start,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       rider.displayName,
                       maxLines: 1,
-                      overflow:
-                          TextOverflow
-                              .ellipsis,
-                      style:
-                          const TextStyle(
-                        color:
-                            Colors.white,
+                      overflow: TextOverflow.ellipsis,
+                      style: const TextStyle(
+                        color: Colors.white,
                         fontSize: 16,
-                        fontWeight:
-                            FontWeight
-                                .w900,
+                        fontWeight: FontWeight.w900,
                       ),
                     ),
-                    const SizedBox(
-                      height: 3,
-                    ),
+                    const SizedBox(height: 3),
                     Text(
                       rider.usernameWithAt,
-                      style:
-                          const TextStyle(
-                        color:
-                            MunjaColors.mint,
+                      style: const TextStyle(
+                        color: MunjaColors.mint,
                         fontSize: 12,
-                        fontWeight:
-                            FontWeight
-                                .w900,
+                        fontWeight: FontWeight.w900,
                       ),
                     ),
-                    const SizedBox(
-                      height: 3,
-                    ),
+                    const SizedBox(height: 3),
                     Text(
                       'LVL ${rider.level} · ${rider.totalXp} XP',
-                      style:
-                          const TextStyle(
-                        color: MunjaColors
-                            .textSoft,
+                      style: const TextStyle(
+                        color: MunjaColors.textSoft,
                         fontSize: 10,
-                        fontWeight:
-                            FontWeight
-                                .w700,
+                        fontWeight: FontWeight.w700,
                       ),
                     ),
                   ],
@@ -2331,36 +1939,24 @@ class _FriendChoiceCard
               ),
               const SizedBox(width: 10),
               AnimatedContainer(
-                duration:
-                    const Duration(
-                  milliseconds: 220,
-                ),
+                duration: const Duration(milliseconds: 220),
                 width: 28,
                 height: 28,
-                decoration:
-                    BoxDecoration(
+                decoration: BoxDecoration(
                   shape: BoxShape.circle,
                   color: selected
                       ? MunjaColors.mint
-                      : Colors.white
-                          .withOpacity(
-                            0.04,
-                          ),
+                      : Colors.white.withOpacity(0.04),
                   border: Border.all(
                     color: selected
                         ? MunjaColors.mint
-                        : Colors.white
-                            .withOpacity(
-                              0.12,
-                            ),
+                        : Colors.white.withOpacity(0.12),
                   ),
                 ),
                 child: selected
                     ? const Icon(
-                        Icons
-                            .check_rounded,
-                        color:
-                            Colors.black,
+                        Icons.check_rounded,
+                        color: Colors.black,
                         size: 18,
                       )
                     : null,
@@ -2373,8 +1969,7 @@ class _FriendChoiceCard
   }
 }
 
-class _DistanceSelector
-    extends StatelessWidget {
+class _DistanceSelector extends StatelessWidget {
   _DistanceSelector({
     required this.options,
     required this.selected,
@@ -2385,50 +1980,30 @@ class _DistanceSelector
   final List<double> options;
   final double selected;
   final bool enabled;
-  final ValueChanged<double>
-      onSelected;
+  final ValueChanged<double> onSelected;
 
   @override
   Widget build(BuildContext context) {
     return Row(
-      children: options
-          .asMap()
-          .entries
-          .map(
-            (entry) {
-              final index =
-                  entry.key;
-              final value =
-                  entry.value;
+      children: options.asMap().entries.map((entry) {
+        final index = entry.key;
+        final value = entry.value;
 
-              return Expanded(
-                child: Padding(
-                  padding:
-                      EdgeInsets.only(
-                    right:
-                        index ==
-                                options
-                                        .length -
-                                    1
-                            ? 0
-                            : 10,
-                  ),
-                  child: _ChoiceTile(
-                    label:
-                        '${value.toStringAsFixed(0)} KM',
-                    icon:
-                        Icons.route_rounded,
-                    selected:
-                        selected == value,
-                    enabled: enabled,
-                    onTap: () =>
-                        onSelected(value),
-                  ),
-                ),
-              );
-            },
-          )
-          .toList(),
+        return Expanded(
+          child: Padding(
+            padding: EdgeInsets.only(
+              right: index == options.length - 1 ? 0 : 10,
+            ),
+            child: _ChoiceTile(
+              label: '${value.toStringAsFixed(0)} KM',
+              icon: Icons.route_rounded,
+              selected: selected == value,
+              enabled: enabled,
+              onTap: () => onSelected(value),
+            ),
+          ),
+        );
+      }).toList(),
     );
   }
 }
@@ -2476,9 +2051,7 @@ class _IntChoiceSelector extends StatelessWidget {
   }
 }
 
-
-class _DurationSelector
-    extends StatelessWidget {
+class _DurationSelector extends StatelessWidget {
   _DurationSelector({
     required this.options,
     required this.selected,
@@ -2494,50 +2067,30 @@ class _DurationSelector
   @override
   Widget build(BuildContext context) {
     return Row(
-      children: options
-          .asMap()
-          .entries
-          .map(
-            (entry) {
-              final index =
-                  entry.key;
-              final value =
-                  entry.value;
+      children: options.asMap().entries.map((entry) {
+        final index = entry.key;
+        final value = entry.value;
 
-              return Expanded(
-                child: Padding(
-                  padding:
-                      EdgeInsets.only(
-                    right:
-                        index ==
-                                options
-                                        .length -
-                                    1
-                            ? 0
-                            : 10,
-                  ),
-                  child: _ChoiceTile(
-                    label:
-                        '$value DAYS',
-                    icon: Icons
-                        .calendar_month_rounded,
-                    selected:
-                        selected == value,
-                    enabled: enabled,
-                    onTap: () =>
-                        onSelected(value),
-                  ),
-                ),
-              );
-            },
-          )
-          .toList(),
+        return Expanded(
+          child: Padding(
+            padding: EdgeInsets.only(
+              right: index == options.length - 1 ? 0 : 10,
+            ),
+            child: _ChoiceTile(
+              label: '$value DAYS',
+              icon: Icons.calendar_month_rounded,
+              selected: selected == value,
+              enabled: enabled,
+              onTap: () => onSelected(value),
+            ),
+          ),
+        );
+      }).toList(),
     );
   }
 }
 
-class _ChoiceTile
-    extends StatelessWidget {
+class _ChoiceTile extends StatelessWidget {
   _ChoiceTile({
     required this.label,
     required this.icon,
@@ -2557,55 +2110,37 @@ class _ChoiceTile
     return Material(
       color: Colors.transparent,
       child: InkWell(
-        onTap:
-            enabled ? onTap : null,
-        borderRadius:
-            BorderRadius.circular(22),
+        onTap: enabled ? onTap : null,
+        borderRadius: BorderRadius.circular(22),
         child: AnimatedContainer(
-          duration:
-              const Duration(
-            milliseconds: 220,
-          ),
+          duration: const Duration(milliseconds: 220),
           height: 94,
           decoration: BoxDecoration(
             color: selected
-                ? MunjaColors.mint
-                    .withOpacity(0.12)
-                : MunjaColors.panel
-                    .withOpacity(0.64),
-            borderRadius:
-                BorderRadius.circular(22),
+                ? MunjaColors.mint.withOpacity(0.12)
+                : MunjaColors.panel.withOpacity(0.64),
+            borderRadius: BorderRadius.circular(22),
             border: Border.all(
               color: selected
-                  ? MunjaColors.mint
-                      .withOpacity(0.46)
-                  : Colors.white
-                      .withOpacity(0.06),
+                  ? MunjaColors.mint.withOpacity(0.46)
+                  : Colors.white.withOpacity(0.06),
             ),
           ),
           child: Column(
-            mainAxisAlignment:
-                MainAxisAlignment.center,
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
               Icon(
                 icon,
-                color: selected
-                    ? MunjaColors.mint
-                    : MunjaColors
-                        .textSoft,
+                color: selected ? MunjaColors.mint : MunjaColors.textSoft,
                 size: 24,
               ),
               const SizedBox(height: 9),
               Text(
                 label,
                 style: TextStyle(
-                  color: selected
-                      ? Colors.white
-                      : MunjaColors
-                          .textSoft,
+                  color: selected ? Colors.white : MunjaColors.textSoft,
                   fontSize: 11,
-                  fontWeight:
-                      FontWeight.w900,
+                  fontWeight: FontWeight.w900,
                 ),
               ),
             ],
@@ -2616,12 +2151,8 @@ class _ChoiceTile
   }
 }
 
-class _ChallengeRewardPreview
-    extends StatelessWidget {
-  _ChallengeRewardPreview({
-    required this.crystals,
-    required this.xp,
-  });
+class _ChallengeRewardPreview extends StatelessWidget {
+  _ChallengeRewardPreview({required this.crystals, required this.xp});
 
   final int crystals;
   final int xp;
@@ -2630,33 +2161,21 @@ class _ChallengeRewardPreview
   Widget build(BuildContext context) {
     return Container(
       width: double.infinity,
-      padding:
-          const EdgeInsets.all(18),
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color:
-            MunjaColors.mint.withOpacity(
-          0.065,
-        ),
-        borderRadius:
-            BorderRadius.circular(27),
-        border: Border.all(
-          color:
-              MunjaColors.mint.withOpacity(
-            0.20,
-          ),
-        ),
+        color: MunjaColors.mint.withOpacity(0.065),
+        borderRadius: BorderRadius.circular(27),
+        border: Border.all(color: MunjaColors.mint.withOpacity(0.20)),
       ),
       child: Column(
-        crossAxisAlignment:
-            CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             _t('challengeReward'),
             style: TextStyle(
               color: MunjaColors.mint,
               fontSize: 9,
-              fontWeight:
-                  FontWeight.w900,
+              fontWeight: FontWeight.w900,
               letterSpacing: 1.1,
             ),
           ),
@@ -2665,8 +2184,7 @@ class _ChallengeRewardPreview
             children: [
               Expanded(
                 child: _RewardPill(
-                  icon:
-                      Icons.diamond_rounded,
+                  icon: Icons.diamond_rounded,
                   value: '+$crystals',
                   label: 'CRYSTALS',
                 ),
@@ -2674,8 +2192,7 @@ class _ChallengeRewardPreview
               const SizedBox(width: 10),
               Expanded(
                 child: _RewardPill(
-                  icon:
-                      Icons.bolt_rounded,
+                  icon: Icons.bolt_rounded,
                   value: '+$xp',
                   label: 'XP',
                 ),
@@ -2688,13 +2205,8 @@ class _ChallengeRewardPreview
   }
 }
 
-class _RewardPill
-    extends StatelessWidget {
-  _RewardPill({
-    required this.icon,
-    required this.value,
-    required this.label,
-  });
+class _RewardPill extends StatelessWidget {
+  _RewardPill({required this.icon, required this.value, required this.label});
 
   final IconData icon;
   final String value;
@@ -2704,55 +2216,34 @@ class _RewardPill
   Widget build(BuildContext context) {
     return Container(
       height: 68,
-      padding:
-          const EdgeInsets.symmetric(
-        horizontal: 13,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 13),
       decoration: BoxDecoration(
-        color:
-            Colors.black.withOpacity(
-          0.17,
-        ),
-        borderRadius:
-            BorderRadius.circular(20),
-        border: Border.all(
-          color:
-              Colors.white.withOpacity(
-            0.055,
-          ),
-        ),
+        color: Colors.black.withOpacity(0.17),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.white.withOpacity(0.055)),
       ),
       child: Row(
         children: [
-          Icon(
-            icon,
-            color: MunjaColors.mint,
-            size: 20,
-          ),
+          Icon(icon, color: MunjaColors.mint, size: 20),
           const SizedBox(width: 9),
           Column(
-            mainAxisAlignment:
-                MainAxisAlignment.center,
-            crossAxisAlignment:
-                CrossAxisAlignment.start,
+            mainAxisAlignment: MainAxisAlignment.center,
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
                 value,
                 style: const TextStyle(
                   color: Colors.white,
                   fontSize: 16,
-                  fontWeight:
-                      FontWeight.w900,
+                  fontWeight: FontWeight.w900,
                 ),
               ),
               Text(
                 label,
                 style: const TextStyle(
-                  color:
-                      MunjaColors.textSoft,
+                  color: MunjaColors.textSoft,
                   fontSize: 8,
-                  fontWeight:
-                      FontWeight.w900,
+                  fontWeight: FontWeight.w900,
                   letterSpacing: 0.7,
                 ),
               ),
@@ -2764,8 +2255,7 @@ class _RewardPill
   }
 }
 
-class _ChallengeSummaryCard
-    extends StatelessWidget {
+class _ChallengeSummaryCard extends StatelessWidget {
   _ChallengeSummaryCard({
     required this.friend,
     required this.goal,
@@ -2786,42 +2276,29 @@ class _ChallengeSummaryCard
 
     return Container(
       width: double.infinity,
-      padding:
-          const EdgeInsets.all(18),
+      padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
-        color: MunjaColors.panel
-            .withOpacity(0.74),
-        borderRadius:
-            BorderRadius.circular(28),
-        border: Border.all(
-          color:
-              MunjaColors.mint.withOpacity(
-            0.13,
-          ),
-        ),
+        color: MunjaColors.panel.withOpacity(0.74),
+        borderRadius: BorderRadius.circular(28),
+        border: Border.all(color: MunjaColors.mint.withOpacity(0.13)),
       ),
       child: Column(
-        crossAxisAlignment:
-            CrossAxisAlignment.start,
+        crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
               Icon(
-                Icons
-                    .sports_score_rounded,
-                color:
-                    MunjaColors.mint,
+                Icons.sports_score_rounded,
+                color: MunjaColors.mint,
                 size: 21,
               ),
               SizedBox(width: 8),
               Text(
                 _t('challengeSummary'),
                 style: TextStyle(
-                  color:
-                      MunjaColors.mint,
+                  color: MunjaColors.mint,
                   fontSize: 9,
-                  fontWeight:
-                      FontWeight.w900,
+                  fontWeight: FontWeight.w900,
                   letterSpacing: 1.0,
                 ),
               ),
@@ -2833,16 +2310,14 @@ class _ChallengeSummaryCard
             style: const TextStyle(
               color: Colors.white,
               fontSize: 18,
-              fontWeight:
-                  FontWeight.w900,
+              fontWeight: FontWeight.w900,
             ),
           ),
           const SizedBox(height: 10),
           Row(
             children: [
               Expanded(
-                child:
-                    _SummaryMetric(
+                child: _SummaryMetric(
                   label: _t('goal'),
                   value: goal,
                   icon: goalIcon,
@@ -2850,13 +2325,10 @@ class _ChallengeSummaryCard
               ),
               const SizedBox(width: 10),
               Expanded(
-                child:
-                    _SummaryMetric(
+                child: _SummaryMetric(
                   label: _t('time'),
-                  value:
-                      '$durationDays days',
-                  icon: Icons
-                      .timer_outlined,
+                  value: '$durationDays days',
+                  icon: Icons.timer_outlined,
                 ),
               ),
             ],
@@ -2865,12 +2337,10 @@ class _ChallengeSummaryCard
           Text(
             _t('challengeStartsAccept'),
             style: TextStyle(
-              color:
-                  MunjaColors.textSoft,
+              color: MunjaColors.textSoft,
               fontSize: 11,
               height: 1.4,
-              fontWeight:
-                  FontWeight.w600,
+              fontWeight: FontWeight.w600,
             ),
           ),
         ],
@@ -2879,8 +2349,7 @@ class _ChallengeSummaryCard
   }
 }
 
-class _SummaryMetric
-    extends StatelessWidget {
+class _SummaryMetric extends StatelessWidget {
   _SummaryMetric({
     required this.label,
     required this.value,
@@ -2895,66 +2364,36 @@ class _SummaryMetric
   Widget build(BuildContext context) {
     return Container(
       height: 70,
-      padding:
-          const EdgeInsets.symmetric(
-        horizontal: 12,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 12),
       decoration: BoxDecoration(
-        color:
-            Colors.black.withOpacity(
-          0.16,
-        ),
-        borderRadius:
-            BorderRadius.circular(19),
-        border: Border.all(
-          color:
-              Colors.white.withOpacity(
-            0.055,
-          ),
-        ),
+        color: Colors.black.withOpacity(0.16),
+        borderRadius: BorderRadius.circular(19),
+        border: Border.all(color: Colors.white.withOpacity(0.055)),
       ),
       child: Row(
         children: [
-          Icon(
-            icon,
-            color: MunjaColors.mint,
-            size: 20,
-          ),
+          Icon(icon, color: MunjaColors.mint, size: 20),
           const SizedBox(width: 9),
           Expanded(
             child: Column(
-              mainAxisAlignment:
-                  MainAxisAlignment
-                      .center,
-              crossAxisAlignment:
-                  CrossAxisAlignment
-                      .start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   value,
-                  style:
-                      const TextStyle(
-                    color:
-                        Colors.white,
+                  style: const TextStyle(
+                    color: Colors.white,
                     fontSize: 14,
-                    fontWeight:
-                        FontWeight
-                            .w900,
+                    fontWeight: FontWeight.w900,
                   ),
                 ),
-                const SizedBox(
-                  height: 3,
-                ),
+                const SizedBox(height: 3),
                 Text(
                   label,
-                  style:
-                      const TextStyle(
-                    color: MunjaColors
-                        .textSoft,
+                  style: const TextStyle(
+                    color: MunjaColors.textSoft,
                     fontSize: 8,
-                    fontWeight:
-                        FontWeight
-                            .w900,
+                    fontWeight: FontWeight.w900,
                     letterSpacing: 0.7,
                   ),
                 ),
@@ -2967,55 +2406,37 @@ class _SummaryMetric
   }
 }
 
-class _FallbackAvatar
-    extends StatelessWidget {
+class _FallbackAvatar extends StatelessWidget {
   _FallbackAvatar();
 
   @override
   Widget build(BuildContext context) {
     return const Center(
-      child: Icon(
-        Icons.person_rounded,
-        color: MunjaColors.mint,
-        size: 30,
-      ),
+      child: Icon(Icons.person_rounded, color: MunjaColors.mint, size: 30),
     );
   }
 }
 
-class _CreateChallengeLoading
-    extends StatelessWidget {
+class _CreateChallengeLoading extends StatelessWidget {
   _CreateChallengeLoading();
 
   @override
   Widget build(BuildContext context) {
     return ListView(
-      physics:
-          const AlwaysScrollableScrollPhysics(),
-      padding:
-          const EdgeInsets.fromLTRB(
-        20,
-        90,
-        20,
-        360,
-      ),
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: const EdgeInsets.fromLTRB(20, 90, 20, 360),
       children: [
         Center(
           child: Column(
             children: [
-              const CircularProgressIndicator(
-                color:
-                    MunjaColors.mint,
-              ),
+              const CircularProgressIndicator(color: MunjaColors.mint),
               const SizedBox(height: 16),
               Text(
                 _t('loadingFriends'),
                 style: TextStyle(
-                  color: MunjaColors
-                      .textSoft,
+                  color: MunjaColors.textSoft,
                   fontSize: 12,
-                  fontWeight:
-                      FontWeight.w800,
+                  fontWeight: FontWeight.w800,
                 ),
               ),
             ],
@@ -3026,97 +2447,59 @@ class _CreateChallengeLoading
   }
 }
 
-class _CreateChallengeError
-    extends StatelessWidget {
-  _CreateChallengeError({
-    required this.message,
-    required this.onRetry,
-  });
+class _CreateChallengeError extends StatelessWidget {
+  _CreateChallengeError({required this.message, required this.onRetry});
 
   final String message;
-  final Future<void> Function()
-      onRetry;
+  final Future<void> Function() onRetry;
 
   @override
   Widget build(BuildContext context) {
     return ListView(
-      physics:
-          const AlwaysScrollableScrollPhysics(),
-      padding:
-          const EdgeInsets.fromLTRB(
-        20,
-        55,
-        20,
-        360,
-      ),
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: const EdgeInsets.fromLTRB(20, 55, 20, 360),
       children: [
         Container(
-          padding:
-              const EdgeInsets.all(22),
+          padding: const EdgeInsets.all(22),
           decoration: BoxDecoration(
-            color: MunjaColors.panel
-                .withOpacity(0.55),
-            borderRadius:
-                BorderRadius.circular(
-              28,
-            ),
-            border: Border.all(
-              color: MunjaColors.danger
-                  .withOpacity(0.20),
-            ),
+            color: MunjaColors.panel.withOpacity(0.55),
+            borderRadius: BorderRadius.circular(28),
+            border: Border.all(color: MunjaColors.danger.withOpacity(0.20)),
           ),
           child: Column(
             children: [
               const Icon(
-                Icons
-                    .error_outline_rounded,
-                color:
-                    MunjaColors.danger,
+                Icons.error_outline_rounded,
+                color: MunjaColors.danger,
                 size: 34,
               ),
-              const SizedBox(
-                height: 14,
-              ),
+              const SizedBox(height: 14),
               Text(
                 _t('couldNotCreate'),
                 style: TextStyle(
                   color: Colors.white,
                   fontSize: 18,
-                  fontWeight:
-                      FontWeight.w900,
+                  fontWeight: FontWeight.w900,
                 ),
               ),
-              const SizedBox(
-                height: 7,
-              ),
+              const SizedBox(height: 7),
               Text(
                 message,
-                textAlign:
-                    TextAlign.center,
+                textAlign: TextAlign.center,
                 style: const TextStyle(
-                  color: MunjaColors
-                      .textSoft,
+                  color: MunjaColors.textSoft,
                   fontSize: 12,
                   height: 1.4,
-                  fontWeight:
-                      FontWeight.w600,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
-              const SizedBox(
-                height: 16,
-              ),
+              const SizedBox(height: 16),
               FilledButton.icon(
                 onPressed: onRetry,
-                icon: const Icon(
-                  Icons.refresh_rounded,
-                ),
+                icon: const Icon(Icons.refresh_rounded),
                 label: Text(
                   _t('tryAgain'),
-                  style: TextStyle(
-                    fontWeight:
-                        FontWeight
-                            .w900,
-                  ),
+                  style: TextStyle(fontWeight: FontWeight.w900),
                 ),
               ),
             ],
@@ -3127,50 +2510,27 @@ class _CreateChallengeError
   }
 }
 
-class _NoChallengeFriends
-    extends StatelessWidget {
+class _NoChallengeFriends extends StatelessWidget {
   _NoChallengeFriends();
 
   @override
   Widget build(BuildContext context) {
     return ListView(
-      physics:
-          const AlwaysScrollableScrollPhysics(),
-      padding:
-          const EdgeInsets.fromLTRB(
-        20,
-        60,
-        20,
-        360,
-      ),
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: const EdgeInsets.fromLTRB(20, 60, 20, 360),
       children: [
         Container(
-          padding:
-              const EdgeInsets.fromLTRB(
-            24,
-            30,
-            24,
-            30,
-          ),
+          padding: const EdgeInsets.fromLTRB(24, 30, 24, 30),
           decoration: BoxDecoration(
-            color: MunjaColors.panel
-                .withOpacity(0.50),
-            borderRadius:
-                BorderRadius.circular(
-              30,
-            ),
-            border: Border.all(
-              color: Colors.white
-                  .withOpacity(0.055),
-            ),
+            color: MunjaColors.panel.withOpacity(0.50),
+            borderRadius: BorderRadius.circular(30),
+            border: Border.all(color: Colors.white.withOpacity(0.055)),
           ),
           child: Column(
             children: [
               Icon(
-                Icons
-                    .people_outline_rounded,
-                color:
-                    MunjaColors.mint,
+                Icons.people_outline_rounded,
+                color: MunjaColors.mint,
                 size: 40,
               ),
               SizedBox(height: 16),
@@ -3179,22 +2539,18 @@ class _NoChallengeFriends
                 style: TextStyle(
                   color: Colors.white,
                   fontSize: 20,
-                  fontWeight:
-                      FontWeight.w900,
+                  fontWeight: FontWeight.w900,
                 ),
               ),
               SizedBox(height: 7),
               Text(
                 _t('addFriendFirst'),
-                textAlign:
-                    TextAlign.center,
+                textAlign: TextAlign.center,
                 style: TextStyle(
-                  color: MunjaColors
-                      .textSoft,
+                  color: MunjaColors.textSoft,
                   fontSize: 12,
                   height: 1.45,
-                  fontWeight:
-                      FontWeight.w600,
+                  fontWeight: FontWeight.w600,
                 ),
               ),
             ],
@@ -3209,21 +2565,12 @@ BoxDecoration _premiumDecoration() {
   return BoxDecoration(
     color: MunjaColors.panel.withOpacity(0.72),
     borderRadius: BorderRadius.circular(30),
-    border: Border.all(
-      color:
-          MunjaColors.mint.withOpacity(
-        0.14,
-      ),
-    ),
+    border: Border.all(color: MunjaColors.mint.withOpacity(0.14)),
     boxShadow: [
       BoxShadow(
-        color:
-            MunjaColors.mint.withOpacity(
-          0.06,
-        ),
+        color: MunjaColors.mint.withOpacity(0.06),
         blurRadius: 36,
-        offset:
-            const Offset(0, 18),
+        offset: const Offset(0, 18),
       ),
     ],
   );

@@ -25,6 +25,7 @@ import '../services/xp_service.dart';
 import '../services/challenge_service.dart';
 import '../services/social_rider_service.dart';
 import '../Services/munja_pro_service.dart';
+import '../Services/bike_model_resolver.dart';
 import '../services/monthly_special_service.dart';
 import '../widgets/munja_navigation_bike_viewer.dart';
 import '../widgets/munja_3d_bike_viewer.dart';
@@ -36,10 +37,7 @@ import 'crystal_shop_screen.dart';
 import 'munja_pro_screen.dart';
 
 class HomeScreen extends StatefulWidget {
-  const HomeScreen({
-    super.key,
-    this.onOpenGarage,
-  });
+  const HomeScreen({super.key, this.onOpenGarage});
 
   /// When Home is hosted by MainNavigation, use the main Garage tab instead
   /// of pushing a second GarageScreen on top of Home. This keeps ownership of
@@ -63,11 +61,11 @@ class _HomeScreenState extends State<HomeScreen> {
 
   // Live Home data: active challenge progress + canonical account XP.
   StreamSubscription<QuerySnapshot<Map<String, dynamic>>>?
-      _createdActiveChallengesSubscription;
+  _createdActiveChallengesSubscription;
   StreamSubscription<QuerySnapshot<Map<String, dynamic>>>?
-      _receivedActiveChallengesSubscription;
+  _receivedActiveChallengesSubscription;
   StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>?
-      _accountUserSubscription;
+  _accountUserSubscription;
 
   final Map<String, MunjaChallenge> _liveCreatedChallenges =
       <String, MunjaChallenge>{};
@@ -128,9 +126,7 @@ class _HomeScreenState extends State<HomeScreen> {
     // native/UI thread. Give that cleanup a short deterministic window before
     // another FEngine is created.
     if (value) {
-      await Future<void>.delayed(
-        const Duration(milliseconds: 350),
-      );
+      await Future<void>.delayed(const Duration(milliseconds: 350));
     }
   }
 
@@ -220,60 +216,59 @@ class _HomeScreenState extends State<HomeScreen> {
     unawaited(_receivedActiveChallengesSubscription?.cancel());
     unawaited(_accountUserSubscription?.cancel());
 
-    final challenges =
-        FirebaseFirestore.instance.collection('challenges');
+    final challenges = FirebaseFirestore.instance.collection('challenges');
 
     _createdActiveChallengesSubscription = challenges
         .where('creatorUid', isEqualTo: uid)
         .where('status', isEqualTo: 'active')
         .snapshots()
         .listen(
-      (snapshot) {
-        _liveCreatedChallenges
-          ..clear()
-          ..addEntries(
-            snapshot.docs.map((doc) {
-              final challenge = MunjaChallenge.fromFirestore(doc);
-              return MapEntry<String, MunjaChallenge>(
-                challenge.id,
-                challenge,
+          (snapshot) {
+            _liveCreatedChallenges
+              ..clear()
+              ..addEntries(
+                snapshot.docs.map((doc) {
+                  final challenge = MunjaChallenge.fromFirestore(doc);
+                  return MapEntry<String, MunjaChallenge>(
+                    challenge.id,
+                    challenge,
+                  );
+                }),
               );
-            }),
-          );
 
-        _rebuildLiveActiveChallenge();
-      },
-      onError: (Object error, StackTrace stackTrace) {
-        debugPrint('HOME LIVE CREATED CHALLENGES ERROR: $error');
-        debugPrint('$stackTrace');
-      },
-    );
+            _rebuildLiveActiveChallenge();
+          },
+          onError: (Object error, StackTrace stackTrace) {
+            debugPrint('HOME LIVE CREATED CHALLENGES ERROR: $error');
+            debugPrint('$stackTrace');
+          },
+        );
 
     _receivedActiveChallengesSubscription = challenges
         .where('opponentUid', isEqualTo: uid)
         .where('status', isEqualTo: 'active')
         .snapshots()
         .listen(
-      (snapshot) {
-        _liveReceivedChallenges
-          ..clear()
-          ..addEntries(
-            snapshot.docs.map((doc) {
-              final challenge = MunjaChallenge.fromFirestore(doc);
-              return MapEntry<String, MunjaChallenge>(
-                challenge.id,
-                challenge,
+          (snapshot) {
+            _liveReceivedChallenges
+              ..clear()
+              ..addEntries(
+                snapshot.docs.map((doc) {
+                  final challenge = MunjaChallenge.fromFirestore(doc);
+                  return MapEntry<String, MunjaChallenge>(
+                    challenge.id,
+                    challenge,
+                  );
+                }),
               );
-            }),
-          );
 
-        _rebuildLiveActiveChallenge();
-      },
-      onError: (Object error, StackTrace stackTrace) {
-        debugPrint('HOME LIVE RECEIVED CHALLENGES ERROR: $error');
-        debugPrint('$stackTrace');
-      },
-    );
+            _rebuildLiveActiveChallenge();
+          },
+          onError: (Object error, StackTrace stackTrace) {
+            debugPrint('HOME LIVE RECEIVED CHALLENGES ERROR: $error');
+            debugPrint('$stackTrace');
+          },
+        );
 
     // Firestore users/{uid}.totalXp is the same durable account XP that
     // Profile uses. Home listens to it directly so Home and Profile can never
@@ -283,29 +278,29 @@ class _HomeScreenState extends State<HomeScreen> {
         .doc(uid)
         .snapshots()
         .listen(
-      (snapshot) {
-        if (!snapshot.exists) {
-          return;
-        }
+          (snapshot) {
+            if (!snapshot.exists) {
+              return;
+            }
 
-        final data = snapshot.data() ?? const <String, dynamic>{};
-        final totalXp = _readInt(data['totalXp']);
+            final data = snapshot.data() ?? const <String, dynamic>{};
+            final totalXp = _readInt(data['totalXp']);
 
-        if (!mounted || totalXp == _accountTotalXp) {
-          return;
-        }
+            if (!mounted || totalXp == _accountTotalXp) {
+              return;
+            }
 
-        setState(() {
-          _accountTotalXp = totalXp;
-        });
+            setState(() {
+              _accountTotalXp = totalXp;
+            });
 
-        debugPrint('HOME LIVE ACCOUNT XP: $_accountTotalXp');
-      },
-      onError: (Object error, StackTrace stackTrace) {
-        debugPrint('HOME LIVE ACCOUNT XP ERROR: $error');
-        debugPrint('$stackTrace');
-      },
-    );
+            debugPrint('HOME LIVE ACCOUNT XP: $_accountTotalXp');
+          },
+          onError: (Object error, StackTrace stackTrace) {
+            debugPrint('HOME LIVE ACCOUNT XP ERROR: $error');
+            debugPrint('$stackTrace');
+          },
+        );
   }
 
   void _rebuildLiveActiveChallenge() {
@@ -316,13 +311,9 @@ class _HomeScreenState extends State<HomeScreen> {
 
     combined.sort((a, b) {
       final aDate =
-          a.startedAt ??
-          a.createdAt ??
-          DateTime.fromMillisecondsSinceEpoch(0);
+          a.startedAt ?? a.createdAt ?? DateTime.fromMillisecondsSinceEpoch(0);
       final bDate =
-          b.startedAt ??
-          b.createdAt ??
-          DateTime.fromMillisecondsSinceEpoch(0);
+          b.startedAt ?? b.createdAt ?? DateTime.fromMillisecondsSinceEpoch(0);
       return bDate.compareTo(aDate);
     });
 
@@ -344,9 +335,7 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  Future<void> _loadLiveChallengeOpponent(
-    MunjaChallenge challenge,
-  ) async {
+  Future<void> _loadLiveChallengeOpponent(MunjaChallenge challenge) async {
     final currentUid = ChallengeService.instance.currentUid ?? '';
     final opponentUid = challenge.otherUidFor(currentUid).trim();
 
@@ -357,8 +346,9 @@ class _HomeScreenState extends State<HomeScreen> {
     _loadedOpponentUid = opponentUid;
 
     try {
-      final opponent =
-          await SocialRiderService.instance.getProfileByUid(opponentUid);
+      final opponent = await SocialRiderService.instance.getProfileByUid(
+        opponentUid,
+      );
 
       if (!mounted ||
           _activeChallenge?.id != challenge.id ||
@@ -405,11 +395,9 @@ class _HomeScreenState extends State<HomeScreen> {
     required FirestoreBike? activeBike,
     required DigitalTwinProvider digitalTwinProvider,
   }) {
-    final signature =
-        activeBike == null ? null : _bikeSignature(activeBike);
+    final signature = activeBike == null ? null : _bikeSignature(activeBike);
 
-    if (_digitalTwinSyncScheduled ||
-        signature == _lastSyncedBikeSignature) {
+    if (_digitalTwinSyncScheduled || signature == _lastSyncedBikeSignature) {
       return;
     }
 
@@ -439,9 +427,7 @@ class _HomeScreenState extends State<HomeScreen> {
       final currentTwin = digitalTwinProvider.digitalTwin;
 
       if (currentTwin == null || currentTwin.bike.id != currentBike.id) {
-        await digitalTwinProvider.initializeEmpty(
-          bike: currentBike,
-        );
+        await digitalTwinProvider.initializeEmpty(bike: currentBike);
       } else {
         digitalTwinProvider.updateBike(currentBike);
       }
@@ -460,9 +446,7 @@ class _HomeScreenState extends State<HomeScreen> {
     try {
       final saved = await StorageService.loadSavedDevices();
 
-      final nearby = await BleService.scanNearbyMunjaDevices(
-        saved: saved,
-      );
+      final nearby = await BleService.scanNearbyMunjaDevices(saved: saved);
 
       if (!mounted) {
         return;
@@ -515,8 +499,8 @@ class _HomeScreenState extends State<HomeScreen> {
         return;
       }
 
-      final activation =
-          await MonthlySpecialService.instance.getActiveActivation();
+      final activation = await MonthlySpecialService.instance
+          .getActiveActivation();
 
       if (!mounted) {
         return;
@@ -541,8 +525,7 @@ class _HomeScreenState extends State<HomeScreen> {
     _loadingChallenge = true;
 
     try {
-      final challenges =
-          await ChallengeService.instance.getActiveChallenges();
+      final challenges = await ChallengeService.instance.getActiveChallenges();
 
       MunjaChallenge? selected;
       SocialRiderProfile? opponentProfile;
@@ -554,8 +537,7 @@ class _HomeScreenState extends State<HomeScreen> {
         final opponentUid = selected.otherUidFor(currentUid);
 
         if (opponentUid.isNotEmpty) {
-          opponentProfile =
-              await SocialRiderService.instance.getProfileByUid(
+          opponentProfile = await SocialRiderService.instance.getProfileByUid(
             opponentUid,
           );
         }
@@ -588,9 +570,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _openActiveChallenges() async {
     await Navigator.of(context).push<void>(
-      MaterialPageRoute<void>(
-        builder: (_) => const ActiveChallengesScreen(),
-      ),
+      MaterialPageRoute<void>(builder: (_) => const ActiveChallengesScreen()),
     );
 
     if (!mounted) {
@@ -602,9 +582,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _openMunjaPro() async {
     await Navigator.of(context).push<void>(
-      MaterialPageRoute<void>(
-        builder: (_) => const MunjaProScreen(),
-      ),
+      MaterialPageRoute<void>(builder: (_) => const MunjaProScreen()),
     );
 
     if (!mounted) {
@@ -625,9 +603,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _openCrystalShop() async {
     await Navigator.of(context).push<void>(
-      MaterialPageRoute<void>(
-        builder: (_) => const CrystalShopScreen(),
-      ),
+      MaterialPageRoute<void>(builder: (_) => const CrystalShopScreen()),
     );
 
     if (!mounted) {
@@ -658,9 +634,7 @@ class _HomeScreenState extends State<HomeScreen> {
 
     try {
       await Navigator.of(context).push<void>(
-        MaterialPageRoute<void>(
-          builder: (_) => const GarageScreen(),
-        ),
+        MaterialPageRoute<void>(builder: (_) => const GarageScreen()),
       );
     } finally {
       if (mounted) {
@@ -692,105 +666,90 @@ class _HomeScreenState extends State<HomeScreen> {
         );
 
         return Consumer2<BikeProvider, DigitalTwinProvider>(
-          builder: (
-            context,
-            bikeProvider,
-            digitalTwinProvider,
-            _,
-          ) {
+          builder: (context, bikeProvider, digitalTwinProvider, _) {
             final activeBike = bikeProvider.activeBike;
 
-        _scheduleDigitalTwinSync(
-          activeBike: activeBike,
-          digitalTwinProvider: digitalTwinProvider,
-        );
+            _scheduleDigitalTwinSync(
+              activeBike: activeBike,
+              digitalTwinProvider: digitalTwinProvider,
+            );
 
-        final initialLoading =
-            !bikeProvider.isInitialized ||
-            (bikeProvider.isLoading && bikeProvider.bikes.isEmpty);
+            final initialLoading =
+                !bikeProvider.isInitialized ||
+                (bikeProvider.isLoading && bikeProvider.bikes.isEmpty);
 
-        return Scaffold(
-          backgroundColor: MunjaColors.bg,
-          body: SafeArea(
-            bottom: false,
-            child: RefreshIndicator(
-              onRefresh: _refreshHome,
-              color: MunjaColors.mint,
-              backgroundColor: MunjaColors.panel,
-              child: ListView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.fromLTRB(
-                  18,
-                  16,
-                  18,
-                  250,
-                ),
-                children: [
-                  ValueListenableBuilder<MunjaProState>(
-                    valueListenable: MunjaProService.instance.state,
-                    builder: (
-                      context,
-                      proState,
-                      _,
-                    ) {
-                      return _MinimalHomeHeader(
-                        userId: _currentUserId,
-                        isPro: proState.hasActivePro,
-                        onOpenCrystalShop: _openCrystalShop,
-                        onOpenGarage: _openGarage,
-                      );
-                    },
+            return Scaffold(
+              backgroundColor: MunjaColors.bg,
+              body: SafeArea(
+                bottom: false,
+                child: RefreshIndicator(
+                  onRefresh: _refreshHome,
+                  color: MunjaColors.mint,
+                  backgroundColor: MunjaColors.panel,
+                  child: ListView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: const EdgeInsets.fromLTRB(18, 16, 18, 250),
+                    children: [
+                      ValueListenableBuilder<MunjaProState>(
+                        valueListenable: MunjaProService.instance.state,
+                        builder: (context, proState, _) {
+                          return _MinimalHomeHeader(
+                            userId: _currentUserId,
+                            isPro: proState.hasActivePro,
+                            onOpenCrystalShop: _openCrystalShop,
+                            onOpenGarage: _openGarage,
+                          );
+                        },
+                      ),
+                      const SizedBox(height: 18),
+                      if (bikeProvider.hasError && !initialLoading) ...[
+                        _HomeErrorCard(
+                          message:
+                              bikeProvider.errorMessage ??
+                              'Cyklen kunne ikke indlæses.',
+                          onRetry: _refreshHome,
+                          onDismiss: bikeProvider.clearError,
+                        ),
+                        const SizedBox(height: 16),
+                      ],
+                      if (initialLoading)
+                        const _HomeLoadingCard()
+                      else if (activeBike == null)
+                        _NoActiveBikeCard(onOpenGarage: _openGarage)
+                      else ...[
+                        _MinimalDigitalTwinHero(
+                          bike: activeBike,
+                          isLive: isLive,
+                          speedKmh: liveRide.speedKmh,
+                          brakeLightConnected: _hasBrakeLightNearby,
+                          suspend3d: _suspendHome3d,
+                          home3dResetEpoch: _home3dResetEpoch,
+                          onOpenGarage: _openGarage,
+                        ),
+                        const SizedBox(height: 16),
+                        _MinimalStatusStrip(
+                          gpsActive: true,
+                          bleConnected: _hasBrakeLightNearby,
+                          batteryPercent: _batteryPercent,
+                          profile: _userProfile,
+                          trips: _trips,
+                          accountTotalXp: _accountTotalXp,
+                          monthlyActivation: _monthlyActivation,
+                          activeChallenge: _activeChallenge,
+                          challengeOpponent: _challengeOpponent,
+                          currentUid:
+                              ChallengeService.instance.currentUid ?? '',
+                          onOpenMonthlySpecial: _openMunjaPro,
+                          onOpenChallenge: _openActiveChallenges,
+                        ),
+                      ],
+                    ],
                   ),
-                  const SizedBox(height: 18),
-                  if (bikeProvider.hasError && !initialLoading) ...[
-                    _HomeErrorCard(
-                      message: bikeProvider.errorMessage ??
-                          'Cyklen kunne ikke indlæses.',
-                      onRetry: _refreshHome,
-                      onDismiss: bikeProvider.clearError,
-                    ),
-                    const SizedBox(height: 16),
-                  ],
-                  if (initialLoading)
-                    const _HomeLoadingCard()
-                  else if (activeBike == null)
-                    _NoActiveBikeCard(
-                      onOpenGarage: _openGarage,
-                    )
-                  else ...[
-                    _MinimalDigitalTwinHero(
-                      bike: activeBike,
-                      isLive: isLive,
-                      speedKmh: liveRide.speedKmh,
-                      brakeLightConnected: _hasBrakeLightNearby,
-                      suspend3d: _suspendHome3d,
-                      home3dResetEpoch: _home3dResetEpoch,
-                      onOpenGarage: _openGarage,
-                    ),
-                    const SizedBox(height: 16),
-                    _MinimalStatusStrip(
-                      gpsActive: true,
-                      bleConnected: _hasBrakeLightNearby,
-                      batteryPercent: _batteryPercent,
-                      profile: _userProfile,
-                      trips: _trips,
-                      accountTotalXp: _accountTotalXp,
-                      monthlyActivation: _monthlyActivation,
-                      activeChallenge: _activeChallenge,
-                      challengeOpponent: _challengeOpponent,
-                      currentUid:
-                          ChallengeService.instance.currentUid ?? '',
-                      onOpenMonthlySpecial: _openMunjaPro,
-                      onOpenChallenge: _openActiveChallenges,
-                    ),
-                  ],
-                ],
+                ),
               ),
-            ),
-          ),
-          );
-        },
-      );
+            );
+          },
+        );
       },
     );
   }
@@ -855,10 +814,7 @@ class _MinimalHomeHeader extends StatelessWidget {
             uid: userId,
             compact: true,
             showLabel: false,
-            padding: const EdgeInsets.symmetric(
-              horizontal: 9,
-              vertical: 7,
-            ),
+            padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 7),
             onTap: onOpenCrystalShop,
           ),
           const SizedBox(width: 9),
@@ -910,15 +866,11 @@ class _MinimalDigitalTwinHero extends StatelessWidget {
       decoration: BoxDecoration(
         borderRadius: BorderRadius.circular(34),
         border: Border.all(
-          color: MunjaColors.mint.withOpacity(
-            isLive ? 0.24 : 0.12,
-          ),
+          color: MunjaColors.mint.withOpacity(isLive ? 0.24 : 0.12),
         ),
         boxShadow: [
           BoxShadow(
-            color: MunjaColors.mint.withOpacity(
-              isLive ? 0.12 : 0.08,
-            ),
+            color: MunjaColors.mint.withOpacity(isLive ? 0.12 : 0.08),
             blurRadius: isLive ? 36 : 28,
             spreadRadius: 1,
             offset: const Offset(0, 16),
@@ -936,9 +888,7 @@ class _MinimalDigitalTwinHero extends StatelessWidget {
             ),
 
           if (suspend3d)
-            const Positioned.fill(
-              child: _Home3dSuspendedPlaceholder(),
-            )
+            const Positioned.fill(child: _Home3dSuspendedPlaceholder())
           else
             Positioned.fill(
               child: isLive
@@ -951,18 +901,18 @@ class _MinimalDigitalTwinHero extends StatelessWidget {
                         rideSpeedKmh: speedKmh,
                         enableTouch: false,
                         height: 500,
-                        modelPath:
-                            MunjaNavigationBikeViewer.defaultModelPath,
+                        modelPath: BikeModelResolver.resolveFirestoreModelPath(
+                          bike.type,
+                        ),
 
                         // Keep live navigation/cockpit synchronized with the
                         // exact Digital Twin setup selected in Customize.
                         activeSkinId: bike.effectiveActiveSkin.isEmpty
                             ? 'standard'
                             : bike.effectiveActiveSkin,
-                        activeFrameId:
-                            bike.effectiveActiveFrameId.isEmpty
-                                ? 'frame_1'
-                                : bike.effectiveActiveFrameId,
+                        activeFrameId: bike.effectiveActiveFrameId.isEmpty
+                            ? 'frame_1'
+                            : bike.effectiveActiveFrameId,
                         activeFrameColor: bike.effectiveFrameColor.isEmpty
                             ? '#9AA2A0'
                             : bike.effectiveFrameColor,
@@ -974,22 +924,27 @@ class _MinimalDigitalTwinHero extends StatelessWidget {
                         homeCameraOrbit: '0deg 72deg 105%',
                         homeCameraTarget: 'auto auto auto',
                         homeFieldOfView: '38deg',
-                        navigationCameraOrbit:
-                            '180deg 72deg 105%',
-                        navigationCameraTarget:
-                            '0m 0.72m 0m',
+                        navigationCameraOrbit: '180deg 72deg 105%',
+                        navigationCameraTarget: '0m 0.72m 0m',
                         navigationFieldOfView: '32deg',
                       ),
                     )
                   : Munja3DBikeViewer(
                       key: ValueKey<String>(
                         'home-digital-twin-${bike.id}-'
+                        '${bike.type.name}-'
                         '${bike.effectiveActiveFrameId}-'
                         '${bike.effectiveActiveSkin}-'
                         '${bike.effectiveFrameColor}-'
                         'reset-$home3dResetEpoch',
                       ),
                       height: 500,
+                      modelPath: BikeModelResolver.resolveFirestoreModelPath(
+                        bike.type,
+                      ),
+                      applyDigitalTwinCustomization:
+                          bike.type == FirestoreBikeType.mtb ||
+                          bike.type == FirestoreBikeType.kids,
                       isLive: false,
                       enableTouch: true,
                       showControls: false,
@@ -1003,22 +958,21 @@ class _MinimalDigitalTwinHero extends StatelessWidget {
                       // Home gets the same stronger premium movement as Garage.
                       showroomSwing: true,
                       showroomSwingDegrees: 16.0,
-                      showroomSwingDuration:
-                          const Duration(milliseconds: 2600),
-                      showroomSwingResumeDelay:
-                          const Duration(seconds: 2),
+                      showroomSwingDuration: const Duration(milliseconds: 2600),
+                      showroomSwingResumeDelay: const Duration(seconds: 2),
 
                       activeSkinId: bike.effectiveActiveSkin.isEmpty
                           ? 'standard'
                           : bike.effectiveActiveSkin,
-                      activeFrameId:
-                          bike.effectiveActiveFrameId.isEmpty
-                              ? 'frame_1'
-                              : bike.effectiveActiveFrameId,
+                      activeFrameId: bike.effectiveActiveFrameId.isEmpty
+                          ? 'frame_1'
+                          : bike.effectiveActiveFrameId,
                       frameColor: bike.effectiveFrameColor.isEmpty
                           ? '#9AA2A0'
                           : bike.effectiveFrameColor,
-                      onBikeTap: onOpenGarage,
+                      // Home 3D bike is interactive itself.
+                      // Do not navigate to Garage on a normal tap.
+                      onBikeTap: null,
                     ),
             ),
         ],
@@ -1044,9 +998,7 @@ class _Home3dSuspendedPlaceholder extends StatelessWidget {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: MunjaColors.mint.withOpacity(0.08),
-                border: Border.all(
-                  color: MunjaColors.mint.withOpacity(0.16),
-                ),
+                border: Border.all(color: MunjaColors.mint.withOpacity(0.16)),
               ),
               child: const Icon(
                 Icons.pedal_bike_rounded,
@@ -1056,7 +1008,7 @@ class _Home3dSuspendedPlaceholder extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             Text(
-                AppText.t('homeOpeningGear'),
+              AppText.t('homeOpeningGear'),
               style: TextStyle(
                 color: MunjaColors.textSoft,
                 fontSize: 10,
@@ -1101,13 +1053,11 @@ class _MinimalStatusStrip extends StatefulWidget {
   final VoidCallback onOpenChallenge;
 
   @override
-  State<_MinimalStatusStrip> createState() =>
-      _MinimalStatusStripState();
+  State<_MinimalStatusStrip> createState() => _MinimalStatusStripState();
 }
 
 class _MinimalStatusStripState extends State<_MinimalStatusStrip> {
-  static const String _compactPreferenceKey =
-      'munja_home_status_compact_v1';
+  static const String _compactPreferenceKey = 'munja_home_status_compact_v1';
 
   bool _hideTechnicalStatus = false;
   bool _preferenceLoaded = false;
@@ -1121,8 +1071,7 @@ class _MinimalStatusStripState extends State<_MinimalStatusStrip> {
   Future<void> _loadPreference() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final hidden =
-          prefs.getBool(_compactPreferenceKey) ?? false;
+      final hidden = prefs.getBool(_compactPreferenceKey) ?? false;
 
       if (!mounted) {
         return;
@@ -1133,9 +1082,7 @@ class _MinimalStatusStripState extends State<_MinimalStatusStrip> {
         _preferenceLoaded = true;
       });
     } catch (error, stackTrace) {
-      debugPrint(
-        'HOME STATUS STRIP PREF LOAD ERROR: $error',
-      );
+      debugPrint('HOME STATUS STRIP PREF LOAD ERROR: $error');
       debugPrint('$stackTrace');
 
       if (mounted) {
@@ -1155,14 +1102,9 @@ class _MinimalStatusStripState extends State<_MinimalStatusStrip> {
 
     try {
       final prefs = await SharedPreferences.getInstance();
-      await prefs.setBool(
-        _compactPreferenceKey,
-        next,
-      );
+      await prefs.setBool(_compactPreferenceKey, next);
     } catch (error, stackTrace) {
-      debugPrint(
-        'HOME STATUS STRIP PREF SAVE ERROR: $error',
-      );
+      debugPrint('HOME STATUS STRIP PREF SAVE ERROR: $error');
       debugPrint('$stackTrace');
     }
   }
@@ -1172,16 +1114,11 @@ class _MinimalStatusStripState extends State<_MinimalStatusStrip> {
     // Keep the exact same strip height and outer styling.
     // Only the internal width allocation changes.
     return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 10,
-        vertical: 12,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 12),
       decoration: BoxDecoration(
         color: MunjaColors.panel.withOpacity(0.52),
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(
-          color: Colors.white.withOpacity(0.065),
-        ),
+        border: Border.all(color: Colors.white.withOpacity(0.065)),
       ),
       child: Row(
         children: [
@@ -1204,10 +1141,8 @@ class _MinimalStatusStripState extends State<_MinimalStatusStrip> {
               activeChallenge: widget.activeChallenge,
               challengeOpponent: widget.challengeOpponent,
               currentUid: widget.currentUid,
-              onOpenMonthlySpecial:
-                  widget.onOpenMonthlySpecial,
-              onOpenChallenge:
-                  widget.onOpenChallenge,
+              onOpenMonthlySpecial: widget.onOpenMonthlySpecial,
+              onOpenChallenge: widget.onOpenChallenge,
             ),
           ),
 
@@ -1217,56 +1152,44 @@ class _MinimalStatusStripState extends State<_MinimalStatusStrip> {
             switchOutCurve: Curves.easeInCubic,
             child: _hideTechnicalStatus
                 ? const SizedBox.shrink(
-                    key: ValueKey<String>(
-                      'home-tech-hidden',
-                    ),
+                    key: ValueKey<String>('home-tech-hidden'),
                   )
                 : Row(
-                    key: const ValueKey<String>(
-                      'home-tech-visible',
-                    ),
+                    key: const ValueKey<String>('home-tech-visible'),
                     mainAxisSize: MainAxisSize.min,
                     children: [
                       const _StatusDivider(),
                       SizedBox(
                         width: 52,
                         child: _MinimalStatusItem(
-                          icon:
-                              Icons.gps_fixed_rounded,
+                          icon: Icons.gps_fixed_rounded,
                           label: 'GPS',
                           value: widget.gpsActive
                               ? AppText.t('active')
                               : AppText.t('inactive'),
-                          active:
-                              widget.gpsActive,
+                          active: widget.gpsActive,
                         ),
                       ),
                       const _StatusDivider(),
                       SizedBox(
                         width: 52,
                         child: _MinimalStatusItem(
-                          icon:
-                              Icons.bluetooth_rounded,
+                          icon: Icons.bluetooth_rounded,
                           label: 'BLE',
                           value: widget.bleConnected
                               ? AppText.t('connected')
                               : AppText.t('searching'),
-                          active:
-                              widget.bleConnected,
+                          active: widget.bleConnected,
                         ),
                       ),
                       const _StatusDivider(),
                       SizedBox(
                         width: 58,
                         child: _MinimalStatusItem(
-                          icon:
-                              Icons.battery_5_bar_rounded,
-                          label:
-                              AppText.t('battery'),
-                          value:
-                              '${widget.batteryPercent}%',
-                          active:
-                              widget.batteryPercent > 20,
+                          icon: Icons.battery_5_bar_rounded,
+                          label: AppText.t('battery'),
+                          value: '${widget.batteryPercent}%',
+                          active: widget.batteryPercent > 20,
                         ),
                       ),
                     ],
@@ -1279,10 +1202,7 @@ class _MinimalStatusStripState extends State<_MinimalStatusStrip> {
 }
 
 class _StatusExpandButton extends StatelessWidget {
-  const _StatusExpandButton({
-    required this.expanded,
-    required this.onTap,
-  });
+  const _StatusExpandButton({required this.expanded, required this.onTap});
 
   final bool expanded;
   final VoidCallback onTap;
@@ -1300,13 +1220,9 @@ class _StatusExpandButton extends StatelessWidget {
           alignment: Alignment.center,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(999),
-            color: MunjaColors.mint.withOpacity(
-              expanded ? 0.11 : 0.055,
-            ),
+            color: MunjaColors.mint.withOpacity(expanded ? 0.11 : 0.055),
             border: Border.all(
-              color: MunjaColors.mint.withOpacity(
-                expanded ? 0.22 : 0.10,
-              ),
+              color: MunjaColors.mint.withOpacity(expanded ? 0.22 : 0.10),
             ),
           ),
           child: AnimatedRotation(
@@ -1349,8 +1265,7 @@ class _HomeStatusCarousel extends StatefulWidget {
   final VoidCallback onOpenChallenge;
 
   @override
-  State<_HomeStatusCarousel> createState() =>
-      _HomeStatusCarouselState();
+  State<_HomeStatusCarousel> createState() => _HomeStatusCarouselState();
 }
 
 class _HomeStatusCarouselState extends State<_HomeStatusCarousel> {
@@ -1378,14 +1293,11 @@ class _HomeStatusCarouselState extends State<_HomeStatusCarousel> {
     _pageController = PageController();
     _restartSlideTimer();
 
-    _countdownTimer = Timer.periodic(
-      const Duration(minutes: 1),
-      (_) {
-        if (mounted && widget.monthlyActivation != null) {
-          setState(() {});
-        }
-      },
-    );
+    _countdownTimer = Timer.periodic(const Duration(minutes: 1), (_) {
+      if (mounted && widget.monthlyActivation != null) {
+        setState(() {});
+      }
+    });
   }
 
   @override
@@ -1393,10 +1305,8 @@ class _HomeStatusCarouselState extends State<_HomeStatusCarousel> {
     super.didUpdateWidget(oldWidget);
 
     final slidesChanged =
-        oldWidget.monthlyActivation?.id !=
-                widget.monthlyActivation?.id ||
-            oldWidget.activeChallenge?.id !=
-                widget.activeChallenge?.id;
+        oldWidget.monthlyActivation?.id != widget.monthlyActivation?.id ||
+        oldWidget.activeChallenge?.id != widget.activeChallenge?.id;
 
     if (slidesChanged) {
       _page = 0;
@@ -1418,26 +1328,23 @@ class _HomeStatusCarouselState extends State<_HomeStatusCarousel> {
   void _restartSlideTimer() {
     _slideTimer?.cancel();
 
-    _slideTimer = Timer.periodic(
-      _slideDuration,
-      (_) {
-        if (!mounted || !_pageController.hasClients) {
-          return;
-        }
+    _slideTimer = Timer.periodic(_slideDuration, (_) {
+      if (!mounted || !_pageController.hasClients) {
+        return;
+      }
 
-        final count = _slideCount;
-        if (count <= 1) {
-          return;
-        }
+      final count = _slideCount;
+      if (count <= 1) {
+        return;
+      }
 
-        final next = (_page + 1) % count;
-        _pageController.animateToPage(
-          next,
-          duration: const Duration(milliseconds: 420),
-          curve: Curves.easeOutCubic,
-        );
-      },
-    );
+      final next = (_page + 1) % count;
+      _pageController.animateToPage(
+        next,
+        duration: const Duration(milliseconds: 420),
+        curve: Curves.easeOutCubic,
+      );
+    });
   }
 
   @override
@@ -1505,12 +1412,10 @@ class _LevelStatusSlide extends StatelessWidget {
     final progress = XpService.levelProgress(totalXp);
 
     final photoPath = profile?.photoPath;
-    final photoFile =
-        photoPath == null || photoPath.trim().isEmpty
-            ? null
-            : File(photoPath);
-    final hasPhoto =
-        photoFile != null && photoFile.existsSync();
+    final photoFile = photoPath == null || photoPath.trim().isEmpty
+        ? null
+        : File(photoPath);
+    final hasPhoto = photoFile != null && photoFile.existsSync();
 
     return Row(
       children: [
@@ -1520,16 +1425,11 @@ class _LevelStatusSlide extends StatelessWidget {
           decoration: BoxDecoration(
             shape: BoxShape.circle,
             color: MunjaColors.mint.withOpacity(0.10),
-            border: Border.all(
-              color: MunjaColors.mint.withOpacity(0.28),
-            ),
+            border: Border.all(color: MunjaColors.mint.withOpacity(0.28)),
           ),
           clipBehavior: Clip.antiAlias,
           child: hasPhoto
-              ? Image.file(
-                  photoFile,
-                  fit: BoxFit.cover,
-                )
+              ? Image.file(photoFile, fit: BoxFit.cover)
               : const Icon(
                   Icons.person_rounded,
                   color: MunjaColors.mint,
@@ -1559,10 +1459,8 @@ class _LevelStatusSlide extends StatelessWidget {
                 child: LinearProgressIndicator(
                   value: progress,
                   minHeight: 4,
-                  backgroundColor:
-                      Colors.white.withOpacity(0.08),
-                  valueColor:
-                      const AlwaysStoppedAnimation<Color>(
+                  backgroundColor: Colors.white.withOpacity(0.08),
+                  valueColor: const AlwaysStoppedAnimation<Color>(
                     MunjaColors.mint,
                   ),
                 ),
@@ -1597,9 +1495,7 @@ class _MonthlySpecialStatusSlide extends StatelessWidget {
 
   String get _timeLabel {
     if (activation.isCompleted) {
-      return activation.rewardClaimed
-          ? 'CLAIMED'
-          : 'REWARD READY';
+      return activation.rewardClaimed ? 'CLAIMED' : 'REWARD READY';
     }
 
     final remaining = activation.timeRemaining();
@@ -1614,15 +1510,13 @@ class _MonthlySpecialStatusSlide extends StatelessWidget {
       return '${hours}H ${minutes}M';
     }
 
-    final days =
-        (remaining.inSeconds / Duration.secondsPerDay).ceil();
+    final days = (remaining.inSeconds / Duration.secondsPerDay).ceil();
     return '${days}D LEFT';
   }
 
   @override
   Widget build(BuildContext context) {
-    final special =
-        MonthlySpecialService.instance.specialForActivation(
+    final special = MonthlySpecialService.instance.specialForActivation(
       activation,
     );
     final progress = activation.progressRatio(special);
@@ -1685,10 +1579,8 @@ class _MonthlySpecialStatusSlide extends StatelessWidget {
                     child: LinearProgressIndicator(
                       value: progress,
                       minHeight: 4,
-                      backgroundColor:
-                          Colors.white.withOpacity(0.08),
-                      valueColor:
-                          const AlwaysStoppedAnimation<Color>(
+                      backgroundColor: Colors.white.withOpacity(0.08),
+                      valueColor: const AlwaysStoppedAnimation<Color>(
                         MunjaColors.mint,
                       ),
                     ),
@@ -1738,16 +1630,11 @@ class _FriendChallengeStatusSlide extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final otherUid = challenge.otherUidFor(currentUid);
-    final myProgress =
-        challenge.genericProgressFor(currentUid).toDouble();
-    final otherProgress =
-        challenge.genericProgressFor(otherUid).toDouble();
+    final myProgress = challenge.genericProgressFor(currentUid).toDouble();
+    final otherProgress = challenge.genericProgressFor(otherUid).toDouble();
     final myRatio = challenge.progressRatioFor(currentUid);
-    final opponentLabel =
-        opponent?.usernameWithAt ?? 'Munja rider';
-    final unit = _CompactActiveChallengeCard._challengeUnit(
-      challenge.type,
-    );
+    final opponentLabel = opponent?.usernameWithAt ?? 'Munja rider';
+    final unit = _CompactActiveChallengeCard._challengeUnit(challenge.type);
 
     return Material(
       color: Colors.transparent,
@@ -1791,10 +1678,8 @@ class _FriendChallengeStatusSlide extends StatelessWidget {
                     child: LinearProgressIndicator(
                       value: myRatio,
                       minHeight: 4,
-                      backgroundColor:
-                          Colors.white.withOpacity(0.08),
-                      valueColor:
-                          const AlwaysStoppedAnimation<Color>(
+                      backgroundColor: Colors.white.withOpacity(0.08),
+                      valueColor: const AlwaysStoppedAnimation<Color>(
                         MunjaColors.mint,
                       ),
                     ),
@@ -1848,11 +1733,7 @@ class _MinimalStatusItem extends StatelessWidget {
     return Column(
       mainAxisSize: MainAxisSize.min,
       children: [
-        Icon(
-          icon,
-          color: color,
-          size: 18,
-        ),
+        Icon(icon, color: color, size: 18),
         const SizedBox(height: 6),
         Text(
           label.toUpperCase(),
@@ -1895,7 +1776,6 @@ class _StatusDivider extends StatelessWidget {
   }
 }
 
-
 class _CompactActiveChallengeCard extends StatelessWidget {
   const _CompactActiveChallengeCard({
     required this.challenge,
@@ -1912,22 +1792,16 @@ class _CompactActiveChallengeCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final otherUid = challenge.otherUidFor(currentUid);
-    final myProgress =
-        challenge.genericProgressFor(currentUid).toDouble();
-    final otherProgress =
-        challenge.genericProgressFor(otherUid).toDouble();
+    final myProgress = challenge.genericProgressFor(currentUid).toDouble();
+    final otherProgress = challenge.genericProgressFor(otherUid).toDouble();
     final target = challenge.genericTarget.toDouble();
 
     final myRatio = challenge.progressRatioFor(currentUid);
     final otherRatio = challenge.progressRatioFor(otherUid);
 
-    final opponentLabel =
-        opponent?.usernameWithAt ?? 'Munja rider';
+    final opponentLabel = opponent?.usernameWithAt ?? 'Munja rider';
     final unit = _challengeUnit(challenge.type);
-    final title = _challengeTitle(
-      challenge: challenge,
-      target: target,
-    );
+    final title = _challengeTitle(challenge: challenge, target: target);
 
     final daysLeft = _daysLeft(challenge.endsAt);
 
@@ -1941,9 +1815,7 @@ class _CompactActiveChallengeCard extends StatelessWidget {
           decoration: BoxDecoration(
             color: MunjaColors.panel.withOpacity(0.50),
             borderRadius: BorderRadius.circular(24),
-            border: Border.all(
-              color: MunjaColors.mint.withOpacity(0.16),
-            ),
+            border: Border.all(color: MunjaColors.mint.withOpacity(0.16)),
           ),
           child: Row(
             children: [
@@ -1968,7 +1840,7 @@ class _CompactActiveChallengeCard extends StatelessWidget {
                     Row(
                       children: [
                         Text(
-                AppText.t('homeActiveChallenge'),
+                          AppText.t('homeActiveChallenge'),
                           style: TextStyle(
                             color: MunjaColors.mint,
                             fontSize: 8,
@@ -2132,17 +2004,13 @@ class _CompactActiveChallengeCard extends StatelessWidget {
 }
 
 class _LiveRideStrip extends StatelessWidget {
-  const _LiveRideStrip({
-    required this.rideData,
-  });
+  const _LiveRideStrip({required this.rideData});
 
   final RideSessionData rideData;
 
   @override
   Widget build(BuildContext context) {
-    final hours = rideData.rideDuration.inHours
-        .toString()
-        .padLeft(2, '0');
+    final hours = rideData.rideDuration.inHours.toString().padLeft(2, '0');
 
     final minutes = rideData.rideDuration.inMinutes
         .remainder(60)
@@ -2155,24 +2023,18 @@ class _LiveRideStrip extends StatelessWidget {
         .padLeft(2, '0');
 
     return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 14,
-        vertical: 13,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
       decoration: BoxDecoration(
         color: MunjaColors.mint.withOpacity(0.08),
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(
-          color: MunjaColors.mint.withOpacity(0.22),
-        ),
+        border: Border.all(color: MunjaColors.mint.withOpacity(0.22)),
       ),
       child: Row(
         children: [
           Expanded(
             child: _LiveMetric(
               label: AppText.t('speed'),
-              value:
-                  '${rideData.currentSpeedKmh.toStringAsFixed(1)} km/t',
+              value: '${rideData.currentSpeedKmh.toStringAsFixed(1)} km/t',
             ),
           ),
           Expanded(
@@ -2194,10 +2056,7 @@ class _LiveRideStrip extends StatelessWidget {
 }
 
 class _LiveMetric extends StatelessWidget {
-  const _LiveMetric({
-    required this.label,
-    required this.value,
-  });
+  const _LiveMetric({required this.label, required this.value});
 
   final String label;
   final String value;
@@ -2232,27 +2091,18 @@ class _LiveMetric extends StatelessWidget {
 }
 
 class _NoActiveBikeCard extends StatelessWidget {
-  const _NoActiveBikeCard({
-    required this.onOpenGarage,
-  });
+  const _NoActiveBikeCard({required this.onOpenGarage});
 
   final VoidCallback onOpenGarage;
 
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: const EdgeInsets.fromLTRB(
-        22,
-        42,
-        22,
-        42,
-      ),
+      padding: const EdgeInsets.fromLTRB(22, 42, 22, 42),
       decoration: BoxDecoration(
         color: MunjaColors.panel.withOpacity(0.66),
         borderRadius: BorderRadius.circular(34),
-        border: Border.all(
-          color: Colors.white.withOpacity(0.07),
-        ),
+        border: Border.all(color: Colors.white.withOpacity(0.07)),
       ),
       child: Column(
         children: [
@@ -2271,7 +2121,7 @@ class _NoActiveBikeCard extends StatelessWidget {
           ),
           const SizedBox(height: 18),
           Text(
-                AppText.t('homeNoActiveBike'),
+            AppText.t('homeNoActiveBike'),
             style: TextStyle(
               color: Colors.white,
               fontSize: 21,
@@ -2280,7 +2130,7 @@ class _NoActiveBikeCard extends StatelessWidget {
           ),
           const SizedBox(height: 9),
           Text(
-                AppText.t('homeNoActiveBikeBody'),
+            AppText.t('homeNoActiveBikeBody'),
             textAlign: TextAlign.center,
             style: TextStyle(
               color: MunjaColors.textSoft,
@@ -2295,19 +2145,12 @@ class _NoActiveBikeCard extends StatelessWidget {
             style: FilledButton.styleFrom(
               backgroundColor: MunjaColors.mint,
               foregroundColor: Colors.black,
-              padding: const EdgeInsets.symmetric(
-                horizontal: 20,
-                vertical: 14,
-              ),
+              padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
             ),
-            icon: const Icon(
-              Icons.pedal_bike_rounded,
-            ),
+            icon: const Icon(Icons.pedal_bike_rounded),
             label: Text(
-                AppText.t('homeOpenGear'),
-              style: TextStyle(
-                fontWeight: FontWeight.w900,
-              ),
+              AppText.t('homeOpenGear'),
+              style: TextStyle(fontWeight: FontWeight.w900),
             ),
           ),
         ],
@@ -2327,13 +2170,9 @@ class _HomeLoadingCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: MunjaColors.panel.withOpacity(0.62),
         borderRadius: BorderRadius.circular(34),
-        border: Border.all(
-          color: Colors.white.withOpacity(0.07),
-        ),
+        border: Border.all(color: Colors.white.withOpacity(0.07)),
       ),
-      child: const CircularProgressIndicator(
-        color: MunjaColors.mint,
-      ),
+      child: const CircularProgressIndicator(color: MunjaColors.mint),
     );
   }
 }
@@ -2356,16 +2195,11 @@ class _HomeErrorCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.redAccent.withOpacity(0.09),
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(
-          color: Colors.redAccent.withOpacity(0.22),
-        ),
+        border: Border.all(color: Colors.redAccent.withOpacity(0.22)),
       ),
       child: Row(
         children: [
-          const Icon(
-            Icons.error_outline_rounded,
-            color: Colors.redAccent,
-          ),
+          const Icon(Icons.error_outline_rounded, color: Colors.redAccent),
           const SizedBox(width: 11),
           Expanded(
             child: Text(
@@ -2381,17 +2215,11 @@ class _HomeErrorCard extends StatelessWidget {
             onPressed: () {
               onRetry();
             },
-            icon: const Icon(
-              Icons.refresh_rounded,
-              color: MunjaColors.mint,
-            ),
+            icon: const Icon(Icons.refresh_rounded, color: MunjaColors.mint),
           ),
           IconButton(
             onPressed: onDismiss,
-            icon: const Icon(
-              Icons.close_rounded,
-              color: Colors.white38,
-            ),
+            icon: const Icon(Icons.close_rounded, color: Colors.white38),
           ),
         ],
       ),

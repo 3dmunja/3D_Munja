@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'dart:math' as math;
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
@@ -58,6 +59,13 @@ class Munja3DBikeViewer extends StatefulWidget {
   /// When true, Garage/Home use the same master GLB + embedded
   /// MaterialInstances as Customize.
   final bool useDigitalTwinMaterials;
+
+  /// Controls whether the currently loaded native model should receive
+  /// Munja's MTB-specific frame/material customization.
+  ///
+  /// The native renderer itself is shared by every bike type.
+  final bool applyDigitalTwinCustomization;
+
   final String activeSkinId;
   final String activeFrameId;
   final String frameColor;
@@ -107,6 +115,7 @@ class Munja3DBikeViewer extends StatefulWidget {
     this.onOpenGarage,
     this.onBikeTap,
     this.useDigitalTwinMaterials = false,
+    this.applyDigitalTwinCustomization = true,
     this.activeSkinId = 'standard',
     this.activeFrameId = 'frame_1',
     this.frameColor = '#9AA2A0',
@@ -877,24 +886,12 @@ class _Munja3DBikeViewerState extends State<Munja3DBikeViewer> {
   @override
   Widget build(BuildContext context) {
     if (widget.useDigitalTwinMaterials) {
-      // iOS uses Flutter3DViewer because its touch/orbit handling is reliable.
-      // Android keeps the native Interactive3d path for materials and frames.
-      if (defaultTargetPlatform == TargetPlatform.iOS) {
-        return _MunjaIosDigitalTwinViewer(
-          height: widget.height,
-          isLive: widget.isLive,
-          enableTouch: widget.enableTouch,
-          modelPath: widget.modelPath,
-          autoRotate: widget.autoRotate,
-          autoRotateSpeed: widget.autoRotateSpeed,
-          resumeAutoRotateAfterInteraction:
-              widget.resumeAutoRotateAfterInteraction,
-          autoRotateResumeDelay: widget.autoRotateResumeDelay,
-          onBikeTap: widget.onBikeTap,
-        );
-      }
-
+      // iOS and Android now share the native Interactive3d Digital Twin
+      // renderer. On iOS this gives us SceneKit CADisplayLink showroom motion
+      // instead of repeated Flutter3DViewer JavaScript camera commands.
       return _MunjaNativeDigitalTwinViewer(
+        modelPath: widget.modelPath,
+        applyDigitalTwinCustomization: widget.applyDigitalTwinCustomization,
         height: widget.height,
         isLive: widget.isLive,
         enableTouch: widget.enableTouch,
@@ -1482,17 +1479,26 @@ class _MunjaIosDigitalTwinViewer extends StatefulWidget {
     required this.autoRotateSpeed,
     required this.resumeAutoRotateAfterInteraction,
     required this.autoRotateResumeDelay,
+    required this.showroomSwing,
+    required this.showroomSwingDegrees,
+    required this.showroomSwingDuration,
+    required this.showroomSwingResumeDelay,
     this.onBikeTap,
   });
+
+  final String modelPath;
 
   final double height;
   final bool isLive;
   final bool enableTouch;
-  final String modelPath;
   final bool autoRotate;
   final int autoRotateSpeed;
   final bool resumeAutoRotateAfterInteraction;
   final Duration autoRotateResumeDelay;
+  final bool showroomSwing;
+  final double showroomSwingDegrees;
+  final Duration showroomSwingDuration;
+  final Duration showroomSwingResumeDelay;
   final VoidCallback? onBikeTap;
 
   @override
@@ -1507,6 +1513,8 @@ class _MunjaIosDigitalTwinViewerState
   Timer? _cameraSettleTimer;
   Timer? _autoRotateResumeTimer;
   Timer? _readyFallbackTimer;
+  Timer? _showroomSwingTimer;
+  DateTime? _showroomSwingStartedAt;
 
   bool _loaded = false;
   bool _failed = false;
@@ -1551,6 +1559,7 @@ class _MunjaIosDigitalTwinViewerState
     if (oldWidget.modelPath != widget.modelPath) {
       _cameraSettleTimer?.cancel();
       _autoRotateResumeTimer?.cancel();
+      _stopShowroomSwing();
 
       setState(() {
         _loaded = false;
@@ -1563,7 +1572,12 @@ class _MunjaIosDigitalTwinViewerState
     final rotationChanged =
         oldWidget.autoRotate != widget.autoRotate ||
         oldWidget.autoRotateSpeed != widget.autoRotateSpeed ||
-        oldWidget.enableTouch != widget.enableTouch;
+        oldWidget.enableTouch != widget.enableTouch ||
+        oldWidget.showroomSwing != widget.showroomSwing ||
+        oldWidget.showroomSwingDegrees != widget.showroomSwingDegrees ||
+        oldWidget.showroomSwingDuration != widget.showroomSwingDuration ||
+        oldWidget.showroomSwingResumeDelay != widget.showroomSwingResumeDelay ||
+        oldWidget.isLive != widget.isLive;
 
     if (_loaded && rotationChanged) {
       WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -1579,6 +1593,7 @@ class _MunjaIosDigitalTwinViewerState
     _cameraSettleTimer?.cancel();
     _autoRotateResumeTimer?.cancel();
     _readyFallbackTimer?.cancel();
+    _showroomSwingTimer?.cancel();
     _controller.onModelLoaded.removeListener(_onControllerReady);
     super.dispose();
   }
@@ -1611,14 +1626,14 @@ class _MunjaIosDigitalTwinViewerState
 
       _applyInitialCamera();
 
-      if (widget.autoRotate) {
+      if (widget.autoRotate || widget.showroomSwing) {
         _autoRotateResumeTimer?.cancel();
         _autoRotateResumeTimer = Timer(const Duration(milliseconds: 550), () {
           if (mounted &&
               _loaded &&
               !_failed &&
               !_pointerInteracting &&
-              widget.autoRotate) {
+              (widget.autoRotate || widget.showroomSwing)) {
             _syncAutoRotation();
           }
         });
@@ -1654,10 +1669,72 @@ class _MunjaIosDigitalTwinViewerState
     }
   }
 
+  void _stopShowroomSwing() {
+    _showroomSwingTimer?.cancel();
+    _showroomSwingTimer = null;
+    _showroomSwingStartedAt = null;
+  }
+
   void _syncAutoRotation() {
     _autoRotateResumeTimer?.cancel();
+    _stopShowroomSwing();
 
-    if (!_loaded || _failed || _pointerInteracting || !widget.autoRotate) {
+    if (!_loaded || _failed || _pointerInteracting) {
+      _pauseAutoRotation();
+      return;
+    }
+
+    if (widget.showroomSwing && !widget.isLive) {
+      _pauseAutoRotation();
+
+      final amplitude = widget.showroomSwingDegrees.clamp(2.0, 30.0).toDouble();
+
+      final cycleMs = widget.showroomSwingDuration.inMilliseconds.clamp(
+        900,
+        12000,
+      );
+
+      _showroomSwingStartedAt = DateTime.now();
+
+      _showroomSwingTimer = Timer.periodic(const Duration(milliseconds: 33), (
+        _,
+      ) {
+        if (!mounted ||
+            !_loaded ||
+            _failed ||
+            _pointerInteracting ||
+            !widget.showroomSwing ||
+            widget.isLive) {
+          return;
+        }
+
+        final started = _showroomSwingStartedAt;
+        if (started == null) return;
+
+        final elapsedMs =
+            DateTime.now().difference(started).inMicroseconds / 1000.0;
+
+        final phase = (elapsedMs / cycleMs) * 2.0 * math.pi;
+
+        final theta = _frontTheta + math.sin(phase) * amplitude;
+
+        try {
+          _controller.setCameraOrbit(theta, _frontPhi, _frontRadius);
+        } catch (error) {
+          debugPrint('MUNJA iOS 3D SHOWROOM SWING ERROR: $error');
+        }
+      });
+
+      debugPrint(
+        'MUNJA iOS 3D SHOWROOM SWING START: '
+        'center=$_frontTheta° amplitude=$amplitude° '
+        'duration=${cycleMs}ms',
+      );
+
+      return;
+    }
+
+    if (!widget.autoRotate) {
       _pauseAutoRotation();
       return;
     }
@@ -1674,12 +1751,13 @@ class _MunjaIosDigitalTwinViewerState
 
     _pointerInteracting = true;
     _autoRotateResumeTimer?.cancel();
+    _stopShowroomSwing();
 
     _tapPointer = event.pointer;
     _tapDownPosition = event.localPosition;
     _tapMoved = false;
 
-    if (widget.autoRotate) {
+    if (widget.autoRotate || widget.showroomSwing) {
       _pauseAutoRotation();
     }
   }
@@ -1708,12 +1786,17 @@ class _MunjaIosDigitalTwinViewerState
       widget.onBikeTap!();
     }
 
-    if (!widget.autoRotate || !widget.resumeAutoRotateAfterInteraction) {
+    if ((!widget.autoRotate && !widget.showroomSwing) ||
+        !widget.resumeAutoRotateAfterInteraction) {
       return;
     }
 
+    final resumeDelay = widget.showroomSwing
+        ? widget.showroomSwingResumeDelay
+        : widget.autoRotateResumeDelay;
+
     _autoRotateResumeTimer?.cancel();
-    _autoRotateResumeTimer = Timer(widget.autoRotateResumeDelay, () {
+    _autoRotateResumeTimer = Timer(resumeDelay, () {
       if (mounted && _loaded && !_failed && !_pointerInteracting) {
         _syncAutoRotation();
       }
@@ -1728,12 +1811,17 @@ class _MunjaIosDigitalTwinViewerState
     _tapDownPosition = null;
     _tapMoved = false;
 
-    if (!widget.autoRotate || !widget.resumeAutoRotateAfterInteraction) {
+    if ((!widget.autoRotate && !widget.showroomSwing) ||
+        !widget.resumeAutoRotateAfterInteraction) {
       return;
     }
 
+    final resumeDelay = widget.showroomSwing
+        ? widget.showroomSwingResumeDelay
+        : widget.autoRotateResumeDelay;
+
     _autoRotateResumeTimer?.cancel();
-    _autoRotateResumeTimer = Timer(widget.autoRotateResumeDelay, () {
+    _autoRotateResumeTimer = Timer(resumeDelay, () {
       if (mounted && _loaded && !_failed && !_pointerInteracting) {
         _syncAutoRotation();
       }
@@ -1910,6 +1998,8 @@ class _MunjaIosDigitalTwinViewerState
 
 class _MunjaNativeDigitalTwinViewer extends StatefulWidget {
   const _MunjaNativeDigitalTwinViewer({
+    required this.modelPath,
+    required this.applyDigitalTwinCustomization,
     required this.height,
     required this.isLive,
     required this.enableTouch,
@@ -1926,6 +2016,9 @@ class _MunjaNativeDigitalTwinViewer extends StatefulWidget {
     required this.showroomSwingResumeDelay,
     this.onBikeTap,
   });
+
+  final String modelPath;
+  final bool applyDigitalTwinCustomization;
 
   final double height;
   final bool isLive;
@@ -2238,6 +2331,14 @@ class _MunjaNativeDigitalTwinViewerState
     }
 
     try {
+      final isIosRoadBike =
+          defaultTargetPlatform == TargetPlatform.iOS &&
+          widget.modelPath.toLowerCase().contains('road_bike_master.glb');
+
+      final homeHorizontalDegrees = isIosRoadBike
+          ? 90.0
+          : _nativeHomeHorizontalDegrees;
+
       // Stop showroom motion first. Native showroom rotation deliberately uses
       // the CURRENT orbit as its centre; restarting it before the Home pose is
       // restored would preserve the wrong post-navigation framing.
@@ -2252,12 +2353,14 @@ class _MunjaNativeDigitalTwinViewerState
       //
       // targetHeightFactor = 0.0 means the exact fitted GLB center. This is what
       // prevents the bike from staying visually lower after a ride.
-      await _nativeController.setCameraPose(
-        horizontalDegrees: _nativeHomeHorizontalDegrees,
-        verticalDegrees: _nativeHomeVerticalDegrees,
-        targetHeightFactor: _nativeHomeTargetHeightFactor,
-        zoom: _nativeHomeZoom,
-      );
+      if (defaultTargetPlatform != TargetPlatform.iOS || isIosRoadBike) {
+        await _nativeController.setCameraPose(
+          horizontalDegrees: homeHorizontalDegrees,
+          verticalDegrees: _nativeHomeVerticalDegrees,
+          targetHeightFactor: _nativeHomeTargetHeightFactor,
+          zoom: _nativeHomeZoom,
+        );
+      }
 
       if (!_isCurrent(generation)) {
         return;
@@ -2271,26 +2374,28 @@ class _MunjaNativeDigitalTwinViewerState
         return;
       }
 
-      await _nativeController.setCameraPose(
-        horizontalDegrees: _nativeHomeHorizontalDegrees,
-        verticalDegrees: _nativeHomeVerticalDegrees,
-        targetHeightFactor: _nativeHomeTargetHeightFactor,
-        zoom: _nativeHomeZoom,
-      );
+      if (defaultTargetPlatform != TargetPlatform.iOS || isIosRoadBike) {
+        await _nativeController.setCameraPose(
+          horizontalDegrees: homeHorizontalDegrees,
+          verticalDegrees: _nativeHomeVerticalDegrees,
+          targetHeightFactor: _nativeHomeTargetHeightFactor,
+          zoom: _nativeHomeZoom,
+        );
+      }
 
       if (!_isCurrent(generation)) {
         return;
       }
 
-      _iosManualHorizontalDegrees = _nativeHomeHorizontalDegrees;
+      _iosManualHorizontalDegrees = homeHorizontalDegrees;
       _iosManualVerticalDegrees = _nativeHomeVerticalDegrees;
 
       debugPrint(
         'MUNJA DIGITAL TWIN HOME POSE RESTORED: '
-        'horizontal=$_nativeHomeHorizontalDegrees°, '
+        'horizontal=$homeHorizontalDegrees°, '
         'vertical=$_nativeHomeVerticalDegrees°, '
         'targetHeight=$_nativeHomeTargetHeightFactor, '
-        'zoom=$_nativeHomeZoom',
+        'zoom=$_nativeHomeZoom road=$isIosRoadBike',
       );
     } on StateError catch (error) {
       if (!_isCurrent(generation) ||
@@ -2452,9 +2557,9 @@ class _MunjaNativeDigitalTwinViewerState
       _iosManualHorizontalDegrees - (delta.dx * 0.52),
     );
 
-    _iosManualVerticalDegrees = (_iosManualVerticalDegrees + (delta.dy * 0.20))
-        .clamp(-28.0, 28.0)
-        .toDouble();
+    // Match Munja's Android interaction: manual bike rotation stays on the
+    // horizontal orbit. Vertical finger movement must not tilt the camera.
+    _iosManualVerticalDegrees = _nativeHomeVerticalDegrees;
 
     _iosCameraCommandDirty = true;
     unawaited(_flushIosCameraCommand());
@@ -2578,8 +2683,11 @@ class _MunjaNativeDigitalTwinViewerState
 
   Widget _buildNativeInteractive3d() {
     return Interactive3d(
+      // Match Customize: let the native iOS SceneKit view claim
+      // the one-finger pan gesture immediately.
+      iOSEagerGestures: true,
       controller: _nativeController,
-      modelPath: Munja3DBikeViewer.digitalTwinMasterModelPath,
+      modelPath: widget.modelPath,
       solidBackgroundColor: const <double>[0.0, 0.0, 0.0, 0.0],
       backgroundColor: Colors.transparent,
       defaultZoom: _nativeHomeZoom,
@@ -2602,28 +2710,25 @@ class _MunjaNativeDigitalTwinViewerState
   }
 
   Widget _buildNativeTouchLayer() {
-    if (_useIosTouchFallback) {
-      return Listener(
-        behavior: HitTestBehavior.opaque,
-        onPointerDown: _handleIosPointerDown,
-        onPointerMove: _handleIosPointerMove,
-        onPointerUp: _handleIosPointerUp,
-        onPointerCancel: _handleIosPointerCancel,
+    final nativeView = _buildNativeInteractive3d();
 
-        // Disable Interactive3d's own iOS pointer recognizer only in fallback
-        // mode. The model still renders normally; Flutter owns the drag and
-        // drives the same native camera through Interactive3dController.
-        child: IgnorePointer(
-          ignoring: true,
-          child: _buildNativeInteractive3d(),
-        ),
-      );
+    // Android keeps its existing native/texture gesture path completely
+    // unchanged. Only iOS uses Munja's deterministic Flutter pointer fallback.
+    if (!_useIosTouchFallback) {
+      return IgnorePointer(ignoring: !widget.enableTouch, child: nativeView);
     }
 
-    // Existing Android/non-iOS behavior is preserved exactly.
-    return IgnorePointer(
-      ignoring: !widget.enableTouch,
-      child: _buildNativeInteractive3d(),
+    // iOS:
+    // Prevent SceneKit's unrestricted camera controller from consuming the
+    // gesture. Flutter tracks one finger and drives the existing camera pose,
+    // preserving the model-specific Home angle (including Road Bike 90°).
+    return Listener(
+      behavior: HitTestBehavior.opaque,
+      onPointerDown: _handleIosPointerDown,
+      onPointerMove: _handleIosPointerMove,
+      onPointerUp: _handleIosPointerUp,
+      onPointerCancel: _handleIosPointerCancel,
+      child: IgnorePointer(child: nativeView),
     );
   }
 
@@ -2633,6 +2738,19 @@ class _MunjaNativeDigitalTwinViewerState
   }) async {
     final lifecycle = lifecycleGeneration ?? _lifecycleGeneration;
     if (!_isCurrent(lifecycle) || !_ready) return;
+
+    // The renderer/camera/showroom system is shared across bike types.
+    // Frame entity + material mappings below currently belong only to the
+    // MTB master GLB. Road and future models skip this block until their own
+    // customization configuration is added.
+    if (!widget.applyDigitalTwinCustomization) {
+      _lastAppliedSignature = null;
+      debugPrint(
+        'MUNJA DIGITAL TWIN CUSTOMIZATION: SKIPPED | '
+        'model=${widget.modelPath}',
+      );
+      return;
+    }
 
     final signature = _signature;
     if (!force && signature == _lastAppliedSignature) return;

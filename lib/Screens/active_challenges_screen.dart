@@ -4,21 +4,16 @@ import 'package:flutter/material.dart';
 import '../core/localization/app_text.dart';
 import '../services/challenge_service.dart';
 
-
 String _t(String key) => AppText.t(key);
 
 class ActiveChallengesScreen extends StatefulWidget {
   const ActiveChallengesScreen({super.key});
 
   @override
-  State<ActiveChallengesScreen> createState() =>
-      _ActiveChallengesScreenState();
+  State<ActiveChallengesScreen> createState() => _ActiveChallengesScreenState();
 }
 
-enum _ChallengeTab {
-  active,
-  history,
-}
+enum _ChallengeTab { active, history }
 
 class _ActiveChallengesScreenState extends State<ActiveChallengesScreen> {
   static const Color _background = Color(0xFF00100A);
@@ -42,8 +37,7 @@ class _ActiveChallengesScreenState extends State<ActiveChallengesScreen> {
   List<MunjaChallenge> _active = <MunjaChallenge>[];
   List<MunjaChallenge> _history = <MunjaChallenge>[];
 
-  final Map<String, _RiderProfile> _profiles =
-      <String, _RiderProfile>{};
+  final Map<String, _RiderProfile> _profiles = <String, _RiderProfile>{};
 
   @override
   void initState() {
@@ -80,15 +74,11 @@ class _ActiveChallengesScreenState extends State<ActiveChallengesScreen> {
       }
 
       active = await _challengeService.getActiveChallenges();
-      final history =
-          await _challengeService.getCompletedChallenges();
+      final history = await _challengeService.getCompletedChallenges();
 
       final riderUids = <String>{};
 
-      for (final challenge in <MunjaChallenge>[
-        ...active,
-        ...history,
-      ]) {
+      for (final challenge in <MunjaChallenge>[...active, ...history]) {
         riderUids
           ..add(challenge.creatorUid)
           ..add(challenge.opponentUid);
@@ -99,8 +89,10 @@ class _ActiveChallengesScreenState extends State<ActiveChallengesScreen> {
       await Future.wait(
         riderUids.map((uid) async {
           try {
-            final snapshot =
-                await _db.collection('socialRiders').doc(uid).get();
+            final snapshot = await _db
+                .collection('socialRiders')
+                .doc(uid)
+                .get();
 
             loadedProfiles[uid] = _RiderProfile.fromFirestore(
               uid: uid,
@@ -137,16 +129,13 @@ class _ActiveChallengesScreenState extends State<ActiveChallengesScreen> {
 
   String get _currentUid => _challengeService.currentUid ?? '';
 
-  int get _wins => _history
-      .where((challenge) => challenge.winnerUid == _currentUid)
-      .length;
+  int get _wins =>
+      _history.where((challenge) => challenge.winnerUid == _currentUid).length;
 
-  int get _draws => _history
-      .where((challenge) => challenge.winnerUid == null)
-      .length;
+  int get _draws =>
+      _history.where((challenge) => challenge.winnerUid == null).length;
 
-  int get _losses =>
-      (_history.length - _wins - _draws).clamp(0, 99999);
+  int get _losses => (_history.length - _wins - _draws).clamp(0, 99999);
 
   double get _winRate {
     final decided = _wins + _losses;
@@ -194,9 +183,7 @@ class _ActiveChallengesScreenState extends State<ActiveChallengesScreen> {
               if (_loading)
                 const SliverFillRemaining(
                   hasScrollBody: false,
-                  child: Center(
-                    child: CircularProgressIndicator(color: _mint),
-                  ),
+                  child: Center(child: CircularProgressIndicator(color: _mint)),
                 )
               else if (_error != null)
                 SliverToBoxAdapter(
@@ -214,28 +201,23 @@ class _ActiveChallengesScreenState extends State<ActiveChallengesScreen> {
                 )
               else
                 SliverList(
-                  delegate: SliverChildBuilderDelegate(
-                    (context, index) {
-                      final challenge = _visibleChallenges[index];
+                  delegate: SliverChildBuilderDelegate((context, index) {
+                    final challenge = _visibleChallenges[index];
 
-                      return Padding(
-                        padding: EdgeInsets.fromLTRB(
-                          20,
-                          index == 0 ? 20 : 12,
-                          20,
-                          0,
-                        ),
-                        child: _tab == _ChallengeTab.active
-                            ? _buildActiveCard(challenge)
-                            : _buildHistoryCard(challenge),
-                      );
-                    },
-                    childCount: _visibleChallenges.length,
-                  ),
+                    return Padding(
+                      padding: EdgeInsets.fromLTRB(
+                        20,
+                        index == 0 ? 20 : 12,
+                        20,
+                        0,
+                      ),
+                      child: _tab == _ChallengeTab.active
+                          ? _buildActiveCard(challenge)
+                          : _buildHistoryCard(challenge),
+                    );
+                  }, childCount: _visibleChallenges.length),
                 ),
-              const SliverToBoxAdapter(
-                child: SizedBox(height: 330),
-              ),
+              const SliverToBoxAdapter(child: SizedBox(height: 330)),
             ],
           ),
         ),
@@ -300,11 +282,7 @@ class _ActiveChallengesScreenState extends State<ActiveChallengesScreen> {
               shape: BoxShape.circle,
               border: Border.all(color: _border),
             ),
-            child: const Icon(
-              Icons.refresh_rounded,
-              color: _mint,
-              size: 21,
-            ),
+            child: const Icon(Icons.refresh_rounded, color: _mint, size: 21),
           ),
         ),
       ],
@@ -319,15 +297,10 @@ class _ActiveChallengesScreenState extends State<ActiveChallengesScreen> {
         gradient: const LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            Color(0xFF071F16),
-            Color(0xFF03140D),
-          ],
+          colors: [Color(0xFF071F16), Color(0xFF03140D)],
         ),
         borderRadius: BorderRadius.circular(28),
-        border: Border.all(
-          color: _mint.withValues(alpha: 0.15),
-        ),
+        border: Border.all(color: _mint.withValues(alpha: 0.15)),
         boxShadow: [
           BoxShadow(
             color: _mint.withValues(alpha: 0.055),
@@ -357,7 +330,7 @@ class _ActiveChallengesScreenState extends State<ActiveChallengesScreen> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  'MUNJA COMPETE',
+                  _t('munjaCompeteCaps'),
                   style: TextStyle(
                     color: _mint,
                     fontSize: 9,
@@ -459,11 +432,7 @@ class _ActiveChallengesScreenState extends State<ActiveChallengesScreen> {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(
-                  icon,
-                  size: 14,
-                  color: selected ? _mint : _muted,
-                ),
+                Icon(icon, size: 14, color: selected ? _mint : _muted),
                 const SizedBox(width: 6),
                 Text(
                   '$label  $count',
@@ -485,29 +454,11 @@ class _ActiveChallengesScreenState extends State<ActiveChallengesScreen> {
   Widget _buildHistoryStats() {
     return Row(
       children: [
-        Expanded(
-          child: _statTile(
-            _t('wins'),
-            '$_wins',
-            _mint,
-          ),
-        ),
+        Expanded(child: _statTile(_t('wins'), '$_wins', _mint)),
         const SizedBox(width: 8),
-        Expanded(
-          child: _statTile(
-            _t('losses'),
-            '$_losses',
-            _danger,
-          ),
-        ),
+        Expanded(child: _statTile(_t('losses'), '$_losses', _danger)),
         const SizedBox(width: 8),
-        Expanded(
-          child: _statTile(
-            _t('draws'),
-            '$_draws',
-            _gold,
-          ),
-        ),
+        Expanded(child: _statTile(_t('draws'), '$_draws', _gold)),
         const SizedBox(width: 8),
         Expanded(
           child: _statTile(
@@ -520,22 +471,13 @@ class _ActiveChallengesScreenState extends State<ActiveChallengesScreen> {
     );
   }
 
-  Widget _statTile(
-    String label,
-    String value,
-    Color color,
-  ) {
+  Widget _statTile(String label, String value, Color color) {
     return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 8,
-        vertical: 12,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
       decoration: BoxDecoration(
         color: _card,
         borderRadius: BorderRadius.circular(16),
-        border: Border.all(
-          color: color.withValues(alpha: 0.14),
-        ),
+        border: Border.all(color: color.withValues(alpha: 0.14)),
       ),
       child: Column(
         children: [
@@ -585,10 +527,7 @@ class _ActiveChallengesScreenState extends State<ActiveChallengesScreen> {
         borderRadius: BorderRadius.circular(27),
         border: Border.all(color: _border),
         boxShadow: [
-          BoxShadow(
-            color: _mint.withValues(alpha: 0.04),
-            blurRadius: 25,
-          ),
+          BoxShadow(color: _mint.withValues(alpha: 0.04), blurRadius: 25),
         ],
       ),
       child: Column(
@@ -620,7 +559,7 @@ class _ActiveChallengesScreenState extends State<ActiveChallengesScreen> {
           ),
           const SizedBox(height: 17),
           Text(
-            '${_distanceText(target)} KM RACE',
+            _t('kmRace').replaceAll('{distance}', _distanceText(target)),
             style: const TextStyle(
               color: _text,
               fontSize: 21,
@@ -630,7 +569,9 @@ class _ActiveChallengesScreenState extends State<ActiveChallengesScreen> {
           ),
           const SizedBox(height: 5),
           Text(
-            'First rider to ${_distanceText(target)} km wins.',
+            _t(
+              'firstRiderWins',
+            ).replaceAll('{distance}', _distanceText(target)),
             style: const TextStyle(
               color: _muted,
               fontSize: 11,
@@ -658,16 +599,11 @@ class _ActiveChallengesScreenState extends State<ActiveChallengesScreen> {
           const SizedBox(height: 16),
           Container(
             width: double.infinity,
-            padding: const EdgeInsets.symmetric(
-              horizontal: 14,
-              vertical: 12,
-            ),
+            padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
             decoration: BoxDecoration(
               color: _background.withValues(alpha: 0.45),
               borderRadius: BorderRadius.circular(16),
-              border: Border.all(
-                color: _border.withValues(alpha: 0.8),
-              ),
+              border: Border.all(color: _border.withValues(alpha: 0.8)),
             ),
             child: Row(
               children: [
@@ -715,20 +651,20 @@ class _ActiveChallengesScreenState extends State<ActiveChallengesScreen> {
     final color = isDraw
         ? _gold
         : won
-            ? _mint
-            : _danger;
+        ? _mint
+        : _danger;
 
     final label = isDraw
         ? _t('draw')
         : won
-            ? _t('victory')
-            : _t('defeat');
+        ? _t('victory')
+        : _t('defeat');
 
     final icon = isDraw
         ? Icons.horizontal_rule_rounded
         : won
-            ? Icons.emoji_events_rounded
-            : Icons.close_rounded;
+        ? Icons.emoji_events_rounded
+        : Icons.close_rounded;
 
     return Container(
       width: double.infinity,
@@ -737,26 +673,17 @@ class _ActiveChallengesScreenState extends State<ActiveChallengesScreen> {
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            color.withValues(alpha: 0.07),
-            _card,
-          ],
+          colors: [color.withValues(alpha: 0.07), _card],
         ),
         borderRadius: BorderRadius.circular(25),
-        border: Border.all(
-          color: color.withValues(alpha: 0.20),
-        ),
+        border: Border.all(color: color.withValues(alpha: 0.20)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Row(
             children: [
-              _statusBadge(
-                label: label,
-                icon: icon,
-                color: color,
-              ),
+              _statusBadge(label: label, icon: icon, color: color),
               const Spacer(),
               Text(
                 _formatDate(
@@ -794,11 +721,7 @@ class _ActiveChallengesScreenState extends State<ActiveChallengesScreen> {
                   color: won ? _mint : _text,
                 ),
               ),
-              Container(
-                width: 1,
-                height: 32,
-                color: _border,
-              ),
+              Container(width: 1, height: 32, color: _border),
               Expanded(
                 child: _resultValue(
                   label: other.displayName.toUpperCase(),
@@ -867,19 +790,10 @@ class _ActiveChallengesScreenState extends State<ActiveChallengesScreen> {
     );
   }
 
-  Widget _versusHeader(
-    _RiderProfile me,
-    _RiderProfile other,
-  ) {
+  Widget _versusHeader(_RiderProfile me, _RiderProfile other) {
     return Row(
       children: [
-        Expanded(
-          child: _riderMini(
-            me,
-            label: _t('youCaps'),
-            alignEnd: false,
-          ),
-        ),
+        Expanded(child: _riderMini(me, label: _t('youCaps'), alignEnd: false)),
         Container(
           width: 38,
           height: 26,
@@ -899,11 +813,7 @@ class _ActiveChallengesScreenState extends State<ActiveChallengesScreen> {
           ),
         ),
         Expanded(
-          child: _riderMini(
-            other,
-            label: other.displayName,
-            alignEnd: true,
-          ),
+          child: _riderMini(other, label: other.displayName, alignEnd: true),
         ),
       ],
     );
@@ -915,15 +825,17 @@ class _ActiveChallengesScreenState extends State<ActiveChallengesScreen> {
     required bool alignEnd,
   }) {
     return Row(
-      mainAxisAlignment:
-          alignEnd ? MainAxisAlignment.end : MainAxisAlignment.start,
+      mainAxisAlignment: alignEnd
+          ? MainAxisAlignment.end
+          : MainAxisAlignment.start,
       children: [
         if (!alignEnd) _avatar(rider),
         if (!alignEnd) const SizedBox(width: 8),
         Flexible(
           child: Column(
-            crossAxisAlignment:
-                alignEnd ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+            crossAxisAlignment: alignEnd
+                ? CrossAxisAlignment.end
+                : CrossAxisAlignment.start,
             children: [
               Text(
                 label,
@@ -966,9 +878,7 @@ class _ActiveChallengesScreenState extends State<ActiveChallengesScreen> {
       decoration: BoxDecoration(
         color: _mint.withValues(alpha: 0.09),
         shape: BoxShape.circle,
-        border: Border.all(
-          color: _mint.withValues(alpha: 0.20),
-        ),
+        border: Border.all(color: _mint.withValues(alpha: 0.20)),
       ),
       child: hasPhoto
           ? Image.network(
@@ -1050,16 +960,11 @@ class _ActiveChallengesScreenState extends State<ActiveChallengesScreen> {
     required Color color,
   }) {
     return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 10,
-        vertical: 6,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
       decoration: BoxDecoration(
         color: color.withValues(alpha: 0.10),
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(
-          color: color.withValues(alpha: 0.18),
-        ),
+        border: Border.all(color: color.withValues(alpha: 0.18)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
@@ -1085,10 +990,7 @@ class _ActiveChallengesScreenState extends State<ActiveChallengesScreen> {
 
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.symmetric(
-        horizontal: 24,
-        vertical: 34,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 34),
       decoration: BoxDecoration(
         color: _card,
         borderRadius: BorderRadius.circular(26),
@@ -1097,17 +999,13 @@ class _ActiveChallengesScreenState extends State<ActiveChallengesScreen> {
       child: Column(
         children: [
           Icon(
-            history
-                ? Icons.history_rounded
-                : Icons.emoji_events_outlined,
+            history ? Icons.history_rounded : Icons.emoji_events_outlined,
             color: _mint,
             size: 34,
           ),
           const SizedBox(height: 12),
           Text(
-            history
-                ? _t('noHistory')
-                : 'No active challenges',
+            history ? _t('noHistory') : _t('noActiveChallenges'),
             style: const TextStyle(
               color: _text,
               fontSize: 17,
@@ -1116,9 +1014,7 @@ class _ActiveChallengesScreenState extends State<ActiveChallengesScreen> {
           ),
           const SizedBox(height: 7),
           Text(
-            history
-                ? _t('historyAppear')
-                : 'Accepted challenges will appear here.',
+            history ? _t('historyAppear') : _t('acceptedChallengesAppearHere'),
             textAlign: TextAlign.center,
             style: const TextStyle(
               color: _muted,
@@ -1138,17 +1034,11 @@ class _ActiveChallengesScreenState extends State<ActiveChallengesScreen> {
       decoration: BoxDecoration(
         color: _card,
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(
-          color: _danger.withValues(alpha: 0.20),
-        ),
+        border: Border.all(color: _danger.withValues(alpha: 0.20)),
       ),
       child: Column(
         children: [
-          const Icon(
-            Icons.error_outline_rounded,
-            color: _danger,
-            size: 30,
-          ),
+          const Icon(Icons.error_outline_rounded, color: _danger, size: 30),
           const SizedBox(height: 10),
           Text(
             _error ?? _t('challengeLoadFailed'),
@@ -1175,10 +1065,7 @@ class _ActiveChallengesScreenState extends State<ActiveChallengesScreen> {
     return _profiles[uid] ?? _RiderProfile.fallback(uid);
   }
 
-  static double _ratio(
-    double value,
-    double target,
-  ) {
+  static double _ratio(double value, double target) {
     if (target <= 0) return 0;
     return (value / target).clamp(0.0, 1.0);
   }
@@ -1193,7 +1080,9 @@ class _ActiveChallengesScreenState extends State<ActiveChallengesScreen> {
   String _daysLeftText(MunjaChallenge challenge) {
     final end = challenge.endsAt;
     if (end == null) {
-      return '${challenge.durationDays} days';
+      return _t(
+        'challengeDays',
+      ).replaceAll('{count}', '${challenge.durationDays}');
     }
 
     final difference = end.difference(DateTime.now());
@@ -1205,7 +1094,9 @@ class _ActiveChallengesScreenState extends State<ActiveChallengesScreen> {
     final days = difference.inDays;
     if (days <= 0) {
       final hours = difference.inHours.clamp(0, 23);
-      return '${hours <= 0 ? 1 : hours}h left';
+      return _t(
+        'challengeHoursLeft',
+      ).replaceAll('{count}', '${hours <= 0 ? 1 : hours}');
     }
 
     return '$days ${days == 1 ? _t('homeDaysLeftSingular') : _t('homeDaysLeftPlural')}';
@@ -1231,10 +1122,14 @@ class _ActiveChallengesScreenState extends State<ActiveChallengesScreen> {
     }
 
     if (myProgress > otherProgress) {
-      return 'You lead by ${difference.toStringAsFixed(1)} km.';
+      return _t(
+        'youLeadBy',
+      ).replaceAll('{distance}', difference.toStringAsFixed(1));
     }
 
-    return '$otherName leads by ${difference.toStringAsFixed(1)} km.';
+    return _t('otherLeadsBy')
+        .replaceAll('{name}', otherName)
+        .replaceAll('{distance}', difference.toStringAsFixed(1));
   }
 }
 
@@ -1262,10 +1157,7 @@ class _RiderProfile {
       fallback: 'Munja Rider',
     );
 
-    var username = _readString(
-      map['username'],
-      fallback: '',
-    );
+    var username = _readString(map['username'], fallback: '');
 
     if (username.isEmpty) {
       username =
@@ -1274,9 +1166,7 @@ class _RiderProfile {
       username = '@$username';
     }
 
-    final photoUrl = _readNullableString(
-      map['photoUrl'] ?? map['photoURL'],
-    );
+    final photoUrl = _readNullableString(map['photoUrl'] ?? map['photoURL']);
 
     return _RiderProfile(
       uid: uid,
@@ -1297,10 +1187,7 @@ class _RiderProfile {
     );
   }
 
-  static String _readString(
-    Object? value, {
-    required String fallback,
-  }) {
+  static String _readString(Object? value, {required String fallback}) {
     if (value is String && value.trim().isNotEmpty) {
       return value.trim();
     }

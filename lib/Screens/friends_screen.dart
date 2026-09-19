@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../core/theme/munja_colors.dart';
+import '../Core/localization/app_text.dart';
 import '../models/social_rider_profile.dart';
 import '../services/friend_service.dart';
 import '../services/social_rider_service.dart';
@@ -26,9 +27,7 @@ class _FriendsScreenState extends State<FriendsScreen> {
     Future.microtask(_loadFriends);
   }
 
-  Future<void> _loadFriends({
-    bool showRefreshState = false,
-  }) async {
+  Future<void> _loadFriends({bool showRefreshState = false}) async {
     if (showRefreshState && mounted) {
       setState(() {
         _refreshing = true;
@@ -42,8 +41,7 @@ class _FriendsScreenState extends State<FriendsScreen> {
 
       for (final uid in friendUids) {
         try {
-          final rider =
-              await SocialRiderService.instance.getProfileByUid(uid);
+          final rider = await SocialRiderService.instance.getProfileByUid(uid);
 
           if (rider != null) {
             loadedFriends.add(rider);
@@ -55,9 +53,8 @@ class _FriendsScreenState extends State<FriendsScreen> {
       }
 
       loadedFriends.sort(
-        (a, b) => a.displayName
-            .toLowerCase()
-            .compareTo(b.displayName.toLowerCase()),
+        (a, b) =>
+            a.displayName.toLowerCase().compareTo(b.displayName.toLowerCase()),
       );
 
       if (!mounted) {
@@ -78,8 +75,7 @@ class _FriendsScreenState extends State<FriendsScreen> {
       }
 
       setState(() {
-        _errorMessage =
-            'Your Munja friends could not be loaded. Please try again.';
+        _errorMessage = AppText.t('friendsLoadFailed');
         _loading = false;
       });
     } finally {
@@ -91,9 +87,7 @@ class _FriendsScreenState extends State<FriendsScreen> {
     }
   }
 
-  Future<void> _openRider(
-    SocialRiderProfile rider,
-  ) async {
+  Future<void> _openRider(SocialRiderProfile rider) async {
     HapticFeedback.selectionClick();
 
     await showModalBottomSheet<void>(
@@ -102,20 +96,13 @@ class _FriendsScreenState extends State<FriendsScreen> {
       barrierColor: Colors.black.withOpacity(0.72),
       isScrollControlled: true,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(
-          top: Radius.circular(32),
-        ),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(32)),
       ),
       builder: (sheetContext) {
         return SafeArea(
           top: false,
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(
-              20,
-              18,
-              20,
-              28,
-            ),
+            padding: const EdgeInsets.fromLTRB(20, 18, 20, 28),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
@@ -128,9 +115,7 @@ class _FriendsScreenState extends State<FriendsScreen> {
                   ),
                 ),
                 const SizedBox(height: 22),
-                _FriendSheetProfile(
-                  rider: rider,
-                ),
+                _FriendSheetProfile(rider: rider),
               ],
             ),
           ),
@@ -139,9 +124,7 @@ class _FriendsScreenState extends State<FriendsScreen> {
     );
   }
 
-  void _showChallengeComingSoon(
-    SocialRiderProfile rider,
-  ) {
+  void _showChallengeComingSoon(SocialRiderProfile rider) {
     HapticFeedback.mediumImpact();
 
     ScaffoldMessenger.of(context).showSnackBar(
@@ -166,12 +149,10 @@ class _FriendsScreenState extends State<FriendsScreen> {
         foregroundColor: Colors.white,
         leading: IconButton(
           onPressed: () => Navigator.of(context).pop(),
-          icon: const Icon(
-            Icons.arrow_back_ios_new_rounded,
-          ),
+          icon: const Icon(Icons.arrow_back_ios_new_rounded),
         ),
-        title: const Text(
-          'Friends',
+        title: Text(
+          AppText.t('friendsTitle'),
           style: TextStyle(
             color: Colors.white,
             fontSize: 20,
@@ -183,9 +164,7 @@ class _FriendsScreenState extends State<FriendsScreen> {
       body: SafeArea(
         top: false,
         child: RefreshIndicator(
-          onRefresh: () => _loadFriends(
-            showRefreshState: true,
-          ),
+          onRefresh: () => _loadFriends(showRefreshState: true),
           color: MunjaColors.mint,
           backgroundColor: MunjaColors.panel,
           child: _buildBody(),
@@ -200,10 +179,7 @@ class _FriendsScreenState extends State<FriendsScreen> {
     }
 
     if (_errorMessage != null) {
-      return _FriendsError(
-        message: _errorMessage!,
-        onRetry: _loadFriends,
-      );
+      return _FriendsError(message: _errorMessage!, onRetry: _loadFriends);
     }
 
     if (_friends.isEmpty) {
@@ -212,43 +188,27 @@ class _FriendsScreenState extends State<FriendsScreen> {
 
     return ListView(
       physics: const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.fromLTRB(
-        20,
-        12,
-        20,
-        44,
-      ),
+      padding: const EdgeInsets.fromLTRB(20, 12, 20, 44),
       children: [
-        _FriendsHeader(
-          count: _friends.length,
-          refreshing: _refreshing,
-        ),
+        _FriendsHeader(count: _friends.length, refreshing: _refreshing),
         const SizedBox(height: 18),
-        ..._friends.map(
-          (rider) {
-            return Padding(
-              padding: const EdgeInsets.only(
-                bottom: 14,
-              ),
-              child: _FriendCard(
-                rider: rider,
-                onTap: () => _openRider(rider),
-                onChallenge: () =>
-                    _showChallengeComingSoon(rider),
-              ),
-            );
-          },
-        ),
+        ..._friends.map((rider) {
+          return Padding(
+            padding: const EdgeInsets.only(bottom: 14),
+            child: _FriendCard(
+              rider: rider,
+              onTap: () => _openRider(rider),
+              onChallenge: () => _showChallengeComingSoon(rider),
+            ),
+          );
+        }),
       ],
     );
   }
 }
 
 class _FriendsHeader extends StatelessWidget {
-  const _FriendsHeader({
-    required this.count,
-    required this.refreshing,
-  });
+  const _FriendsHeader({required this.count, required this.refreshing});
 
   final int count;
   final bool refreshing;
@@ -260,9 +220,7 @@ class _FriendsHeader extends StatelessWidget {
       decoration: BoxDecoration(
         color: MunjaColors.panel.withOpacity(0.72),
         borderRadius: BorderRadius.circular(30),
-        border: Border.all(
-          color: MunjaColors.mint.withOpacity(0.14),
-        ),
+        border: Border.all(color: MunjaColors.mint.withOpacity(0.14)),
         boxShadow: [
           BoxShadow(
             color: MunjaColors.mint.withOpacity(0.06),
@@ -291,8 +249,8 @@ class _FriendsHeader extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'MUNJA CREW',
+                Text(
+                  AppText.t('munjaCrewCaps'),
                   style: TextStyle(
                     color: MunjaColors.mint,
                     fontSize: 9,
@@ -302,7 +260,7 @@ class _FriendsHeader extends StatelessWidget {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  '$count ${count == 1 ? 'friend' : 'friends'}',
+                  '$count ${count == 1 ? AppText.t('friendSingular') : AppText.t('friendsPlural')}',
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 20,
@@ -311,9 +269,8 @@ class _FriendsHeader extends StatelessWidget {
                   ),
                 ),
                 const SizedBox(height: 4),
-                const Text(
-                  'Your Munja riders are ready for rides, '
-                  'progress and future challenges.',
+                Text(
+                  AppText.t('munjaRidersReady'),
                   style: TextStyle(
                     color: MunjaColors.textSoft,
                     fontSize: 12,
@@ -353,8 +310,7 @@ class _FriendCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final hasPhoto =
-        rider.photoUrl != null &&
-        rider.photoUrl!.trim().isNotEmpty;
+        rider.photoUrl != null && rider.photoUrl!.trim().isNotEmpty;
 
     return Material(
       color: Colors.transparent,
@@ -366,9 +322,7 @@ class _FriendCard extends StatelessWidget {
           decoration: BoxDecoration(
             color: MunjaColors.panel.withOpacity(0.78),
             borderRadius: BorderRadius.circular(28),
-            border: Border.all(
-              color: Colors.white.withOpacity(0.06),
-            ),
+            border: Border.all(color: Colors.white.withOpacity(0.06)),
           ),
           child: Column(
             children: [
@@ -381,8 +335,7 @@ class _FriendCard extends StatelessWidget {
                       shape: BoxShape.circle,
                       color: MunjaColors.mint.withOpacity(0.10),
                       border: Border.all(
-                        color:
-                            MunjaColors.mint.withOpacity(0.32),
+                        color: MunjaColors.mint.withOpacity(0.32),
                         width: 2,
                       ),
                     ),
@@ -391,11 +344,7 @@ class _FriendCard extends StatelessWidget {
                         ? Image.network(
                             rider.photoUrl!,
                             fit: BoxFit.cover,
-                            errorBuilder: (
-                              context,
-                              error,
-                              stackTrace,
-                            ) {
+                            errorBuilder: (context, error, stackTrace) {
                               return const _FallbackAvatar();
                             },
                           )
@@ -404,8 +353,7 @@ class _FriendCard extends StatelessWidget {
                   const SizedBox(width: 14),
                   Expanded(
                     child: Column(
-                      crossAxisAlignment:
-                          CrossAxisAlignment.start,
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
                         Row(
                           children: [
@@ -413,37 +361,30 @@ class _FriendCard extends StatelessWidget {
                               child: Text(
                                 rider.displayName,
                                 maxLines: 1,
-                                overflow:
-                                    TextOverflow.ellipsis,
+                                overflow: TextOverflow.ellipsis,
                                 style: const TextStyle(
                                   color: Colors.white,
                                   fontSize: 19,
-                                  fontWeight:
-                                      FontWeight.w900,
+                                  fontWeight: FontWeight.w900,
                                   letterSpacing: -0.3,
                                 ),
                               ),
                             ),
                             Container(
-                              padding:
-                                  const EdgeInsets.symmetric(
+                              padding: const EdgeInsets.symmetric(
                                 horizontal: 9,
                                 vertical: 6,
                               ),
                               decoration: BoxDecoration(
                                 color: MunjaColors.mint,
-                                borderRadius:
-                                    BorderRadius.circular(
-                                  999,
-                                ),
+                                borderRadius: BorderRadius.circular(999),
                               ),
                               child: Text(
                                 'LVL ${rider.level}',
                                 style: const TextStyle(
                                   color: Colors.black,
                                   fontSize: 9,
-                                  fontWeight:
-                                      FontWeight.w900,
+                                  fontWeight: FontWeight.w900,
                                 ),
                               ),
                             ),
@@ -455,8 +396,7 @@ class _FriendCard extends StatelessWidget {
                           style: const TextStyle(
                             color: MunjaColors.mint,
                             fontSize: 13,
-                            fontWeight:
-                                FontWeight.w900,
+                            fontWeight: FontWeight.w900,
                           ),
                         ),
                         const SizedBox(height: 3),
@@ -467,8 +407,7 @@ class _FriendCard extends StatelessWidget {
                           style: const TextStyle(
                             color: Colors.white38,
                             fontSize: 9,
-                            fontWeight:
-                                FontWeight.w800,
+                            fontWeight: FontWeight.w800,
                             letterSpacing: 0.4,
                           ),
                         ),
@@ -477,8 +416,7 @@ class _FriendCard extends StatelessWidget {
                   ),
                 ],
               ),
-              if (rider.city != null &&
-                  rider.city!.trim().isNotEmpty) ...[
+              if (rider.city != null && rider.city!.trim().isNotEmpty) ...[
                 const SizedBox(height: 14),
                 Row(
                   children: [
@@ -504,16 +442,15 @@ class _FriendCard extends StatelessWidget {
                 children: [
                   Expanded(
                     child: _FriendMetric(
-                      label: 'LEVEL',
+                      label: AppText.t('levelCaps'),
                       value: '${rider.level}',
-                      icon:
-                          Icons.workspace_premium_rounded,
+                      icon: Icons.workspace_premium_rounded,
                     ),
                   ),
                   const SizedBox(width: 10),
                   Expanded(
                     child: _FriendMetric(
-                      label: 'TOTAL XP',
+                      label: AppText.t('totalXpCaps'),
                       value: '${rider.totalXp}',
                       icon: Icons.bolt_rounded,
                     ),
@@ -526,14 +463,10 @@ class _FriendCard extends StatelessWidget {
                 height: 50,
                 child: FilledButton.icon(
                   onPressed: onChallenge,
-                  icon: const Icon(
-                    Icons.bolt_rounded,
-                  ),
-                  label: const Text(
-                    'Challenge',
-                    style: TextStyle(
-                      fontWeight: FontWeight.w900,
-                    ),
+                  icon: const Icon(Icons.bolt_rounded),
+                  label: Text(
+                    AppText.t('challenge'),
+                    style: TextStyle(fontWeight: FontWeight.w900),
                   ),
                 ),
               ),
@@ -560,36 +493,25 @@ class _FriendMetric extends StatelessWidget {
   Widget build(BuildContext context) {
     return Container(
       height: 72,
-      padding: const EdgeInsets.symmetric(
-        horizontal: 12,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 12),
       decoration: BoxDecoration(
         color: Colors.black.withOpacity(0.16),
         borderRadius: BorderRadius.circular(20),
-        border: Border.all(
-          color: Colors.white.withOpacity(0.055),
-        ),
+        border: Border.all(color: Colors.white.withOpacity(0.055)),
       ),
       child: Row(
         children: [
-          Icon(
-            icon,
-            color: MunjaColors.mint,
-            size: 20,
-          ),
+          Icon(icon, color: MunjaColors.mint, size: 20),
           const SizedBox(width: 10),
           Expanded(
             child: Column(
-              mainAxisAlignment:
-                  MainAxisAlignment.center,
-              crossAxisAlignment:
-                  CrossAxisAlignment.start,
+              mainAxisAlignment: MainAxisAlignment.center,
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
                   value,
                   maxLines: 1,
-                  overflow:
-                      TextOverflow.ellipsis,
+                  overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
                     color: Colors.white,
                     fontSize: 15,
@@ -616,17 +538,14 @@ class _FriendMetric extends StatelessWidget {
 }
 
 class _FriendSheetProfile extends StatelessWidget {
-  const _FriendSheetProfile({
-    required this.rider,
-  });
+  const _FriendSheetProfile({required this.rider});
 
   final SocialRiderProfile rider;
 
   @override
   Widget build(BuildContext context) {
     final hasPhoto =
-        rider.photoUrl != null &&
-        rider.photoUrl!.trim().isNotEmpty;
+        rider.photoUrl != null && rider.photoUrl!.trim().isNotEmpty;
 
     return Column(
       children: [
@@ -646,11 +565,7 @@ class _FriendSheetProfile extends StatelessWidget {
               ? Image.network(
                   rider.photoUrl!,
                   fit: BoxFit.cover,
-                  errorBuilder: (
-                    context,
-                    error,
-                    stackTrace,
-                  ) {
+                  errorBuilder: (context, error, stackTrace) {
                     return const _FallbackAvatar();
                   },
                 )
@@ -686,12 +601,10 @@ class _FriendSheetProfile extends StatelessWidget {
             letterSpacing: 0.5,
           ),
         ),
-        if (rider.city != null &&
-            rider.city!.trim().isNotEmpty) ...[
+        if (rider.city != null && rider.city!.trim().isNotEmpty) ...[
           const SizedBox(height: 10),
           Row(
-            mainAxisAlignment:
-                MainAxisAlignment.center,
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
               const Icon(
                 Icons.location_on_rounded,
@@ -715,16 +628,15 @@ class _FriendSheetProfile extends StatelessWidget {
           children: [
             Expanded(
               child: _FriendMetric(
-                label: 'LEVEL',
+                label: AppText.t('levelCaps'),
                 value: '${rider.level}',
-                icon:
-                    Icons.workspace_premium_rounded,
+                icon: Icons.workspace_premium_rounded,
               ),
             ),
             const SizedBox(width: 10),
             Expanded(
               child: _FriendMetric(
-                label: 'TOTAL XP',
+                label: AppText.t('totalXpCaps'),
                 value: '${rider.totalXp}',
                 icon: Icons.bolt_rounded,
               ),
@@ -742,11 +654,7 @@ class _FallbackAvatar extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return const Center(
-      child: Icon(
-        Icons.person_rounded,
-        color: MunjaColors.mint,
-        size: 32,
-      ),
+      child: Icon(Icons.person_rounded, color: MunjaColors.mint, size: 32),
     );
   }
 }
@@ -757,24 +665,16 @@ class _FriendsLoading extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListView(
-      physics:
-          const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.fromLTRB(
-        20,
-        80,
-        20,
-        44,
-      ),
-      children: const [
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: const EdgeInsets.fromLTRB(20, 80, 20, 44),
+      children: [
         Center(
           child: Column(
             children: [
-              CircularProgressIndicator(
-                color: MunjaColors.mint,
-              ),
+              CircularProgressIndicator(color: MunjaColors.mint),
               SizedBox(height: 16),
               Text(
-                'Loading friends...',
+                AppText.t('loadingFriends'),
                 style: TextStyle(
                   color: MunjaColors.textSoft,
                   fontSize: 12,
@@ -790,38 +690,23 @@ class _FriendsLoading extends StatelessWidget {
 }
 
 class _FriendsError extends StatelessWidget {
-  const _FriendsError({
-    required this.message,
-    required this.onRetry,
-  });
+  const _FriendsError({required this.message, required this.onRetry});
 
   final String message;
-  final Future<void> Function({
-    bool showRefreshState,
-  }) onRetry;
+  final Future<void> Function({bool showRefreshState}) onRetry;
 
   @override
   Widget build(BuildContext context) {
     return ListView(
-      physics:
-          const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.fromLTRB(
-        20,
-        50,
-        20,
-        44,
-      ),
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: const EdgeInsets.fromLTRB(20, 50, 20, 44),
       children: [
         Container(
           padding: const EdgeInsets.all(22),
           decoration: BoxDecoration(
-            color:
-                MunjaColors.panel.withOpacity(0.55),
+            color: MunjaColors.panel.withOpacity(0.55),
             borderRadius: BorderRadius.circular(28),
-            border: Border.all(
-              color:
-                  MunjaColors.danger.withOpacity(0.20),
-            ),
+            border: Border.all(color: MunjaColors.danger.withOpacity(0.20)),
           ),
           child: Column(
             children: [
@@ -831,8 +716,8 @@ class _FriendsError extends StatelessWidget {
                 size: 34,
               ),
               const SizedBox(height: 14),
-              const Text(
-                'Could not load friends',
+              Text(
+                AppText.t('couldNotLoadFriends'),
                 style: TextStyle(
                   color: Colors.white,
                   fontSize: 18,
@@ -853,18 +738,12 @@ class _FriendsError extends StatelessWidget {
               const SizedBox(height: 16),
               FilledButton.icon(
                 onPressed: () {
-                  onRetry(
-                    showRefreshState: false,
-                  );
+                  onRetry(showRefreshState: false);
                 },
-                icon: const Icon(
-                  Icons.refresh_rounded,
-                ),
-                label: const Text(
-                  'Try again',
-                  style: TextStyle(
-                    fontWeight: FontWeight.w900,
-                  ),
+                icon: const Icon(Icons.refresh_rounded),
+                label: Text(
+                  AppText.t('tryAgain'),
+                  style: TextStyle(fontWeight: FontWeight.w900),
                 ),
               ),
             ],
@@ -881,31 +760,17 @@ class _EmptyFriends extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return ListView(
-      physics:
-          const AlwaysScrollableScrollPhysics(),
-      padding: const EdgeInsets.fromLTRB(
-        20,
-        60,
-        20,
-        44,
-      ),
+      physics: const AlwaysScrollableScrollPhysics(),
+      padding: const EdgeInsets.fromLTRB(20, 60, 20, 44),
       children: [
         Container(
-          padding: const EdgeInsets.fromLTRB(
-            24,
-            30,
-            24,
-            30,
-          ),
+          padding: const EdgeInsets.fromLTRB(24, 30, 24, 30),
           decoration: BoxDecoration(
-            color:
-                MunjaColors.panel.withOpacity(0.50),
+            color: MunjaColors.panel.withOpacity(0.50),
             borderRadius: BorderRadius.circular(30),
-            border: Border.all(
-              color: Colors.white.withOpacity(0.055),
-            ),
+            border: Border.all(color: Colors.white.withOpacity(0.055)),
           ),
-          child: const Column(
+          child: Column(
             children: [
               Icon(
                 Icons.people_outline_rounded,
@@ -914,7 +779,7 @@ class _EmptyFriends extends StatelessWidget {
               ),
               SizedBox(height: 16),
               Text(
-                'No friends yet',
+                AppText.t('noFriendsYet'),
                 style: TextStyle(
                   color: Colors.white,
                   fontSize: 20,

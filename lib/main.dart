@@ -619,7 +619,14 @@ class _AppEntryScreenState extends State<AppEntryScreen> {
         body: Center(child: CircularProgressIndicator()),
       );
     }
-    return onboardingDone ? MainNavigation() : const OnboardingScreen();
+    return onboardingDone
+        ? MainNavigation()
+        : OnboardingScreen(
+            onFinished: () {
+              if (!mounted) return;
+              setState(() => onboardingDone = true);
+            },
+          );
   }
 }
 
@@ -761,10 +768,7 @@ Widget buildMiniBarChart(List<MonthlyStats> stats) {
               children: [
                 Text(
                   item.km.toStringAsFixed(1),
-                  style: TextStyle(
-                    fontSize: 12,
-                    color: MunjaColors.textSoft,
-                  ),
+                  style: TextStyle(fontSize: 12, color: MunjaColors.textSoft),
                 ),
                 const SizedBox(height: 8),
                 AnimatedContainer(
@@ -801,7 +805,9 @@ Widget buildMiniBarChart(List<MonthlyStats> stats) {
 }
 
 class OnboardingScreen extends StatefulWidget {
-  const OnboardingScreen({super.key});
+  final VoidCallback onFinished;
+
+  const OnboardingScreen({super.key, required this.onFinished});
 
   @override
   State<OnboardingScreen> createState() => _OnboardingScreenState();
@@ -863,9 +869,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
 
     if (!mounted) return;
 
-    Navigator.of(context).pushReplacement(
-      MaterialPageRoute(builder: (_) => MainNavigation()),
-    );
+    widget.onFinished();
   }
 
   Future<void> _next() async {
@@ -912,8 +916,9 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                         AppText.t('getStarted'),
                         style: TextStyle(
                           color: Colors.white,
-                          fontSize:
-                              MediaQuery.sizeOf(context).width < 390 ? 31 : 35,
+                          fontSize: MediaQuery.sizeOf(context).width < 390
+                              ? 31
+                              : 35,
                           height: 1.05,
                           fontWeight: FontWeight.w900,
                           letterSpacing: -1.1,
@@ -955,12 +960,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                         en: 'Start app',
                         bs: 'Pokreni',
                       )
-                    : _text(
-                        context,
-                        da: 'Næste',
-                        en: 'Next',
-                        bs: 'Dalje',
-                      ),
+                    : _text(context, da: 'Næste', en: 'Next', bs: 'Dalje'),
                 isLastPage: isLastPage,
                 onBack: page == 0 ? null : _back,
                 onNext: _next,
@@ -1123,7 +1123,12 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
               ),
               const SizedBox(height: 24),
               _WheelNavigationPreview(
-                homeLabel: _text(context, da: 'Hjem', en: 'Home', bs: 'Početna'),
+                homeLabel: _text(
+                  context,
+                  da: 'Hjem',
+                  en: 'Home',
+                  bs: 'Početna',
+                ),
                 rideLabel: _text(context, da: 'Tur', en: 'Ride', bs: 'Vožnja'),
                 garageLabel: _text(
                   context,
@@ -1487,12 +1492,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 controller: nameCtrl,
                 textInputAction: TextInputAction.next,
                 decoration: InputDecoration(
-                  labelText: _text(
-                    context,
-                    da: 'Navn',
-                    en: 'Name',
-                    bs: 'Ime',
-                  ),
+                  labelText: _text(context, da: 'Navn', en: 'Name', bs: 'Ime'),
                   prefixIcon: const Icon(Icons.person_rounded),
                 ),
               ),
@@ -1518,12 +1518,7 @@ class _OnboardingScreenState extends State<OnboardingScreen> {
                 textInputAction: TextInputAction.done,
                 onSubmitted: (_) => _finish(),
                 decoration: InputDecoration(
-                  labelText: _text(
-                    context,
-                    da: 'By',
-                    en: 'City',
-                    bs: 'Grad',
-                  ),
+                  labelText: _text(context, da: 'By', en: 'City', bs: 'Grad'),
                   prefixIcon: const Icon(Icons.location_city_rounded),
                 ),
               ),
@@ -1810,10 +1805,7 @@ class _OnboardingGlassCard extends StatelessWidget {
             blurRadius: 42,
             offset: const Offset(0, 20),
           ),
-          BoxShadow(
-            color: MunjaColors.mint.withOpacity(0.07),
-            blurRadius: 36,
-          ),
+          BoxShadow(color: MunjaColors.mint.withOpacity(0.07), blurRadius: 36),
         ],
       ),
       child: child,
@@ -1929,8 +1921,7 @@ class _OnboardingFeatureTile extends StatelessWidget {
 class _DigitalTwinPreview extends StatelessWidget {
   const _DigitalTwinPreview();
 
-  static const String _onboardingBikeModel =
-      'assets/models/munja_bike_v2.glb';
+  static const String _onboardingBikeModel = 'assets/models/munja_bike_v2.glb';
 
   @override
   Widget build(BuildContext context) {
@@ -1942,10 +1933,7 @@ class _DigitalTwinPreview extends StatelessWidget {
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            MunjaColors.mint.withOpacity(0.18),
-            const Color(0xFF03130F),
-          ],
+          colors: [MunjaColors.mint.withOpacity(0.18), const Color(0xFF03130F)],
         ),
         border: Border.all(color: MunjaColors.mint.withOpacity(0.28)),
         boxShadow: [
@@ -2003,9 +1991,7 @@ class _DigitalTwinPreview extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: const Color(0xFF03100D).withOpacity(0.88),
                   borderRadius: BorderRadius.circular(999),
-                  border: Border.all(
-                    color: Colors.white.withOpacity(0.08),
-                  ),
+                  border: Border.all(color: Colors.white.withOpacity(0.08)),
                 ),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.center,
@@ -2122,10 +2108,7 @@ class _WheelNavigationPreview extends StatelessWidget {
             decoration: BoxDecoration(
               shape: BoxShape.circle,
               color: const Color(0xFF07130F),
-              border: Border.all(
-                color: MunjaColors.mintStrong,
-                width: 3,
-              ),
+              border: Border.all(color: MunjaColors.mintStrong, width: 3),
               boxShadow: [
                 BoxShadow(
                   color: MunjaColors.mint.withOpacity(0.42),
@@ -2258,9 +2241,7 @@ class _OnboardingInstructionTile extends StatelessWidget {
             child: Text(
               number,
               style: TextStyle(
-                color: highlighted
-                    ? const Color(0xFF03130F)
-                    : Colors.white,
+                color: highlighted ? const Color(0xFF03130F) : Colors.white,
                 fontWeight: FontWeight.w900,
               ),
             ),
@@ -2303,10 +2284,7 @@ class _RideHubPreview extends StatelessWidget {
   final String nearbyLabel;
   final String customLabel;
 
-  const _RideHubPreview({
-    required this.nearbyLabel,
-    required this.customLabel,
-  });
+  const _RideHubPreview({required this.nearbyLabel, required this.customLabel});
 
   @override
   Widget build(BuildContext context) {
@@ -2369,10 +2347,7 @@ class _RideHubPreview extends StatelessWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                const Icon(
-                  Icons.alt_route_rounded,
-                  color: Color(0xFF03130F),
-                ),
+                const Icon(Icons.alt_route_rounded, color: Color(0xFF03130F)),
                 const SizedBox(width: 9),
                 Flexible(
                   child: Text(
@@ -2479,10 +2454,7 @@ class _RewardPreview extends StatelessWidget {
         gradient: LinearGradient(
           begin: Alignment.topLeft,
           end: Alignment.bottomRight,
-          colors: [
-            MunjaColors.mint.withOpacity(0.18),
-            const Color(0xFF03130F),
-          ],
+          colors: [MunjaColors.mint.withOpacity(0.18), const Color(0xFF03130F)],
         ),
         border: Border.all(color: MunjaColors.mint.withOpacity(0.24)),
       ),
@@ -2712,7 +2684,6 @@ class _OnboardingGridPainter extends CustomPainter {
   @override
   bool shouldRepaint(covariant _OnboardingGridPainter oldDelegate) => false;
 }
-
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});

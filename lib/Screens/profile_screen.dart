@@ -60,7 +60,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   int _accountTotalXp = 0;
 
   StreamSubscription<DocumentSnapshot<Map<String, dynamic>>>?
-      _accountSubscription;
+  _accountSubscription;
 
   List<Trip> trips = [];
   List<MunjaDevice> savedDevices = [];
@@ -102,9 +102,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
   void _startLiveAccountData() {
     final uid = _currentUserId;
 
-    unawaited(
-      _accountSubscription?.cancel(),
-    );
+    unawaited(_accountSubscription?.cancel());
 
     _accountSubscription = null;
 
@@ -117,48 +115,33 @@ class _ProfileScreenState extends State<ProfileScreen> {
         .doc(uid)
         .snapshots()
         .listen(
-      (snapshot) {
-        if (!snapshot.exists) {
-          return;
-        }
+          (snapshot) {
+            if (!snapshot.exists) {
+              return;
+            }
 
-        final data =
-            snapshot.data() ??
-                const <String, dynamic>{};
+            final data = snapshot.data() ?? const <String, dynamic>{};
 
-        final totalXp =
-            _readLiveInt(
-          data['totalXp'],
+            final totalXp = _readLiveInt(data['totalXp']);
+
+            if (!mounted || totalXp == _accountTotalXp) {
+              return;
+            }
+
+            setState(() {
+              _accountTotalXp = totalXp;
+            });
+
+            debugPrint('PROFILE LIVE ACCOUNT XP: $_accountTotalXp');
+          },
+          onError: (Object error, StackTrace stackTrace) {
+            debugPrint('PROFILE LIVE ACCOUNT ERROR: $error');
+            debugPrint('$stackTrace');
+          },
         );
-
-        if (!mounted ||
-            totalXp == _accountTotalXp) {
-          return;
-        }
-
-        setState(() {
-          _accountTotalXp = totalXp;
-        });
-
-        debugPrint(
-          'PROFILE LIVE ACCOUNT XP: $_accountTotalXp',
-        );
-      },
-      onError: (
-        Object error,
-        StackTrace stackTrace,
-      ) {
-        debugPrint(
-          'PROFILE LIVE ACCOUNT ERROR: $error',
-        );
-        debugPrint('$stackTrace');
-      },
-    );
   }
 
-  static int _readLiveInt(
-    Object? value,
-  ) {
+  static int _readLiveInt(Object? value) {
     if (value is int) {
       return value < 0 ? 0 : value;
     }
@@ -169,11 +152,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
 
     if (value is String) {
-      final parsed =
-          int.tryParse(
-            value.trim(),
-          ) ??
-          0;
+      final parsed = int.tryParse(value.trim()) ?? 0;
 
       return parsed < 0 ? 0 : parsed;
     }
@@ -181,8 +160,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     return 0;
   }
 
-  String get _profilePhotoSubtitle =>
-      AppText.t('profilePhotoSubtitle');
+  String get _profilePhotoSubtitle => AppText.t('profilePhotoSubtitle');
 
   String get _accountTitle => AppText.t('account');
 
@@ -190,51 +168,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
   String get _signOutText => AppText.t('signOut');
 
-  String get _signOutDescription {
-    switch (AppText.currentLocale.languageCode) {
-      case 'en':
-        return 'You will return to the login screen.';
-      case 'bs':
-        return 'Vratit ćeš se na ekran za prijavu.';
-      default:
-        return 'Du vender tilbage til login-skærmen.';
-    }
-  }
+  String get _signOutDescription => AppText.t('profileSignOutDescription');
 
-  String get _signOutDialogTitle {
-    switch (AppText.currentLocale.languageCode) {
-      case 'en':
-        return 'Sign out of Munja?';
-      case 'bs':
-        return 'Odjaviti se iz Munja aplikacije?';
-      default:
-        return 'Log ud af Munja?';
-    }
-  }
+  String get _signOutDialogTitle => AppText.t('profileSignOutDialogTitle');
 
-  String get _signOutDialogMessage {
-    switch (AppText.currentLocale.languageCode) {
-      case 'en':
-        return 'Your local rides and settings stay on this device.';
-      case 'bs':
-        return 'Tvoje lokalne vožnje i postavke ostaju na ovom uređaju.';
-      default:
-        return 'Dine lokale ture og indstillinger bliver på denne enhed.';
-    }
-  }
+  String get _signOutDialogMessage => AppText.t('profileSignOutDialogMessage');
 
   String get _cancelText => AppText.t('cancel');
 
-  String get _signOutFailedText {
-    switch (AppText.currentLocale.languageCode) {
-      case 'en':
-        return 'Sign out failed. Please try again.';
-      case 'bs':
-        return 'Odjava nije uspjela. Pokušaj ponovo.';
-      default:
-        return 'Log ud mislykkedes. Prøv igen.';
-    }
-  }
+  String get _signOutFailedText => AppText.t('profileSignOutFailed');
 
   Future<void> _confirmSignOut() async {
     if (signingOut) return;
@@ -333,19 +275,16 @@ class _ProfileScreenState extends State<ProfileScreen> {
     String? resolvedRemotePhotoUrl;
 
     try {
-      loadedFirestoreUser =
-          await FirestoreUserService.instance.ensureCurrentUserExists(
-        updateLastLogin: false,
-      );
+      loadedFirestoreUser = await FirestoreUserService.instance
+          .ensureCurrentUserExists(updateLastLogin: false);
 
-      resolvedTotalXp =
-          await FirestoreUserService.instance.syncTotalXpAtLeast(
+      resolvedTotalXp = await FirestoreUserService.instance.syncTotalXpAtLeast(
         localCalculatedXp,
       );
 
       // Re-read after migration so Profile holds the canonical account object.
-      loadedFirestoreUser =
-          await FirestoreUserService.instance.getCurrentUser();
+      loadedFirestoreUser = await FirestoreUserService.instance
+          .getCurrentUser();
 
       if (loadedFirestoreUser != null) {
         resolvedTotalXp = loadedFirestoreUser.safeTotalXp;
@@ -369,32 +308,29 @@ class _ProfileScreenState extends State<ProfileScreen> {
       resolvedTotalXp = localCalculatedXp;
     }
 
-    final resolvedLevel =
-        XpService.levelForTotalXp(resolvedTotalXp);
+    final resolvedLevel = XpService.levelForTotalXp(resolvedTotalXp);
 
     SocialRiderProfile? loadedSocialProfile;
     final loadedFriendsPreview = <SocialRiderProfile>[];
 
     try {
-      loadedSocialProfile =
-          await SocialRiderService.instance.ensureCurrentProfile(
-        displayName: profile.name,
-        level: resolvedLevel,
-        totalXp: resolvedTotalXp,
-        city: profile.city,
-      );
+      loadedSocialProfile = await SocialRiderService.instance
+          .ensureCurrentProfile(
+            displayName: profile.name,
+            level: resolvedLevel,
+            totalXp: resolvedTotalXp,
+            city: profile.city,
+          );
     } catch (error, stackTrace) {
       debugPrint('PROFILE SOCIAL LOAD ERROR: $error');
       debugPrint('$stackTrace');
     }
 
     try {
-      final friendUids =
-          await FriendService.instance.getFriendUids();
+      final friendUids = await FriendService.instance.getFriendUids();
 
       for (final uid in friendUids.take(3)) {
-        final rider =
-            await SocialRiderService.instance.getProfileByUid(uid);
+        final rider = await SocialRiderService.instance.getProfileByUid(uid);
 
         if (rider != null) {
           loadedFriendsPreview.add(rider);
@@ -444,8 +380,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
 
     try {
-      socialProfile =
-          await SocialRiderService.instance.ensureCurrentProfile(
+      socialProfile = await SocialRiderService.instance.ensureCurrentProfile(
         displayName: profile.name,
         level: level,
         totalXp: totalXp,
@@ -480,9 +415,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     HapticFeedback.selectionClick();
 
     await Navigator.of(context).push<void>(
-      MaterialPageRoute<void>(
-        builder: (_) => const FindRiderScreen(),
-      ),
+      MaterialPageRoute<void>(builder: (_) => const FindRiderScreen()),
     );
 
     if (!mounted) return;
@@ -494,9 +427,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     HapticFeedback.selectionClick();
 
     await Navigator.of(context).push<void>(
-      MaterialPageRoute<void>(
-        builder: (_) => const FriendRequestsScreen(),
-      ),
+      MaterialPageRoute<void>(builder: (_) => const FriendRequestsScreen()),
     );
 
     if (!mounted) return;
@@ -508,9 +439,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     HapticFeedback.selectionClick();
 
     await Navigator.of(context).push<void>(
-      MaterialPageRoute<void>(
-        builder: (_) => const FriendsScreen(),
-      ),
+      MaterialPageRoute<void>(builder: (_) => const FriendsScreen()),
     );
 
     if (!mounted) return;
@@ -522,9 +451,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     HapticFeedback.selectionClick();
 
     await Navigator.of(context).push<String>(
-      MaterialPageRoute<String>(
-        builder: (_) => const CreateChallengeScreen(),
-      ),
+      MaterialPageRoute<String>(builder: (_) => const CreateChallengeScreen()),
     );
 
     if (!mounted) return;
@@ -536,9 +463,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     HapticFeedback.selectionClick();
 
     await Navigator.of(context).push<void>(
-      MaterialPageRoute<void>(
-        builder: (_) => const ChallengeRequestsScreen(),
-      ),
+      MaterialPageRoute<void>(builder: (_) => const ChallengeRequestsScreen()),
     );
 
     if (!mounted) return;
@@ -550,9 +475,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     HapticFeedback.selectionClick();
 
     await Navigator.of(context).push<void>(
-      MaterialPageRoute<void>(
-        builder: (_) => const ActiveChallengesScreen(),
-      ),
+      MaterialPageRoute<void>(builder: (_) => const ActiveChallengesScreen()),
     );
 
     if (!mounted) return;
@@ -564,9 +487,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     HapticFeedback.selectionClick();
 
     await Navigator.of(context).push<void>(
-      MaterialPageRoute<void>(
-        builder: (_) => const CrystalShopScreen(),
-      ),
+      MaterialPageRoute<void>(builder: (_) => const CrystalShopScreen()),
     );
 
     if (!mounted) return;
@@ -578,9 +499,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     HapticFeedback.selectionClick();
 
     await Navigator.of(context).push<void>(
-      MaterialPageRoute<void>(
-        builder: (_) => const MunjaProScreen(),
-      ),
+      MaterialPageRoute<void>(builder: (_) => const MunjaProScreen()),
     );
 
     if (!mounted) return;
@@ -722,8 +641,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   },
                 ),
                 if ((photoPath != null && photoPath!.isNotEmpty) ||
-                    (remotePhotoUrl != null &&
-                        remotePhotoUrl!.isNotEmpty)) ...[
+                    (remotePhotoUrl != null && remotePhotoUrl!.isNotEmpty)) ...[
                   const SizedBox(height: 10),
                   _PhotoSheetButton(
                     icon: Icons.delete_outline_rounded,
@@ -796,9 +714,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       return current.usernameWithAt;
     }
 
-    final normalized = SocialRiderProfile.createUsernameCandidate(
-      riderName,
-    );
+    final normalized = SocialRiderProfile.createUsernameCandidate(riderName);
 
     return '@$normalized';
   }
@@ -865,9 +781,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       backgroundColor: MunjaColors.panel,
       barrierColor: Colors.black.withOpacity(0.72),
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(
-          top: Radius.circular(30),
-        ),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
       ),
       builder: (sheetContext) {
         return SafeArea(
@@ -959,9 +873,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       icon: const Icon(Icons.check_rounded),
                       label: Text(
                         AppText.t('saveProfile'),
-                        style: const TextStyle(
-                          fontWeight: FontWeight.w900,
-                        ),
+                        style: const TextStyle(fontWeight: FontWeight.w900),
                       ),
                     ),
                   ),
@@ -982,9 +894,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
       backgroundColor: MunjaColors.panel,
       barrierColor: Colors.black.withOpacity(0.72),
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(
-          top: Radius.circular(30),
-        ),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
       ),
       builder: (sheetContext) {
         Widget languageRow({
@@ -992,17 +902,14 @@ class _ProfileScreenState extends State<ProfileScreen> {
           required String code,
           required String languageCode,
         }) {
-          final active =
-              AppText.currentLocale.languageCode == languageCode;
+          final active = AppText.currentLocale.languageCode == languageCode;
 
           return _CompactLanguageRow(
             label: label,
             code: code,
             active: active,
             onTap: () async {
-              await AppText.setLocale(
-                Locale(languageCode),
-              );
+              await AppText.setLocale(Locale(languageCode));
 
               if (mounted) {
                 setState(() {});
@@ -1018,12 +925,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
         return SafeArea(
           top: false,
           child: Padding(
-            padding: const EdgeInsets.fromLTRB(
-              20,
-              14,
-              20,
-              24,
-            ),
+            padding: const EdgeInsets.fromLTRB(20, 14, 20, 24),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
@@ -1040,7 +942,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                 ),
                 const SizedBox(height: 20),
                 Text(
-                    AppText.t('profileLanguage'),
+                  AppText.t('profileLanguage'),
                   style: TextStyle(
                     color: MunjaColors.mint,
                     fontSize: 10,
@@ -1058,23 +960,11 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                 ),
                 const SizedBox(height: 16),
-                languageRow(
-                  label: 'Dansk',
-                  code: 'DA',
-                  languageCode: 'da',
-                ),
+                languageRow(label: 'Dansk', code: 'DA', languageCode: 'da'),
                 const SizedBox(height: 8),
-                languageRow(
-                  label: 'English',
-                  code: 'EN',
-                  languageCode: 'en',
-                ),
+                languageRow(label: 'English', code: 'EN', languageCode: 'en'),
                 const SizedBox(height: 8),
-                languageRow(
-                  label: 'Bosanski',
-                  code: 'BS',
-                  languageCode: 'bs',
-                ),
+                languageRow(label: 'Bosanski', code: 'BS', languageCode: 'bs'),
               ],
             ),
           ),
@@ -1088,11 +978,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     if (loading) {
       return const Scaffold(
         backgroundColor: MunjaColors.bg,
-        body: Center(
-          child: CircularProgressIndicator(
-            color: MunjaColors.mint,
-          ),
-        ),
+        body: Center(child: CircularProgressIndicator(color: MunjaColors.mint)),
       );
     }
 
@@ -1146,11 +1032,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
 
               ValueListenableBuilder<MunjaProState>(
                 valueListenable: MunjaProService.instance.state,
-                builder: (
-                  context,
-                  proState,
-                  _,
-                ) {
+                builder: (context, proState, _) {
                   return _CompactProRow(
                     isPro: proState.hasActivePro,
                     onTap: _openMunjaPro,
@@ -1167,8 +1049,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     icon: Icons.people_alt_rounded,
                     title: AppText.t('profileFriends'),
                     subtitle: friendsPreview.isEmpty
-                        ? 'Find and manage riders'
-                        : '${friendsPreview.length} recent riders',
+                        ? AppText.t('findAndManageRiders')
+                        : AppText.t(
+                            friendsPreview.length == 1
+                                ? 'recentRiderSingular'
+                                : 'recentRidersPlural',
+                          ).replaceAll('{count}', '${friendsPreview.length}'),
                     onTap: _openFriends,
                   ),
                   _CompactProfileMenuItem(
@@ -1185,29 +1071,23 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                   _CompactProfileMenuItem(
                     icon: Icons.history_rounded,
-                    title: AppText.t('rideHistory'),
+                    title: AppText.t('rideHistoryTitle'),
                     subtitle:
                         '${trips.length} ${AppText.t('savedRides')} · ${totalKm.toStringAsFixed(1)} km',
-                    onTap: () => _openScreen(
-                      const RideHistoryScreen(),
-                    ),
+                    onTap: () => _openScreen(const RideHistoryScreen()),
                   ),
                   _CompactProfileMenuItem(
                     icon: Icons.insights_rounded,
                     title: AppText.t('analytics'),
                     subtitle: AppText.t('analyticsSubtitle'),
-                    onTap: () => _openScreen(
-                      const RideAnalyticsScreen(),
-                    ),
+                    onTap: () => _openScreen(const RideAnalyticsScreen()),
                   ),
                 ],
               ),
 
               const SizedBox(height: 12),
 
-              _CompactAchievements(
-                items: achievements,
-              ),
+              _CompactAchievements(items: achievements),
 
               const SizedBox(height: 12),
 
@@ -1253,7 +1133,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
         return 'Dansk';
     }
   }
-
 }
 
 class _CompactProfileHero extends StatelessWidget {
@@ -1292,10 +1171,8 @@ class _CompactProfileHero extends StatelessWidget {
         : (xp / xpForNextLevel).clamp(0.0, 1.0);
 
     final localPath = photoPath?.trim() ?? '';
-    final localFile =
-        localPath.isEmpty ? null : File(localPath);
-    final hasLocal =
-        localFile != null && localFile.existsSync();
+    final localFile = localPath.isEmpty ? null : File(localPath);
+    final hasLocal = localFile != null && localFile.existsSync();
 
     final remote = photoUrl?.trim() ?? '';
     final hasRemote = remote.isNotEmpty;
@@ -1307,19 +1184,13 @@ class _CompactProfileHero extends StatelessWidget {
     );
 
     if (hasLocal) {
-      avatar = Image.file(
-        localFile,
-        fit: BoxFit.cover,
-      );
+      avatar = Image.file(localFile, fit: BoxFit.cover);
     } else if (hasRemote) {
       avatar = Image.network(
         remote,
         fit: BoxFit.cover,
-        errorBuilder: (_, __, ___) => const Icon(
-          Icons.person_rounded,
-          color: MunjaColors.mint,
-          size: 32,
-        ),
+        errorBuilder: (_, __, ___) =>
+            const Icon(Icons.person_rounded, color: MunjaColors.mint, size: 32),
       );
     }
 
@@ -1328,9 +1199,7 @@ class _CompactProfileHero extends StatelessWidget {
       decoration: BoxDecoration(
         color: MunjaColors.panel.withOpacity(0.72),
         borderRadius: BorderRadius.circular(28),
-        border: Border.all(
-          color: MunjaColors.mint.withOpacity(0.13),
-        ),
+        border: Border.all(color: MunjaColors.mint.withOpacity(0.13)),
         boxShadow: [
           BoxShadow(
             color: MunjaColors.mint.withOpacity(0.055),
@@ -1355,8 +1224,7 @@ class _CompactProfileHero extends StatelessWidget {
                         shape: BoxShape.circle,
                         color: Colors.black.withOpacity(0.22),
                         border: Border.all(
-                          color:
-                              MunjaColors.mint.withOpacity(0.42),
+                          color: MunjaColors.mint.withOpacity(0.42),
                           width: 1.5,
                         ),
                       ),
@@ -1372,10 +1240,7 @@ class _CompactProfileHero extends StatelessWidget {
                         decoration: BoxDecoration(
                           color: MunjaColors.mint,
                           shape: BoxShape.circle,
-                          border: Border.all(
-                            color: MunjaColors.bg,
-                            width: 2.5,
-                          ),
+                          border: Border.all(color: MunjaColors.bg, width: 2.5),
                         ),
                         child: const Icon(
                           Icons.camera_alt_rounded,
@@ -1390,8 +1255,7 @@ class _CompactProfileHero extends StatelessWidget {
               const SizedBox(width: 13),
               Expanded(
                 child: Column(
-                  crossAxisAlignment:
-                      CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       name,
@@ -1429,14 +1293,11 @@ class _CompactProfileHero extends StatelessWidget {
                             child: Text(
                               city,
                               maxLines: 1,
-                              overflow:
-                                  TextOverflow.ellipsis,
+                              overflow: TextOverflow.ellipsis,
                               style: const TextStyle(
-                                color:
-                                    MunjaColors.textSoft,
+                                color: MunjaColors.textSoft,
                                 fontSize: 10.5,
-                                fontWeight:
-                                    FontWeight.w700,
+                                fontWeight: FontWeight.w700,
                               ),
                             ),
                           ),
@@ -1496,10 +1357,7 @@ class _CompactProfileHero extends StatelessWidget {
               value: progress,
               minHeight: 5,
               backgroundColor: Colors.white.withOpacity(0.07),
-              valueColor:
-                  const AlwaysStoppedAnimation<Color>(
-                MunjaColors.mint,
-              ),
+              valueColor: const AlwaysStoppedAnimation<Color>(MunjaColors.mint),
             ),
           ),
           const SizedBox(height: 14),
@@ -1534,10 +1392,7 @@ class _CompactProfileHero extends StatelessWidget {
 }
 
 class _CompactStat extends StatelessWidget {
-  const _CompactStat({
-    required this.value,
-    required this.label,
-  });
+  const _CompactStat({required this.value, required this.label});
 
   final String value;
   final String label;
@@ -1584,10 +1439,7 @@ class _CompactVerticalDivider extends StatelessWidget {
 }
 
 class _CompactProRow extends StatelessWidget {
-  const _CompactProRow({
-    required this.isPro,
-    required this.onTap,
-  });
+  const _CompactProRow({required this.isPro, required this.onTap});
 
   final bool isPro;
   final VoidCallback onTap;
@@ -1600,17 +1452,12 @@ class _CompactProRow extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(22),
         child: Ink(
-          padding: const EdgeInsets.symmetric(
-            horizontal: 14,
-            vertical: 12,
-          ),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
           decoration: BoxDecoration(
             color: MunjaColors.panel.withOpacity(0.58),
             borderRadius: BorderRadius.circular(22),
             border: Border.all(
-              color: MunjaColors.mint.withOpacity(
-                isPro ? 0.34 : 0.13,
-              ),
+              color: MunjaColors.mint.withOpacity(isPro ? 0.34 : 0.13),
             ),
           ),
           child: Row(
@@ -1631,8 +1478,7 @@ class _CompactProRow extends StatelessWidget {
               const SizedBox(width: 11),
               Expanded(
                 child: Column(
-                  crossAxisAlignment:
-                      CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     const Text(
                       'MUNJA PRO',
@@ -1647,13 +1493,11 @@ class _CompactProRow extends StatelessWidget {
                     Text(
                       isPro
                           ? 'ACTIVE · Pro features unlocked'
-                          : 'Unlock Pro experience',
+                          : AppText.t('unlockProExperience'),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        color: isPro
-                            ? MunjaColors.mint
-                            : Colors.white,
+                        color: isPro ? MunjaColors.mint : Colors.white,
                         fontSize: 12.5,
                         fontWeight: FontWeight.w900,
                         letterSpacing: isPro ? 0.35 : 0,
@@ -1663,9 +1507,7 @@ class _CompactProRow extends StatelessWidget {
                 ),
               ),
               Icon(
-                isPro
-                    ? Icons.verified_rounded
-                    : Icons.chevron_right_rounded,
+                isPro ? Icons.verified_rounded : Icons.chevron_right_rounded,
                 color: MunjaColors.mint,
                 size: 20,
               ),
@@ -1678,10 +1520,7 @@ class _CompactProRow extends StatelessWidget {
 }
 
 class _CompactProfileMenu extends StatelessWidget {
-  const _CompactProfileMenu({
-    required this.title,
-    required this.items,
-  });
+  const _CompactProfileMenu({required this.title, required this.items});
 
   final String title;
   final List<_CompactProfileMenuItem> items;
@@ -1692,20 +1531,13 @@ class _CompactProfileMenu extends StatelessWidget {
       decoration: BoxDecoration(
         color: MunjaColors.panel.withOpacity(0.48),
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(
-          color: Colors.white.withOpacity(0.055),
-        ),
+        border: Border.all(color: Colors.white.withOpacity(0.055)),
       ),
       clipBehavior: Clip.antiAlias,
       child: Column(
         children: [
           Padding(
-            padding: const EdgeInsets.fromLTRB(
-              14,
-              12,
-              14,
-              8,
-            ),
+            padding: const EdgeInsets.fromLTRB(14, 12, 14, 8),
             child: Align(
               alignment: Alignment.centerLeft,
               child: Text(
@@ -1723,8 +1555,7 @@ class _CompactProfileMenu extends StatelessWidget {
             items[i],
             if (i < items.length - 1)
               Padding(
-                padding:
-                    const EdgeInsets.only(left: 58),
+                padding: const EdgeInsets.only(left: 58),
                 child: Divider(
                   height: 1,
                   thickness: 1,
@@ -1757,18 +1588,14 @@ class _CompactProfileMenuItem extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final accent =
-        danger ? MunjaColors.danger : MunjaColors.mint;
+    final accent = danger ? MunjaColors.danger : MunjaColors.mint;
 
     return Material(
       color: Colors.transparent,
       child: InkWell(
         onTap: loading ? null : onTap,
         child: Padding(
-          padding: const EdgeInsets.symmetric(
-            horizontal: 14,
-            vertical: 11,
-          ),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 11),
           child: Row(
             children: [
               Container(
@@ -1786,25 +1613,19 @@ class _CompactProfileMenuItem extends StatelessWidget {
                           color: accent,
                         ),
                       )
-                    : Icon(
-                        icon,
-                        color: accent,
-                        size: 18,
-                      ),
+                    : Icon(icon, color: accent, size: 18),
               ),
               const SizedBox(width: 10),
               Expanded(
                 child: Column(
-                  crossAxisAlignment:
-                      CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       title,
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
-                        color:
-                            danger ? accent : Colors.white,
+                        color: danger ? accent : Colors.white,
                         fontSize: 12.5,
                         fontWeight: FontWeight.w800,
                       ),
@@ -1826,9 +1647,7 @@ class _CompactProfileMenuItem extends StatelessWidget {
               const SizedBox(width: 8),
               Icon(
                 Icons.chevron_right_rounded,
-                color: danger
-                    ? accent.withOpacity(0.8)
-                    : Colors.white24,
+                color: danger ? accent.withOpacity(0.8) : Colors.white24,
                 size: 20,
               ),
             ],
@@ -1840,37 +1659,27 @@ class _CompactProfileMenuItem extends StatelessWidget {
 }
 
 class _CompactAchievements extends StatelessWidget {
-  const _CompactAchievements({
-    required this.items,
-  });
+  const _CompactAchievements({required this.items});
 
   final List<_AchievementData> items;
 
   @override
   Widget build(BuildContext context) {
-    final unlocked =
-        items.where((item) => item.unlocked).length;
+    final unlocked = items.where((item) => item.unlocked).length;
 
     return Container(
-      padding: const EdgeInsets.fromLTRB(
-        14,
-        12,
-        14,
-        14,
-      ),
+      padding: const EdgeInsets.fromLTRB(14, 12, 14, 14),
       decoration: BoxDecoration(
         color: MunjaColors.panel.withOpacity(0.48),
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(
-          color: Colors.white.withOpacity(0.055),
-        ),
+        border: Border.all(color: Colors.white.withOpacity(0.055)),
       ),
       child: Column(
         children: [
           Row(
             children: [
               Text(
-                    AppText.t('profileAchievementsCaps'),
+                AppText.t('profileAchievementsCaps'),
                 style: TextStyle(
                   color: MunjaColors.mint,
                   fontSize: 9,
@@ -1900,18 +1709,13 @@ class _CompactAchievements extends StatelessWidget {
                       height: 40,
                       decoration: BoxDecoration(
                         color: items[i].unlocked
-                            ? MunjaColors.mint
-                                .withOpacity(0.10)
-                            : Colors.white
-                                .withOpacity(0.025),
-                        borderRadius:
-                            BorderRadius.circular(13),
+                            ? MunjaColors.mint.withOpacity(0.10)
+                            : Colors.white.withOpacity(0.025),
+                        borderRadius: BorderRadius.circular(13),
                         border: Border.all(
                           color: items[i].unlocked
-                              ? MunjaColors.mint
-                                  .withOpacity(0.19)
-                              : Colors.white
-                                  .withOpacity(0.04),
+                              ? MunjaColors.mint.withOpacity(0.19)
+                              : Colors.white.withOpacity(0.04),
                         ),
                       ),
                       child: Icon(
@@ -1924,8 +1728,7 @@ class _CompactAchievements extends StatelessWidget {
                     ),
                   ),
                 ),
-                if (i < items.length - 1)
-                  const SizedBox(width: 7),
+                if (i < items.length - 1) const SizedBox(width: 7),
               ],
             ],
           ),
@@ -1956,10 +1759,7 @@ class _CompactLanguageRow extends StatelessWidget {
         onTap: onTap,
         borderRadius: BorderRadius.circular(18),
         child: Container(
-          padding: const EdgeInsets.symmetric(
-            horizontal: 14,
-            vertical: 13,
-          ),
+          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 13),
           decoration: BoxDecoration(
             color: active
                 ? MunjaColors.mint.withOpacity(0.10)
@@ -1986,9 +1786,7 @@ class _CompactLanguageRow extends StatelessWidget {
                 child: Text(
                   code,
                   style: TextStyle(
-                    color: active
-                        ? Colors.black
-                        : Colors.white54,
+                    color: active ? Colors.black : Colors.white54,
                     fontSize: 9,
                     fontWeight: FontWeight.w900,
                   ),
@@ -2075,10 +1873,7 @@ class _ProfileV2Header extends StatelessWidget {
           child: IconButton(
             onPressed: onEditProfile,
             tooltip: AppText.t('profileSettings'),
-            icon: const Icon(
-              Icons.tune_rounded,
-              color: MunjaColors.mint,
-            ),
+            icon: const Icon(Icons.tune_rounded, color: MunjaColors.mint),
           ),
         ),
       ],
@@ -2129,8 +1924,7 @@ class _ProfileIdentityHero extends StatelessWidget {
         ? null
         : File(photoPath!);
 
-    final hasLocalPhoto =
-        photoFile != null && photoFile.existsSync();
+    final hasLocalPhoto = photoFile != null && photoFile.existsSync();
 
     final normalizedPhotoUrl = photoUrl?.trim() ?? '';
     final hasRemotePhoto = normalizedPhotoUrl.isNotEmpty;
@@ -2140,9 +1934,7 @@ class _ProfileIdentityHero extends StatelessWidget {
       decoration: BoxDecoration(
         color: MunjaColors.panel.withOpacity(0.88),
         borderRadius: BorderRadius.circular(32),
-        border: Border.all(
-          color: MunjaColors.mint.withOpacity(0.18),
-        ),
+        border: Border.all(color: MunjaColors.mint.withOpacity(0.18)),
         boxShadow: [
           BoxShadow(
             color: MunjaColors.mint.withOpacity(0.10),
@@ -2169,33 +1961,28 @@ class _ProfileIdentityHero extends StatelessWidget {
                         shape: BoxShape.circle,
                         color: Colors.black.withOpacity(0.24),
                         border: Border.all(
-                          color:
-                              MunjaColors.mint.withOpacity(0.52),
+                          color: MunjaColors.mint.withOpacity(0.52),
                           width: 2,
                         ),
                       ),
                       clipBehavior: Clip.antiAlias,
                       child: hasLocalPhoto
-                          ? Image.file(
-                              photoFile!,
-                              fit: BoxFit.cover,
-                            )
+                          ? Image.file(photoFile!, fit: BoxFit.cover)
                           : hasRemotePhoto
-                              ? Image.network(
-                                  normalizedPhotoUrl,
-                                  fit: BoxFit.cover,
-                                  errorBuilder: (_, __, ___) =>
-                                      const Icon(
-                                    Icons.person_rounded,
-                                    color: MunjaColors.mint,
-                                    size: 42,
-                                  ),
-                                )
-                              : const Icon(
-                                  Icons.person_rounded,
-                                  color: MunjaColors.mint,
-                                  size: 42,
-                                ),
+                          ? Image.network(
+                              normalizedPhotoUrl,
+                              fit: BoxFit.cover,
+                              errorBuilder: (_, __, ___) => const Icon(
+                                Icons.person_rounded,
+                                color: MunjaColors.mint,
+                                size: 42,
+                              ),
+                            )
+                          : const Icon(
+                              Icons.person_rounded,
+                              color: MunjaColors.mint,
+                              size: 42,
+                            ),
                     ),
                     Positioned(
                       right: -2,
@@ -2206,10 +1993,7 @@ class _ProfileIdentityHero extends StatelessWidget {
                         decoration: BoxDecoration(
                           color: MunjaColors.mint,
                           shape: BoxShape.circle,
-                          border: Border.all(
-                            color: MunjaColors.bg,
-                            width: 3,
-                          ),
+                          border: Border.all(color: MunjaColors.bg, width: 3),
                         ),
                         child: const Icon(
                           Icons.add_a_photo_rounded,
@@ -2224,8 +2008,7 @@ class _ProfileIdentityHero extends StatelessWidget {
               const SizedBox(width: 16),
               Expanded(
                 child: Column(
-                  crossAxisAlignment:
-                      CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
                       name,
@@ -2311,7 +2094,7 @@ class _ProfileIdentityHero extends StatelessWidget {
           Row(
             children: [
               Text(
-                    AppText.t('profileLevelProgress'),
+                AppText.t('profileLevelProgress'),
                 style: TextStyle(
                   color: MunjaColors.textSoft,
                   fontSize: 9,
@@ -2337,10 +2120,7 @@ class _ProfileIdentityHero extends StatelessWidget {
               value: progress,
               minHeight: 9,
               backgroundColor: Colors.white.withOpacity(0.07),
-              valueColor:
-                  const AlwaysStoppedAnimation<Color>(
-                    MunjaColors.mint,
-                  ),
+              valueColor: const AlwaysStoppedAnimation<Color>(MunjaColors.mint),
             ),
           ),
           const SizedBox(height: 7),
@@ -2368,8 +2148,7 @@ class _ProfileIdentityHero extends StatelessWidget {
               const SizedBox(width: 10),
               Expanded(
                 child: _ProfileStat(
-                  icon:
-                      Icons.local_fire_department_rounded,
+                  icon: Icons.local_fire_department_rounded,
                   value: '$streakDays',
                   label: AppText.t('profileStreak'),
                 ),
@@ -2391,11 +2170,7 @@ class _ProfileIdentityHero extends StatelessWidget {
 }
 
 class _ProfileStat extends StatelessWidget {
-  _ProfileStat({
-    required this.icon,
-    required this.value,
-    required this.label,
-  });
+  _ProfileStat({required this.icon, required this.value, required this.label});
 
   final IconData icon;
   final String value;
@@ -2409,18 +2184,12 @@ class _ProfileStat extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.black.withOpacity(0.18),
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(
-          color: Colors.white.withOpacity(0.06),
-        ),
+        border: Border.all(color: Colors.white.withOpacity(0.06)),
       ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(
-            icon,
-            color: MunjaColors.mint,
-            size: 19,
-          ),
+          Icon(icon, color: MunjaColors.mint, size: 19),
           const SizedBox(height: 5),
           Text(
             value,
@@ -2449,10 +2218,7 @@ class _ProfileStat extends StatelessWidget {
 }
 
 class _MunjaProProfileCard extends StatelessWidget {
-  const _MunjaProProfileCard({
-    required this.isPro,
-    required this.onTap,
-  });
+  const _MunjaProProfileCard({required this.isPro, required this.onTap});
 
   final bool isPro;
   final VoidCallback onTap;
@@ -2469,9 +2235,7 @@ class _MunjaProProfileCard extends StatelessWidget {
           decoration: BoxDecoration(
             color: MunjaColors.panel.withOpacity(0.92),
             borderRadius: BorderRadius.circular(28),
-            border: Border.all(
-              color: MunjaColors.mint.withOpacity(0.24),
-            ),
+            border: Border.all(color: MunjaColors.mint.withOpacity(0.24)),
             boxShadow: [
               BoxShadow(
                 color: MunjaColors.mint.withOpacity(0.07),
@@ -2488,9 +2252,7 @@ class _MunjaProProfileCard extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: MunjaColors.mint.withOpacity(0.12),
                   borderRadius: BorderRadius.circular(18),
-                  border: Border.all(
-                    color: MunjaColors.mint.withOpacity(0.22),
-                  ),
+                  border: Border.all(color: MunjaColors.mint.withOpacity(0.22)),
                 ),
                 child: const Icon(
                   Icons.bolt_rounded,
@@ -2501,8 +2263,7 @@ class _MunjaProProfileCard extends StatelessWidget {
               const SizedBox(width: 14),
               Expanded(
                 child: Column(
-                  crossAxisAlignment:
-                      CrossAxisAlignment.start,
+                  crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Row(
                       children: [
@@ -2511,8 +2272,7 @@ class _MunjaProProfileCard extends StatelessWidget {
                           style: TextStyle(
                             color: MunjaColors.mint,
                             fontSize: 11,
-                            fontWeight:
-                                FontWeight.w900,
+                            fontWeight: FontWeight.w900,
                             letterSpacing: 1.4,
                           ),
                         ),
@@ -2520,8 +2280,7 @@ class _MunjaProProfileCard extends StatelessWidget {
                         Icon(
                           isPro
                               ? Icons.verified_rounded
-                              : Icons
-                                  .workspace_premium_rounded,
+                              : Icons.workspace_premium_rounded,
                           color: MunjaColors.mint,
                           size: 15,
                         ),
@@ -2530,8 +2289,8 @@ class _MunjaProProfileCard extends StatelessWidget {
                     const SizedBox(height: 5),
                     Text(
                       isPro
-                          ? 'Munja Pro is active'
-                          : 'Unlock more of Munja',
+                          ? AppText.t('munjaProIsActive')
+                          : AppText.t('unlockMoreOfMunja'),
                       style: const TextStyle(
                         color: Colors.white,
                         fontSize: 17,
@@ -2542,8 +2301,8 @@ class _MunjaProProfileCard extends StatelessWidget {
                     const SizedBox(height: 4),
                     Text(
                       isPro
-                          ? 'Your Pro features, Monthly Specials and selected premium cosmetics are unlocked.'
-                          : 'AI Coach, advanced analytics, Pro challenges and exclusive cosmetics.',
+                          ? AppText.t('proFeaturesUnlocked')
+                          : AppText.t('proFeaturesDescription'),
                       style: const TextStyle(
                         color: MunjaColors.textSoft,
                         fontSize: 11.5,
@@ -2563,9 +2322,7 @@ class _MunjaProProfileCard extends StatelessWidget {
                   shape: BoxShape.circle,
                 ),
                 child: Icon(
-                  isPro
-                      ? Icons.check_rounded
-                      : Icons.arrow_forward_rounded,
+                  isPro ? Icons.check_rounded : Icons.arrow_forward_rounded,
                   color: MunjaColors.mint,
                   size: 20,
                 ),
@@ -2636,9 +2393,7 @@ class _SocialActionButton extends StatelessWidget {
               icon: Icon(icon),
               label: Text(
                 label,
-                style: const TextStyle(
-                  fontWeight: FontWeight.w900,
-                ),
+                style: const TextStyle(fontWeight: FontWeight.w900),
               ),
             )
           : OutlinedButton.icon(
@@ -2646,9 +2401,7 @@ class _SocialActionButton extends StatelessWidget {
               icon: Icon(icon),
               label: Text(
                 label,
-                style: const TextStyle(
-                  fontWeight: FontWeight.w900,
-                ),
+                style: const TextStyle(fontWeight: FontWeight.w900),
               ),
             ),
     );
@@ -2671,33 +2424,25 @@ class _FriendsPreviewCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return _ProfileSocialCard(
-      eyebrow: 'SOCIAL',
+      eyebrow: AppText.t('socialCaps'),
       title: AppText.t('profileFriends'),
-      subtitle:
-          AppText.t('profileFindRidersBody'),
+      subtitle: AppText.t('profileFindRidersBody'),
       child: Column(
         children: [
           if (friends.isEmpty)
-            _NoFriendsPreview(
-              onFindRiders: onFindRiders,
-            )
+            _NoFriendsPreview(onFindRiders: onFindRiders)
           else
             Row(
               children: [
-                ...friends.asMap().entries.expand(
-                  (entry) {
-                    final rider = entry.value;
+                ...friends.asMap().entries.expand((entry) {
+                  final rider = entry.value;
 
-                    return <Widget>[
-                      _FriendAvatar(
-                        rider: rider,
-                        onTap: onOpenFriends,
-                      ),
-                      if (entry.key < friends.length - 1)
-                        const SizedBox(width: 10),
-                    ];
-                  },
-                ),
+                  return <Widget>[
+                    _FriendAvatar(rider: rider, onTap: onOpenFriends),
+                    if (entry.key < friends.length - 1)
+                      const SizedBox(width: 10),
+                  ];
+                }),
                 const Spacer(),
                 IconButton(
                   onPressed: onOpenFriends,
@@ -2725,14 +2470,10 @@ class _FriendsPreviewCard extends StatelessWidget {
                   height: 48,
                   child: OutlinedButton.icon(
                     onPressed: onInvite,
-                    icon: const Icon(
-                      Icons.mark_email_unread_rounded,
-                    ),
+                    icon: const Icon(Icons.mark_email_unread_rounded),
                     label: Text(
-                    AppText.t('profileRequests'),
-                      style: TextStyle(
-                        fontWeight: FontWeight.w900,
-                      ),
+                      AppText.t('profileRequests'),
+                      style: TextStyle(fontWeight: FontWeight.w900),
                     ),
                   ),
                 ),
@@ -2743,14 +2484,10 @@ class _FriendsPreviewCard extends StatelessWidget {
                   height: 48,
                   child: FilledButton.icon(
                     onPressed: onOpenFriends,
-                    icon: const Icon(
-                      Icons.people_alt_rounded,
-                    ),
+                    icon: const Icon(Icons.people_alt_rounded),
                     label: Text(
-                    AppText.t('profileViewAll'),
-                      style: TextStyle(
-                        fontWeight: FontWeight.w900,
-                      ),
+                      AppText.t('profileViewAll'),
+                      style: TextStyle(fontWeight: FontWeight.w900),
                     ),
                   ),
                 ),
@@ -2764,9 +2501,7 @@ class _FriendsPreviewCard extends StatelessWidget {
 }
 
 class _NoFriendsPreview extends StatelessWidget {
-  const _NoFriendsPreview({
-    required this.onFindRiders,
-  });
+  const _NoFriendsPreview({required this.onFindRiders});
 
   final VoidCallback onFindRiders;
 
@@ -2778,9 +2513,7 @@ class _NoFriendsPreview extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.black.withOpacity(0.14),
         borderRadius: BorderRadius.circular(22),
-        border: Border.all(
-          color: Colors.white.withOpacity(0.05),
-        ),
+        border: Border.all(color: Colors.white.withOpacity(0.05)),
       ),
       child: Row(
         children: [
@@ -2837,10 +2570,7 @@ class _NoFriendsPreview extends StatelessWidget {
 }
 
 class _FriendAvatar extends StatelessWidget {
-  const _FriendAvatar({
-    required this.rider,
-    required this.onTap,
-  });
+  const _FriendAvatar({required this.rider, required this.onTap});
 
   final SocialRiderProfile rider;
   final VoidCallback onTap;
@@ -2874,16 +2604,13 @@ class _FriendAvatar extends StatelessWidget {
 
     final firstName = name.split(RegExp(r'\s+')).first;
 
-    return firstName.length > 9
-        ? '${firstName.substring(0, 8)}…'
-        : firstName;
+    return firstName.length > 9 ? '${firstName.substring(0, 8)}…' : firstName;
   }
 
   @override
   Widget build(BuildContext context) {
     final hasPhoto =
-        rider.photoUrl != null &&
-        rider.photoUrl!.trim().isNotEmpty;
+        rider.photoUrl != null && rider.photoUrl!.trim().isNotEmpty;
 
     return GestureDetector(
       onTap: onTap,
@@ -2898,20 +2625,14 @@ class _FriendAvatar extends StatelessWidget {
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
                 color: MunjaColors.mint.withOpacity(0.11),
-                border: Border.all(
-                  color: MunjaColors.mint.withOpacity(0.28),
-                ),
+                border: Border.all(color: MunjaColors.mint.withOpacity(0.28)),
               ),
               clipBehavior: Clip.antiAlias,
               child: hasPhoto
                   ? Image.network(
                       rider.photoUrl!,
                       fit: BoxFit.cover,
-                      errorBuilder: (
-                        context,
-                        error,
-                        stackTrace,
-                      ) {
+                      errorBuilder: (context, error, stackTrace) {
                         return Text(
                           initials,
                           style: const TextStyle(
@@ -2963,18 +2684,15 @@ class _ChallengePreviewCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return _ProfileSocialCard(
-      eyebrow: 'COMPETE',
+      eyebrow: AppText.t('competeCaps'),
       title: AppText.t('profileChallenges'),
-      subtitle:
-          AppText.t('profileChallengeHubBody'),
+      subtitle: AppText.t('profileChallengeHubBody'),
       child: Container(
         padding: const EdgeInsets.all(16),
         decoration: BoxDecoration(
           color: Colors.black.withOpacity(0.16),
           borderRadius: BorderRadius.circular(24),
-          border: Border.all(
-            color: MunjaColors.mint.withOpacity(0.14),
-          ),
+          border: Border.all(color: MunjaColors.mint.withOpacity(0.14)),
         ),
         child: Column(
           children: [
@@ -3026,14 +2744,10 @@ class _ChallengePreviewCard extends StatelessWidget {
               height: 50,
               child: FilledButton.icon(
                 onPressed: onOpenActive,
-                icon: const Icon(
-                  Icons.sports_score_rounded,
-                ),
+                icon: const Icon(Icons.sports_score_rounded),
                 label: Text(
-                    AppText.t('profileActiveChallenges'),
-                  style: TextStyle(
-                    fontWeight: FontWeight.w900,
-                  ),
+                  AppText.t('profileActiveChallenges'),
+                  style: TextStyle(fontWeight: FontWeight.w900),
                 ),
               ),
             ),
@@ -3045,14 +2759,10 @@ class _ChallengePreviewCard extends StatelessWidget {
                     height: 50,
                     child: OutlinedButton.icon(
                       onPressed: onOpenRequests,
-                      icon: const Icon(
-                        Icons.mark_email_unread_rounded,
-                      ),
+                      icon: const Icon(Icons.mark_email_unread_rounded),
                       label: Text(
-                    AppText.t('profileRequests'),
-                        style: TextStyle(
-                          fontWeight: FontWeight.w900,
-                        ),
+                        AppText.t('profileRequests'),
+                        style: TextStyle(fontWeight: FontWeight.w900),
                       ),
                     ),
                   ),
@@ -3063,14 +2773,10 @@ class _ChallengePreviewCard extends StatelessWidget {
                     height: 50,
                     child: FilledButton.icon(
                       onPressed: onStartChallenge,
-                      icon: const Icon(
-                        Icons.bolt_rounded,
-                      ),
+                      icon: const Icon(Icons.bolt_rounded),
                       label: Text(
-                    AppText.t('profileNewChallenge'),
-                        style: TextStyle(
-                          fontWeight: FontWeight.w900,
-                        ),
+                        AppText.t('profileNewChallenge'),
+                        style: TextStyle(fontWeight: FontWeight.w900),
                       ),
                     ),
                   ),
@@ -3085,29 +2791,20 @@ class _ChallengePreviewCard extends StatelessWidget {
 }
 
 class _AchievementsCard extends StatelessWidget {
-  const _AchievementsCard({
-    required this.items,
-  });
+  const _AchievementsCard({required this.items});
 
   final List<_AchievementData> items;
 
   @override
   Widget build(BuildContext context) {
     return _ProfileSocialCard(
-      eyebrow: 'PROGRESS',
+      eyebrow: AppText.t('progressCaps'),
       title: AppText.t('profileAchievements'),
-      subtitle:
-          AppText.t('profileMilestonesBody'),
+      subtitle: AppText.t('profileMilestonesBody'),
       child: Wrap(
         spacing: 10,
         runSpacing: 10,
-        children: items
-            .map(
-              (item) => _AchievementBadge(
-                data: item,
-              ),
-            )
-            .toList(),
+        children: items.map((item) => _AchievementBadge(data: item)).toList(),
       ),
     );
   }
@@ -3126,23 +2823,16 @@ class _AchievementData {
 }
 
 class _AchievementBadge extends StatelessWidget {
-  const _AchievementBadge({
-    required this.data,
-  });
+  const _AchievementBadge({required this.data});
 
   final _AchievementData data;
 
   @override
   Widget build(BuildContext context) {
-    final color = data.unlocked
-        ? MunjaColors.mint
-        : Colors.white30;
+    final color = data.unlocked ? MunjaColors.mint : Colors.white30;
 
     return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 12,
-        vertical: 10,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
         color: data.unlocked
             ? MunjaColors.mint.withOpacity(0.11)
@@ -3157,11 +2847,7 @@ class _AchievementBadge extends StatelessWidget {
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          Icon(
-            data.icon,
-            size: 16,
-            color: color,
-          ),
+          Icon(data.icon, size: 16, color: color),
           const SizedBox(width: 7),
           Text(
             data.title,
@@ -3173,11 +2859,7 @@ class _AchievementBadge extends StatelessWidget {
           ),
           if (!data.unlocked) ...[
             const SizedBox(width: 6),
-            const Icon(
-              Icons.lock_rounded,
-              size: 13,
-              color: Colors.white24,
-            ),
+            const Icon(Icons.lock_rounded, size: 13, color: Colors.white24),
           ],
         ],
       ),

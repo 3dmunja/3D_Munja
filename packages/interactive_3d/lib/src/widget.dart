@@ -287,7 +287,7 @@ class Interactive3dState extends State<Interactive3d> {
         return;
       }
 
-      await channel.invokeMethod('loadModel', {
+      final loadResult = await channel.invokeMethod('loadModel', {
         'modelBytes': modelBytes,
         'name': modelName,
         'preselectedEntities': widget.preselectedEntities,
@@ -304,6 +304,47 @@ class Interactive3dState extends State<Interactive3d> {
         'initialMaterialOverrides':
             widget.initialMaterialOverrides?.map((o) => o.toMap()).toList(),
       });
+
+      if (loadResult is Map) {
+        final tree = loadResult['munjaSceneTree'];
+        if (tree is List) {
+          debugPrint(
+              '========== MUNJA iOS FULL SCENE TREE FROM DART ==========');
+          for (final line in tree) {
+            debugPrint('MUNJA TREE: $line');
+          }
+          debugPrint(
+              '========== END MUNJA iOS FULL SCENE TREE FROM DART ==========');
+        }
+
+        final worldBounds = loadResult['munjaWorldBounds'];
+        debugPrint('MUNJA iOS WORLD BOUNDS FROM DART: $worldBounds');
+
+        final geometrySummary = loadResult['munjaGeometrySummary'];
+        debugPrint(
+          'MUNJA iOS GEOMETRY SUMMARY FROM DART: $geometrySummary',
+        );
+
+        final materialSummary = loadResult['munjaMaterialSummary'];
+        debugPrint(
+          'MUNJA iOS MATERIAL SUMMARY FROM DART: $materialSummary',
+        );
+
+        final transformSummary = loadResult['munjaTransformSummary'];
+        debugPrint(
+          'MUNJA iOS TRANSFORM SUMMARY FROM DART: $transformSummary',
+        );
+
+        final meshSummary = loadResult['munjaMeshSummary'];
+        debugPrint(
+          'MUNJA iOS MESH SUMMARY FROM DART: $meshSummary',
+        );
+
+        final cameraSummary = loadResult['munjaCameraSummary'];
+        debugPrint(
+          'MUNJA iOS CAMERA SUMMARY FROM DART: $cameraSummary',
+        );
+      }
 
       // iOS HDR/EXR background
       if (widget.iOSBackgroundEnvPath != null ||
@@ -681,8 +722,24 @@ class Interactive3dState extends State<Interactive3d> {
     Duration resumeDelay = const Duration(seconds: 2),
   }) async {
     if (Platform.isIOS) {
+      final cameraState = await _iosMethodChannel?.invokeMethod<dynamic>(
+        'startShowroomRotation',
+        {
+          'amplitudeDegrees': amplitudeDegrees,
+          'durationMs': cycleDuration.inMilliseconds,
+          'resumeDelayMs': resumeDelay.inMilliseconds,
+        },
+      );
+
       debugPrint(
-        'MUNJA SHOWROOM ROTATION: iOS native implementation not added yet.',
+        'MUNJA CAMERA STATE FROM iOS: $cameraState',
+      );
+
+      debugPrint(
+        'MUNJA SHOWROOM ROTATION STARTED iOS: '
+        'amplitude=${amplitudeDegrees}deg | '
+        'duration=${cycleDuration.inMilliseconds}ms | '
+        'resumeDelay=${resumeDelay.inMilliseconds}ms',
       );
       return;
     }
@@ -718,6 +775,13 @@ class Interactive3dState extends State<Interactive3d> {
   /// horizontal orbit.
   Future<void> stopShowroomRotation() async {
     if (Platform.isIOS) {
+      await _iosMethodChannel?.invokeMethod(
+        'stopShowroomRotation',
+      );
+
+      debugPrint(
+        'MUNJA SHOWROOM ROTATION STOPPED iOS',
+      );
       return;
     }
 
@@ -754,6 +818,15 @@ class Interactive3dState extends State<Interactive3d> {
     required double zoom,
   }) async {
     if (Platform.isIOS) {
+      await _iosMethodChannel?.invokeMethod(
+        'setCameraPose',
+        {
+          'horizontalDegrees': horizontalDegrees,
+          'verticalDegrees': verticalDegrees,
+          'targetHeightFactor': targetHeightFactor,
+          'zoom': zoom,
+        },
+      );
       return;
     }
 

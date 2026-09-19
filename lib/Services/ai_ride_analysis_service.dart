@@ -1,11 +1,9 @@
 import 'dart:math';
 
 import '../models/trip.dart';
+import '../Core/localization/app_text.dart';
 
-enum RideAnalysisTier {
-  free,
-  pro,
-}
+enum RideAnalysisTier { free, pro }
 
 class RideAnalysisResult {
   const RideAnalysisResult({
@@ -30,6 +28,19 @@ class RideAnalysisResult {
 class AiRideAnalysisService {
   const AiRideAnalysisService();
 
+  String _t(
+    String key, [
+    Map<String, String> values = const <String, String>{},
+  ]) {
+    var text = AppText.t(key);
+
+    for (final entry in values.entries) {
+      text = text.replaceAll('{${entry.key}}', entry.value);
+    }
+
+    return text;
+  }
+
   RideAnalysisResult analyze({
     required Trip trip,
     required List<Trip> history,
@@ -37,8 +48,9 @@ class AiRideAnalysisService {
   }) {
     final distanceKm = trip.distanceM / 1000;
     final durationHours = trip.duration.inSeconds / 3600;
-    final averageSpeedKmh =
-        durationHours <= 0 ? 0.0 : distanceKm / durationHours;
+    final averageSpeedKmh = durationHours <= 0
+        ? 0.0
+        : distanceKm / durationHours;
 
     final previousTrips = history
         .where(
@@ -64,22 +76,20 @@ class AiRideAnalysisService {
         .where((value) => value.isFinite && value > 0)
         .toList(growable: false);
 
-    final averageHistoricDistance =
-        _average(historicalDistances);
-    final averageHistoricSpeed =
-        _average(historicalSpeeds);
+    final averageHistoricDistance = _average(historicalDistances);
+    final averageHistoricSpeed = _average(historicalSpeeds);
 
     final isAboveUsualDistance =
         averageHistoricDistance > 0 &&
-            distanceKm >= averageHistoricDistance * 1.10;
+        distanceKm >= averageHistoricDistance * 1.10;
 
     final isLongerThanUsual =
         averageHistoricDistance > 0 &&
-            distanceKm >= averageHistoricDistance * 1.25;
+        distanceKm >= averageHistoricDistance * 1.25;
 
     final isAboveUsualSpeed =
         averageHistoricSpeed > 0 &&
-            averageSpeedKmh >= averageHistoricSpeed * 1.08;
+        averageSpeedKmh >= averageHistoricSpeed * 1.08;
 
     final consistencyScore = _consistencyScore(
       trip: trip,
@@ -141,18 +151,12 @@ class AiRideAnalysisService {
       return 0;
     }
 
-    final total = values.fold<double>(
-      0,
-      (sum, value) => sum + value,
-    );
+    final total = values.fold<double>(0, (sum, value) => sum + value);
 
     return total / values.length;
   }
 
-  int _consistencyScore({
-    required Trip trip,
-    required double averageSpeedKmh,
-  }) {
+  int _consistencyScore({required Trip trip, required double averageSpeedKmh}) {
     var score = 70;
 
     if (trip.duration.inMinutes >= 20) {
@@ -177,18 +181,18 @@ class AiRideAnalysisService {
     required double averageSpeedKmh,
   }) {
     if (distanceKm >= 25) {
-      return 'Strong endurance ride';
+      return _t('rideAnalysisStrongEndurance');
     }
 
     if (averageSpeedKmh >= 22) {
-      return 'Fast ride';
+      return _t('rideAnalysisFastRide');
     }
 
     if (distanceKm >= 8) {
-      return 'Solid ride';
+      return _t('rideAnalysisSolidRide');
     }
 
-    return 'Ride complete';
+    return _t('rideAnalysisRideComplete');
   }
 
   String _freeSummary({
@@ -198,9 +202,11 @@ class AiRideAnalysisService {
   }) {
     final minutes = duration.inMinutes;
 
-    return 'You completed ${distanceKm.toStringAsFixed(1)} km '
-        'in $minutes min with an average speed of '
-        '${averageSpeedKmh.toStringAsFixed(1)} km/h.';
+    return _t('rideAnalysisFreeSummary', {
+      'distance': distanceKm.toStringAsFixed(1),
+      'minutes': '$minutes',
+      'speed': averageSpeedKmh.toStringAsFixed(1),
+    });
   }
 
   String _freeRecommendation({
@@ -208,14 +214,14 @@ class AiRideAnalysisService {
     required double averageSpeedKmh,
   }) {
     if (distanceKm < 5) {
-      return 'For the next ride, try adding a few more steady kilometres.';
+      return _t('rideAnalysisAddSteadyKilometres');
     }
 
     if (averageSpeedKmh < 14) {
-      return 'Focus on a smooth, sustainable pace rather than short speed bursts.';
+      return _t('rideAnalysisSmoothSustainablePace');
     }
 
-    return 'Keep building consistency and add distance gradually.';
+    return _t('rideAnalysisBuildConsistency');
   }
 
   String _proTitle({
@@ -224,22 +230,22 @@ class AiRideAnalysisService {
     required int consistencyScore,
   }) {
     if (isAboveUsualDistance && isAboveUsualSpeed) {
-      return 'Above your normal performance';
+      return _t('rideAnalysisAboveNormalPerformance');
     }
 
     if (isAboveUsualSpeed) {
-      return 'Faster than your usual pace';
+      return _t('rideAnalysisFasterThanUsual');
     }
 
     if (isAboveUsualDistance) {
-      return 'Longer than your usual ride';
+      return _t('rideAnalysisLongerThanUsual');
     }
 
     if (consistencyScore >= 85) {
-      return 'Very consistent ride';
+      return _t('rideAnalysisVeryConsistent');
     }
 
-    return 'Personal ride analysis';
+    return _t('rideAnalysisPersonalAnalysis');
   }
 
   String _proSummary({
@@ -252,38 +258,42 @@ class AiRideAnalysisService {
     required int consistencyScore,
   }) {
     final parts = <String>[
-      'This ride was ${distanceKm.toStringAsFixed(1)} km at '
-          '${averageSpeedKmh.toStringAsFixed(1)} km/h.',
+      _t('rideAnalysisProBaseSummary', {
+        'distance': distanceKm.toStringAsFixed(1),
+        'speed': averageSpeedKmh.toStringAsFixed(1),
+      }),
     ];
 
     if (averageHistoricDistance > 0) {
-      final distanceDelta =
-          ((distanceKm / averageHistoricDistance) - 1) * 100;
+      final distanceDelta = ((distanceKm / averageHistoricDistance) - 1) * 100;
 
       parts.add(
-        'Distance was ${distanceDelta.abs().toStringAsFixed(0)}% '
-        '${distanceDelta >= 0 ? 'above' : 'below'} your recent average.',
+        _t(
+          distanceDelta >= 0
+              ? 'rideAnalysisDistanceAbove'
+              : 'rideAnalysisDistanceBelow',
+          {'percent': distanceDelta.abs().toStringAsFixed(0)},
+        ),
       );
     }
 
     if (averageHistoricSpeed > 0) {
-      final speedDelta =
-          ((averageSpeedKmh / averageHistoricSpeed) - 1) * 100;
+      final speedDelta = ((averageSpeedKmh / averageHistoricSpeed) - 1) * 100;
 
       parts.add(
-        'Average speed was ${speedDelta.abs().toStringAsFixed(0)}% '
-        '${speedDelta >= 0 ? 'above' : 'below'} your usual pace.',
+        _t(
+          speedDelta >= 0 ? 'rideAnalysisSpeedAbove' : 'rideAnalysisSpeedBelow',
+          {'percent': speedDelta.abs().toStringAsFixed(0)},
+        ),
       );
     }
 
     parts.add(
-      'Ride consistency score: $consistencyScore/100.',
+      _t('rideAnalysisConsistencyScore', {'score': '$consistencyScore'}),
     );
 
     if (isAboveUsualDistance && isAboveUsualSpeed) {
-      parts.add(
-        'You extended both distance and pace in the same session.',
-      );
+      parts.add(_t('rideAnalysisExtendedDistanceAndPace'));
     }
 
     return parts.join(' ');
@@ -296,21 +306,21 @@ class AiRideAnalysisService {
     required int hardBrakes,
   }) {
     if (hardBrakes >= 4) {
-      return 'Next ride, focus on smoother speed control and earlier braking.';
+      return _t('rideAnalysisSmootherBraking');
     }
 
     if (isLongerThanUsual && isAboveUsualSpeed) {
-      return 'Use the next ride as a lighter recovery session to balance the training load.';
+      return _t('rideAnalysisRecoverySession');
     }
 
     if (consistencyScore < 70) {
-      return 'Try starting slightly easier and hold a steadier pace through the middle of the ride.';
+      return _t('rideAnalysisStartEasier');
     }
 
     if (isAboveUsualSpeed) {
-      return 'Your pace is progressing. Keep the next ride controlled and repeat the same effort.';
+      return _t('rideAnalysisPaceProgressing');
     }
 
-    return 'Build on this ride by adding 5–10% distance while keeping the same smooth pace.';
+    return _t('rideAnalysisAddDistance');
   }
 }

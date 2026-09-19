@@ -237,9 +237,9 @@ class _Header extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              const Text(
-                'MUNJA RIDES',
-                style: TextStyle(
+              Text(
+                AppText.t('munjaRidesCaps'),
+                style: const TextStyle(
                   color: MunjaColors.mint,
                   fontSize: 12,
                   fontWeight: FontWeight.w900,

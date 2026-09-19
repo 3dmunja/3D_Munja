@@ -17,6 +17,7 @@ import '../core/theme/munja_colors.dart';
 import '../models/firestore_bike.dart';
 import '../providers/bike_provider.dart';
 import '../providers/digital_twin_provider.dart';
+import '../services/bike_model_resolver.dart';
 import '../widgets/munja_3d_bike_viewer.dart';
 
 class _CosmeticUnlock {
@@ -94,9 +95,7 @@ class _GarageScreenState extends State<GarageScreen> {
     final uid = _currentUserId;
 
     if (uid.isEmpty) {
-      return Stream<List<_CosmeticUnlock>>.value(
-        const <_CosmeticUnlock>[],
-      );
+      return Stream<List<_CosmeticUnlock>>.value(const <_CosmeticUnlock>[]);
     }
 
     return FirebaseFirestore.instance
@@ -195,9 +194,7 @@ class _GarageScreenState extends State<GarageScreen> {
     // One extra event-loop turn is enough for the old Flutter owner to detach.
     // Native Filament remains persistent inside interactive_3d.
     if (value) {
-      await Future<void>.delayed(
-        const Duration(milliseconds: 40),
-      );
+      await Future<void>.delayed(const Duration(milliseconds: 40));
     }
   }
 
@@ -226,17 +223,10 @@ class _GarageScreenState extends State<GarageScreen> {
     }
   }
 
-  Future<void> _openCustomize(
-    BuildContext context,
-    FirestoreBike bike,
-  ) async {
+  Future<void> _openCustomize(BuildContext context, FirestoreBike bike) async {
     await _pushWithGarage3dSuspended<void>(
       context,
-      MaterialPageRoute<void>(
-        builder: (_) => BikeCustomizeScreen(
-          bike: bike,
-        ),
-      ),
+      MaterialPageRoute<void>(builder: (_) => BikeCustomizeScreen(bike: bike)),
     );
 
     if (!mounted) {
@@ -249,50 +239,28 @@ class _GarageScreenState extends State<GarageScreen> {
     await context.read<BikeProvider>().refresh();
   }
 
-  Future<void> _openProducts(
-    BuildContext context,
-    FirestoreBike bike,
-  ) async {
+  Future<void> _openProducts(BuildContext context, FirestoreBike bike) async {
     await _pushWithGarage3dSuspended<void>(
       context,
-      MaterialPageRoute<void>(
-        builder: (_) => BikeProductsScreen(
-          bike: bike,
-        ),
-      ),
+      MaterialPageRoute<void>(builder: (_) => BikeProductsScreen(bike: bike)),
     );
   }
 
-  Future<void> _openDevices(
-    BuildContext context,
-    FirestoreBike bike,
-  ) async {
+  Future<void> _openDevices(BuildContext context, FirestoreBike bike) async {
     await _pushWithGarage3dSuspended<void>(
       context,
-      MaterialPageRoute<void>(
-        builder: (_) => BikeDevicesScreen(
-          bike: bike,
-        ),
-      ),
+      MaterialPageRoute<void>(builder: (_) => BikeDevicesScreen(bike: bike)),
     );
   }
 
-  Future<void> _openBikeInfo(
-    BuildContext context,
-    FirestoreBike bike,
-  ) async {
+  Future<void> _openBikeInfo(BuildContext context, FirestoreBike bike) async {
     await Navigator.of(context).push<void>(
       MaterialPageRoute<void>(
         builder: (_) => BikeInfoScreen(
           bike: bike,
           onEdit: () {
             Navigator.of(context).pop();
-            Future.microtask(
-              () => _openBikeEditor(
-                context,
-                bike: bike,
-              ),
-            );
+            Future.microtask(() => _openBikeEditor(context, bike: bike));
           },
         ),
       ),
@@ -344,31 +312,58 @@ class _GarageScreenState extends State<GarageScreen> {
       builder: (dialogContext) {
         return AlertDialog(
           backgroundColor: MunjaColors.panel,
+          icon: const Icon(
+            Icons.warning_amber_rounded,
+            color: Colors.redAccent,
+            size: 38,
+          ),
           title: Text(
             AppText.t('deleteBike'),
-            style: TextStyle(
+            textAlign: TextAlign.center,
+            style: const TextStyle(
               color: MunjaColors.text,
               fontWeight: FontWeight.w900,
             ),
           ),
-          content: Text(
-            '${AppText.t('confirmDeleteBike')} "${bike.displayName}"?',
-            style: TextStyle(
-              color: Colors.white.withValues(alpha: 0.68),
-              height: 1.4,
-              fontWeight: FontWeight.w600,
-            ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Text(
+                '"${bike.displayName}"',
+                textAlign: TextAlign.center,
+                style: const TextStyle(
+                  color: MunjaColors.text,
+                  fontSize: 17,
+                  fontWeight: FontWeight.w900,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Text(
+                'Are you sure you want to permanently delete this bike?\n\n'
+                'This action cannot be undone.',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  color: Colors.white.withValues(alpha: 0.68),
+                  height: 1.45,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
           ),
           actions: [
             TextButton(
               onPressed: () => Navigator.of(dialogContext).pop(false),
               child: Text(AppText.t('cancel')),
             ),
-            TextButton(
+            FilledButton(
+              style: FilledButton.styleFrom(
+                backgroundColor: Colors.redAccent,
+                foregroundColor: Colors.white,
+              ),
               onPressed: () => Navigator.of(dialogContext).pop(true),
-              child: Text(
-                AppText.t('delete'),
-                style: TextStyle(color: Colors.redAccent),
+              child: const Text(
+                'Delete permanently',
+                style: TextStyle(fontWeight: FontWeight.w900),
               ),
             ),
           ],
@@ -411,160 +406,146 @@ class _GarageScreenState extends State<GarageScreen> {
     return StreamBuilder<List<_CosmeticUnlock>>(
       stream: _watchCosmeticUnlocks(),
       initialData: const <_CosmeticUnlock>[],
-      builder: (
-        context,
-        unlockSnapshot,
-      ) {
+      builder: (context, unlockSnapshot) {
         final cosmeticUnlocks =
-            unlockSnapshot.data ??
-                const <_CosmeticUnlock>[];
+            unlockSnapshot.data ?? const <_CosmeticUnlock>[];
 
         return Consumer2<BikeProvider, DigitalTwinProvider>(
           builder: (context, provider, digitalTwinProvider, _) {
-        final bikes = provider.bikes;
-        final activeBike = provider.activeBike;
+            final bikes = provider.bikes;
+            final activeBike = provider.activeBike;
 
-        _scheduleDigitalTwinSync(
-          activeBike: activeBike,
-          digitalTwinProvider: digitalTwinProvider,
-        );
+            _scheduleDigitalTwinSync(
+              activeBike: activeBike,
+              digitalTwinProvider: digitalTwinProvider,
+            );
 
-        final showInitialLoading =
-            !provider.isInitialized || (provider.isLoading && bikes.isEmpty);
+            final showInitialLoading =
+                !provider.isInitialized ||
+                (provider.isLoading && bikes.isEmpty);
 
-        return Scaffold(
-          backgroundColor: MunjaColors.bg,
-          body: SafeArea(
-            bottom: false,
-            child: RefreshIndicator(
-              onRefresh: provider.refresh,
-              color: MunjaColors.mint,
-              backgroundColor: MunjaColors.panel,
-              child: ListView(
-                physics: const AlwaysScrollableScrollPhysics(),
-                padding: const EdgeInsets.fromLTRB(
-                  20,
-                  18,
-                  20,
-                  360,
-                ),
-                children: [
-                  _GarageHeader(
-                    bikesCount: bikes.length,
-                    busy: provider.isCreating,
-                    onAddBike: () => _openBikeEditor(context),
-                  ),
-                  if (cosmeticUnlocks.isNotEmpty) ...[
-                    const SizedBox(height: 14),
-                    _UnlockedRewardsCard(
-                      unlocks: cosmeticUnlocks,
-                      onCustomize: activeBike == null
-                          ? null
-                          : () => _openCustomize(
-                                context,
-                                activeBike,
-                              ),
-                    ),
-                  ],
-                  const SizedBox(height: 18),
-                  if (provider.hasError && !showInitialLoading) ...[
-                    _ErrorCard(
-                      message:
-                          provider.errorMessage ??
-                          'Cyklerne kunne ikke indlæses.',
-                      onRetry: provider.refresh,
-                      onDismiss: provider.clearError,
-                    ),
-                    const SizedBox(height: 16),
-                  ],
-                  if (showInitialLoading)
-                    const _LoadingCard()
-                  else if (bikes.isEmpty)
-                    _EmptyGarageCard(
-                      onCreateBike: () => _openBikeEditor(context),
-                    )
-                  else ...[
-                    if (activeBike != null) ...[
-                      _ActiveBikeHero(
-                        bike: activeBike,
-                        busy: provider.isBusy,
-                        digitalTwinProvider: digitalTwinProvider,
-                        suspend3d: _suspendGarage3d,
-                        onCustomize: () =>
-                            _openCustomize(context, activeBike),
-                        onProducts: () =>
-                            _openProducts(context, activeBike),
-                        onDevices: () =>
-                            _openDevices(context, activeBike),
-                        onBikeInfo: () =>
-                            _openBikeInfo(context, activeBike),
-                        onEdit: () =>
-                            _openBikeEditor(context, bike: activeBike),
+            return Scaffold(
+              backgroundColor: MunjaColors.bg,
+              body: SafeArea(
+                bottom: false,
+                child: RefreshIndicator(
+                  onRefresh: provider.refresh,
+                  color: MunjaColors.mint,
+                  backgroundColor: MunjaColors.panel,
+                  child: ListView(
+                    physics: const AlwaysScrollableScrollPhysics(),
+                    padding: const EdgeInsets.fromLTRB(20, 18, 20, 360),
+                    children: [
+                      _GarageHeader(
+                        bikesCount: bikes.length,
+                        busy: provider.isCreating,
+                        onAddBike: () => _openBikeEditor(context),
                       ),
-                      const SizedBox(height: 18),
-                    ],
-                    Row(
-                      children: [
-                        Text(
-                          AppText.t('myBikes').toUpperCase(),
-                          style: TextStyle(
-                            color: Colors.white.withValues(alpha: 0.44),
-                            fontSize: 10,
-                            fontWeight: FontWeight.w900,
-                            letterSpacing: 1.7,
-                          ),
+                      if (cosmeticUnlocks.isNotEmpty) ...[
+                        const SizedBox(height: 14),
+                        _UnlockedRewardsCard(
+                          unlocks: cosmeticUnlocks,
+                          onCustomize: activeBike == null
+                              ? null
+                              : () => _openCustomize(context, activeBike),
                         ),
-                        const Spacer(),
-                        Text(
-                          'SWIPE',
-                          style: TextStyle(
-                            color: Colors.white.withValues(alpha: 0.22),
-                            fontSize: 8,
-                            fontWeight: FontWeight.w800,
-                            letterSpacing: 0.8,
+                      ],
+                      const SizedBox(height: 18),
+                      if (provider.hasError && !showInitialLoading) ...[
+                        _ErrorCard(
+                          message:
+                              provider.errorMessage ??
+                              'Cyklerne kunne ikke indlæses.',
+                          onRetry: provider.refresh,
+                          onDismiss: provider.clearError,
+                        ),
+                        const SizedBox(height: 16),
+                      ],
+                      if (showInitialLoading)
+                        const _LoadingCard()
+                      else if (bikes.isEmpty)
+                        _EmptyGarageCard(
+                          onCreateBike: () => _openBikeEditor(context),
+                        )
+                      else ...[
+                        if (activeBike != null) ...[
+                          _ActiveBikeHero(
+                            bike: activeBike,
+                            busy: provider.isBusy,
+                            digitalTwinProvider: digitalTwinProvider,
+                            suspend3d: _suspendGarage3d,
+                            onCustomize: () =>
+                                _openCustomize(context, activeBike),
+                            onProducts: () =>
+                                _openProducts(context, activeBike),
+                            onDevices: () => _openDevices(context, activeBike),
+                            onBikeInfo: () =>
+                                _openBikeInfo(context, activeBike),
+                            onEdit: () =>
+                                _openBikeEditor(context, bike: activeBike),
+                          ),
+                          const SizedBox(height: 18),
+                        ],
+                        Row(
+                          children: [
+                            Text(
+                              AppText.t('myBikes').toUpperCase(),
+                              style: TextStyle(
+                                color: Colors.white.withValues(alpha: 0.44),
+                                fontSize: 10,
+                                fontWeight: FontWeight.w900,
+                                letterSpacing: 1.7,
+                              ),
+                            ),
+                            const Spacer(),
+                            Text(
+                              'SWIPE',
+                              style: TextStyle(
+                                color: Colors.white.withValues(alpha: 0.22),
+                                fontSize: 8,
+                                fontWeight: FontWeight.w800,
+                                letterSpacing: 0.8,
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        SizedBox(
+                          height: 146,
+                          child: ListView.separated(
+                            scrollDirection: Axis.horizontal,
+                            physics: const BouncingScrollPhysics(),
+                            itemCount: bikes.length + 1,
+                            separatorBuilder: (_, __) =>
+                                const SizedBox(width: 10),
+                            itemBuilder: (context, itemIndex) {
+                              if (itemIndex == bikes.length) {
+                                return _GarageAddBikeTile(
+                                  busy: provider.isCreating,
+                                  onTap: () => _openBikeEditor(context),
+                                );
+                              }
+
+                              final bike = bikes[itemIndex];
+
+                              return _GarageBikeTile(
+                                bike: bike,
+                                busy: provider.isBusy,
+                                onTap: () => bike.active
+                                    ? _openBikeEditor(context, bike: bike)
+                                    : _setActiveBike(context, bike),
+                                onMore: () =>
+                                    _openBikeEditor(context, bike: bike),
+                              );
+                            },
                           ),
                         ),
                       ],
-                    ),
-                    const SizedBox(height: 12),
-                    SizedBox(
-                      height: 146,
-                      child: ListView.separated(
-                        scrollDirection: Axis.horizontal,
-                        physics: const BouncingScrollPhysics(),
-                        itemCount: bikes.length + 1,
-                        separatorBuilder: (_, __) =>
-                            const SizedBox(width: 10),
-                        itemBuilder: (context, itemIndex) {
-                          if (itemIndex == bikes.length) {
-                            return _GarageAddBikeTile(
-                              busy: provider.isCreating,
-                              onTap: () => _openBikeEditor(context),
-                            );
-                          }
-
-                          final bike = bikes[itemIndex];
-
-                          return _GarageBikeTile(
-                            bike: bike,
-                            busy: provider.isBusy,
-                            onTap: () => bike.active
-                                ? _openBikeEditor(context, bike: bike)
-                                : _setActiveBike(context, bike),
-                            onMore: () => _openBikeEditor(
-                              context,
-                              bike: bike,
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                  ],
-                ],
+                    ],
+                  ),
+                ),
               ),
-            ),
-          ),
-        );
+            );
           },
         );
       },
@@ -591,9 +572,7 @@ class _UnlockedRewardsCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: MunjaColors.mint.withValues(alpha: 0.055),
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(
-          color: MunjaColors.mint.withValues(alpha: 0.18),
-        ),
+        border: Border.all(color: MunjaColors.mint.withValues(alpha: 0.18)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -631,9 +610,7 @@ class _UnlockedRewardsCard extends StatelessWidget {
           ...recent.map(
             (unlock) => Padding(
               padding: const EdgeInsets.only(bottom: 8),
-              child: _UnlockedRewardRow(
-                unlock: unlock,
-              ),
+              child: _UnlockedRewardRow(unlock: unlock),
             ),
           ),
           if (onCustomize != null) ...[
@@ -643,14 +620,10 @@ class _UnlockedRewardsCard extends StatelessWidget {
               height: 46,
               child: FilledButton.icon(
                 onPressed: onCustomize,
-                icon: const Icon(
-                  Icons.palette_rounded,
-                ),
+                icon: const Icon(Icons.palette_rounded),
                 label: Text(
                   AppText.t('openCustomizeCaps'),
-                  style: TextStyle(
-                    fontWeight: FontWeight.w900,
-                  ),
+                  style: TextStyle(fontWeight: FontWeight.w900),
                 ),
               ),
             ),
@@ -662,9 +635,7 @@ class _UnlockedRewardsCard extends StatelessWidget {
 }
 
 class _UnlockedRewardRow extends StatelessWidget {
-  const _UnlockedRewardRow({
-    required this.unlock,
-  });
+  const _UnlockedRewardRow({required this.unlock});
 
   final _CosmeticUnlock unlock;
 
@@ -673,24 +644,19 @@ class _UnlockedRewardRow extends StatelessWidget {
     final icon = unlock.isFrame
         ? Icons.crop_free_rounded
         : unlock.isSkin
-            ? Icons.palette_rounded
-            : Icons.workspace_premium_rounded;
+        ? Icons.palette_rounded
+        : Icons.workspace_premium_rounded;
 
     final typeLabel = unlock.type.isEmpty
         ? 'REWARD'
         : unlock.type.toUpperCase();
 
     return Container(
-      padding: const EdgeInsets.symmetric(
-        horizontal: 12,
-        vertical: 10,
-      ),
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
       decoration: BoxDecoration(
         color: Colors.black.withValues(alpha: 0.16),
         borderRadius: BorderRadius.circular(17),
-        border: Border.all(
-          color: Colors.white.withValues(alpha: 0.05),
-        ),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.05)),
       ),
       child: Row(
         children: [
@@ -701,11 +667,7 @@ class _UnlockedRewardRow extends StatelessWidget {
               color: MunjaColors.mint.withValues(alpha: 0.10),
               borderRadius: BorderRadius.circular(12),
             ),
-            child: Icon(
-              icon,
-              color: MunjaColors.mint,
-              size: 19,
-            ),
+            child: Icon(icon, color: MunjaColors.mint, size: 19),
           ),
           const SizedBox(width: 10),
           Expanded(
@@ -713,9 +675,7 @@ class _UnlockedRewardRow extends StatelessWidget {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Text(
-                  unlock.name.isEmpty
-                      ? unlock.rewardId
-                      : unlock.name,
+                  unlock.name.isEmpty ? unlock.rewardId : unlock.name,
                   maxLines: 1,
                   overflow: TextOverflow.ellipsis,
                   style: const TextStyle(
@@ -865,9 +825,9 @@ class _ActiveBikeHero extends StatelessWidget {
   Widget build(BuildContext context) {
     final connected = digitalTwinProvider.connectedProductCount;
     final products = digitalTwinProvider.productCount;
-    final activeSkinPreviewAsset = _garageSkinPreviewAsset(
-      bike.effectiveActiveSkin,
-    );
+    final activeSkinPreviewAsset = bike.type == FirestoreBikeType.road
+        ? 'assets/Images/Customize/Previews/road_bike.png'
+        : _garageSkinPreviewAsset(bike.effectiveActiveSkin);
 
     return Container(
       padding: const EdgeInsets.fromLTRB(16, 14, 16, 16),
@@ -943,6 +903,12 @@ class _ActiveBikeHero extends StatelessWidget {
                     const _Garage3dSuspendedPlaceholder()
                   else
                     Munja3DBikeViewer(
+                      modelPath: BikeModelResolver.resolveFirestoreModelPath(
+                        bike.type,
+                      ),
+                      applyDigitalTwinCustomization:
+                          bike.type == FirestoreBikeType.mtb ||
+                          bike.type == FirestoreBikeType.kids,
                       key: ValueKey<String>(
                         'garage-digital-twin-${bike.id}-'
                         '${bike.effectiveActiveFrameId}-'
@@ -958,10 +924,8 @@ class _ActiveBikeHero extends StatelessWidget {
                       autoRotate: false,
                       showroomSwing: true,
                       showroomSwingDegrees: 10.0,
-                      showroomSwingDuration:
-                          const Duration(milliseconds: 2600),
-                      showroomSwingResumeDelay:
-                          const Duration(seconds: 2),
+                      showroomSwingDuration: const Duration(milliseconds: 2600),
+                      showroomSwingResumeDelay: const Duration(seconds: 2),
                       useDigitalTwinMaterials: true,
                       activeSkinId: bike.effectiveActiveSkin.isEmpty
                           ? 'standard'
@@ -1264,7 +1228,6 @@ class _ActiveBikeHero extends StatelessWidget {
   }
 }
 
-
 class _Garage3dSuspendedPlaceholder extends StatelessWidget {
   const _Garage3dSuspendedPlaceholder();
 
@@ -1359,9 +1322,7 @@ class _GarageQuickAction extends StatelessWidget {
           decoration: BoxDecoration(
             color: Colors.black.withValues(alpha: 0.16),
             borderRadius: BorderRadius.circular(20),
-            border: Border.all(
-              color: Colors.white.withValues(alpha: 0.06),
-            ),
+            border: Border.all(color: Colors.white.withValues(alpha: 0.06)),
           ),
           child: Row(
             children: [
@@ -1372,11 +1333,7 @@ class _GarageQuickAction extends StatelessWidget {
                   color: MunjaColors.mint.withValues(alpha: 0.09),
                   borderRadius: BorderRadius.circular(13),
                 ),
-                child: Icon(
-                  icon,
-                  color: MunjaColors.mint,
-                  size: 20,
-                ),
+                child: Icon(icon, color: MunjaColors.mint, size: 20),
               ),
               const SizedBox(width: 10),
               Expanded(
@@ -1441,24 +1398,17 @@ class _GarageOverviewStrip extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.black.withValues(alpha: 0.16),
         borderRadius: BorderRadius.circular(21),
-        border: Border.all(
-          color: Colors.white.withValues(alpha: 0.055),
-        ),
+        border: Border.all(color: Colors.white.withValues(alpha: 0.055)),
       ),
       child: Row(
         children: [
           _GarageMetric(label: 'Produkter', value: '$productCount'),
           _GarageMetricDivider(),
-          _GarageMetric(
-            label: 'Forbundet',
-            value: '$connectedProductCount',
-          ),
+          _GarageMetric(label: 'Forbundet', value: '$connectedProductCount'),
           _GarageMetricDivider(),
           _GarageMetric(
             label: 'Firmware',
-            value: firmwareUpdateCount > 0
-                ? '$firmwareUpdateCount ny'
-                : 'OK',
+            value: firmwareUpdateCount > 0 ? '$firmwareUpdateCount ny' : 'OK',
             active: firmwareUpdateCount == 0,
           ),
           _GarageMetricDivider(),
@@ -1547,9 +1497,7 @@ class _QuickSkinSelector extends StatelessWidget {
       decoration: BoxDecoration(
         color: Colors.black.withValues(alpha: 0.20),
         borderRadius: BorderRadius.circular(24),
-        border: Border.all(
-          color: MunjaColors.mint.withValues(alpha: 0.14),
-        ),
+        border: Border.all(color: MunjaColors.mint.withValues(alpha: 0.14)),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1781,7 +1729,9 @@ class _DigitalTwinStatusRow extends StatelessWidget {
       children: [
         _TwinMetricBadge(
           icon: hasModel ? Icons.view_in_ar_rounded : Icons.view_in_ar_outlined,
-          label: enabled && hasModel ? AppText.t('digitalTwinReady') : AppText.t('no3dModel'),
+          label: enabled && hasModel
+              ? AppText.t('digitalTwinReady')
+              : AppText.t('no3dModel'),
           active: enabled && hasModel,
         ),
         _TwinMetricBadge(
@@ -1791,7 +1741,8 @@ class _DigitalTwinStatusRow extends StatelessWidget {
         ),
         _TwinMetricBadge(
           icon: Icons.bluetooth_connected_rounded,
-          label: '$connectedProductCount ${AppText.t('connected').toLowerCase()}',
+          label:
+              '$connectedProductCount ${AppText.t('connected').toLowerCase()}',
           active: connectedProductCount > 0,
         ),
         if (firmwareUpdateCount > 0)
@@ -1928,9 +1879,7 @@ class _GarageBikeTile extends StatelessWidget {
                       ),
                       child: Icon(
                         _bikeIcon(bike.type),
-                        color: bike.active
-                            ? MunjaColors.mint
-                            : Colors.white54,
+                        color: bike.active ? MunjaColors.mint : Colors.white54,
                         size: 24,
                       ),
                     ),
@@ -1989,10 +1938,7 @@ class _GarageBikeTile extends StatelessWidget {
 }
 
 class _GarageAddBikeTile extends StatelessWidget {
-  const _GarageAddBikeTile({
-    required this.busy,
-    required this.onTap,
-  });
+  const _GarageAddBikeTile({required this.busy, required this.onTap});
 
   final bool busy;
   final VoidCallback onTap;
@@ -2010,9 +1956,7 @@ class _GarageAddBikeTile extends StatelessWidget {
             decoration: BoxDecoration(
               color: MunjaColors.panel.withValues(alpha: 0.48),
               borderRadius: BorderRadius.circular(24),
-              border: Border.all(
-                color: Colors.white.withValues(alpha: 0.07),
-              ),
+              border: Border.all(color: Colors.white.withValues(alpha: 0.07)),
             ),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
@@ -2196,7 +2140,10 @@ class _BikeCard extends StatelessWidget {
                 ),
               PopupMenuItem<String>(
                 value: 'delete',
-                child: Text(AppText.t('delete'), style: const TextStyle(color: Colors.redAccent)),
+                child: Text(
+                  AppText.t('delete'),
+                  style: const TextStyle(color: Colors.redAccent),
+                ),
               ),
             ],
           ),
@@ -2456,8 +2403,13 @@ class _BikeEditorSheetState extends State<_BikeEditorSheet> {
     } else {
       final ownerId = provider.currentUserId ?? '';
 
+      final enteredName = _nameController.text.trim();
+      final bikeName = enteredName.isNotEmpty
+          ? enteredName
+          : _defaultBikeName(_type);
+
       final bike = FirestoreBike.empty(ownerId: ownerId).copyWith(
-        name: _nameController.text,
+        name: bikeName,
         brand: _brandController.text,
         model: _modelController.text,
         type: _type,
@@ -2470,10 +2422,7 @@ class _BikeEditorSheetState extends State<_BikeEditorSheet> {
         notes: _notesController.text,
       );
 
-      final createdBike = await provider.createBike(
-        bike,
-        makeActive: _makeActive || provider.bikes.isEmpty,
-      );
+      final createdBike = await provider.createBike(bike, makeActive: true);
 
       success = createdBike != null;
       targetBikeId = createdBike?.id;
@@ -2529,8 +2478,7 @@ class _BikeEditorSheetState extends State<_BikeEditorSheet> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
-            provider.errorMessage ??
-                AppText.t('bikeSavedFileProcessFailed'),
+            provider.errorMessage ?? AppText.t('bikeSavedFileProcessFailed'),
           ),
           backgroundColor: Colors.redAccent,
         ),
@@ -2567,11 +2515,8 @@ class _BikeEditorSheetState extends State<_BikeEditorSheet> {
             key: _formKey,
             child: ListView(
               shrinkWrap: true,
-              keyboardDismissBehavior:
-                  ScrollViewKeyboardDismissBehavior.onDrag,
-              padding: const EdgeInsets.only(
-                bottom: 360,
-              ),
+              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+              padding: const EdgeInsets.only(bottom: 360),
               children: [
                 Center(
                   child: Container(
@@ -2619,32 +2564,13 @@ class _BikeEditorSheetState extends State<_BikeEditorSheet> {
                   label: AppText.t('bikeName'),
                   icon: Icons.directions_bike_rounded,
                   validator: (value) {
-                    if (value == null || value.trim().isEmpty) {
+                    if (_editing && (value == null || value.trim().isEmpty)) {
                       return AppText.t('enterBikeName');
                     }
                     return null;
                   },
                 ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _TextField(
-                        controller: _brandController,
-                        label: AppText.t('brand'),
-                        icon: Icons.sell_outlined,
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: _TextField(
-                        controller: _modelController,
-                        label: 'Model',
-                        icon: Icons.badge_outlined,
-                      ),
-                    ),
-                  ],
-                ),
+
                 const SizedBox(height: 12),
                 DropdownButtonFormField<FirestoreBikeType>(
                   initialValue: _type,
@@ -2669,105 +2595,128 @@ class _BikeEditorSheetState extends State<_BikeEditorSheet> {
                           }
                         },
                 ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _TextField(
-                        controller: _colorController,
-                        label: AppText.t('color'),
-                        icon: Icons.palette_outlined,
+
+                if (_editing) ...[
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _TextField(
+                          controller: _brandController,
+                          label: AppText.t('brand'),
+                          icon: Icons.sell_outlined,
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: _TextField(
-                        controller: _wheelSizeController,
-                        label: AppText.t('wheelSize'),
-                        icon: Icons.straighten_rounded,
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _TextField(
+                          controller: _modelController,
+                          label: 'Model',
+                          icon: Icons.badge_outlined,
+                        ),
                       ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _TextField(
-                        controller: _frameSizeController,
-                        label: AppText.t('frameSize'),
-                        icon: Icons.height_rounded,
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _TextField(
+                          controller: _colorController,
+                          label: AppText.t('color'),
+                          icon: Icons.palette_outlined,
+                        ),
                       ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: _TextField(
-                        controller: _firmwareController,
-                        label: 'Firmware',
-                        icon: Icons.memory_rounded,
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _TextField(
+                          controller: _wheelSizeController,
+                          label: AppText.t('wheelSize'),
+                          icon: Icons.straighten_rounded,
+                        ),
                       ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                _TextField(
-                  controller: _serialNumberController,
-                  label: 'Serienummer',
-                  icon: Icons.qr_code_rounded,
-                ),
-                const SizedBox(height: 18),
-                _BikeImagePickerCard(
-                  pendingImagePath: _pendingImagePath,
-                  existingImageUrl: _removeExistingImage
-                      ? ''
-                      : _imageUrlController.text,
-                  uploading: provider.isUploadingBikeImage,
-                  deleting: provider.isDeletingBikeImage,
-                  uploadProgress: provider.bikeImageUploadProgress,
-                  onChoose: saving ? null : _chooseBikeImage,
-                  onRemove: saving ? null : _removeImageSelection,
-                ),
-                const SizedBox(height: 12),
-                _BikeModelPickerCard(
-                  pendingModelName: _pendingModelName,
-                  existingModelUrl: _removeExistingModel
-                      ? ''
-                      : _glbModelUrlController.text,
-                  uploading: provider.isUploadingBikeModel,
-                  deleting: provider.isDeletingBikeModel,
-                  uploadProgress: provider.bikeModelUploadProgress,
-                  onChoose: saving ? null : _chooseBikeModel,
-                  onRemove: saving ? null : _removeModelSelection,
-                ),
-                const SizedBox(height: 12),
-                _TextField(
-                  controller: _notesController,
-                  label: AppText.t('notes'),
-                  icon: Icons.notes_rounded,
-                  maxLines: 3,
-                ),
-                const SizedBox(height: 14),
-                _SwitchTile(
-                  title: AppText.t('digitalTwin'),
-                  subtitle: AppText.t('enableDigitalBike3d'),
-                  value: _digitalTwinEnabled,
-                  onChanged: saving
-                      ? null
-                      : (value) {
-                          setState(() => _digitalTwinEnabled = value);
-                        },
-                ),
-                const SizedBox(height: 10),
-                _SwitchTile(
-                  title: AppText.t('activeBike'),
-                  subtitle: AppText.t('useAsPrimaryBike'),
-                  value: _makeActive,
-                  onChanged: saving
-                      ? null
-                      : (value) {
-                          setState(() => _makeActive = value);
-                        },
-                ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _TextField(
+                          controller: _frameSizeController,
+                          label: AppText.t('frameSize'),
+                          icon: Icons.height_rounded,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _TextField(
+                          controller: _firmwareController,
+                          label: 'Firmware',
+                          icon: Icons.memory_rounded,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  _TextField(
+                    controller: _serialNumberController,
+                    label: 'Serienummer',
+                    icon: Icons.qr_code_rounded,
+                  ),
+                  const SizedBox(height: 18),
+                  _BikeImagePickerCard(
+                    pendingImagePath: _pendingImagePath,
+                    existingImageUrl: _removeExistingImage
+                        ? ''
+                        : _imageUrlController.text,
+                    uploading: provider.isUploadingBikeImage,
+                    deleting: provider.isDeletingBikeImage,
+                    uploadProgress: provider.bikeImageUploadProgress,
+                    onChoose: saving ? null : _chooseBikeImage,
+                    onRemove: saving ? null : _removeImageSelection,
+                  ),
+                  const SizedBox(height: 12),
+                  _BikeModelPickerCard(
+                    pendingModelName: _pendingModelName,
+                    existingModelUrl: _removeExistingModel
+                        ? ''
+                        : _glbModelUrlController.text,
+                    uploading: provider.isUploadingBikeModel,
+                    deleting: provider.isDeletingBikeModel,
+                    uploadProgress: provider.bikeModelUploadProgress,
+                    onChoose: saving ? null : _chooseBikeModel,
+                    onRemove: saving ? null : _removeModelSelection,
+                  ),
+                  const SizedBox(height: 12),
+                  _TextField(
+                    controller: _notesController,
+                    label: AppText.t('notes'),
+                    icon: Icons.notes_rounded,
+                    maxLines: 3,
+                  ),
+                  const SizedBox(height: 14),
+                  _SwitchTile(
+                    title: AppText.t('digitalTwin'),
+                    subtitle: AppText.t('enableDigitalBike3d'),
+                    value: _digitalTwinEnabled,
+                    onChanged: saving
+                        ? null
+                        : (value) {
+                            setState(() => _digitalTwinEnabled = value);
+                          },
+                  ),
+                  const SizedBox(height: 10),
+                  _SwitchTile(
+                    title: AppText.t('activeBike'),
+                    subtitle: AppText.t('useAsPrimaryBike'),
+                    value: _makeActive,
+                    onChanged: saving
+                        ? null
+                        : (value) {
+                            setState(() => _makeActive = value);
+                          },
+                  ),
+                ],
                 const SizedBox(height: 22),
                 SizedBox(
                   height: 56,
@@ -2905,7 +2854,9 @@ class _BikeModelPickerCard extends StatelessWidget {
           : _hasExistingModel
           ? AppText.t('glbModelConnected')
           : AppText.t('chooseGlbGltfModel'),
-      actionLabel: hasModel ? AppText.t('changeModel') : AppText.t('choose3dModel'),
+      actionLabel: hasModel
+          ? AppText.t('changeModel')
+          : AppText.t('choose3dModel'),
       onAction: onChoose,
       onRemove: hasModel ? onRemove : null,
       busy: busy,
@@ -2945,7 +2896,9 @@ class _BikeModelPickerCard extends StatelessWidget {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   Text(
-                    hasModel ? AppText.t('digitalTwinReadyCaps') : AppText.t('noModelCaps'),
+                    hasModel
+                        ? AppText.t('digitalTwinReadyCaps')
+                        : AppText.t('noModelCaps'),
                     style: TextStyle(
                       color: hasModel
                           ? MunjaColors.mint
@@ -3500,6 +3453,25 @@ String _bikeTypeLabel(FirestoreBikeType type) {
       return AppText.t('kidsBike');
     case FirestoreBikeType.other:
       return 'Anden';
+  }
+}
+
+String _defaultBikeName(FirestoreBikeType type) {
+  switch (type) {
+    case FirestoreBikeType.road:
+      return 'My Road Bike';
+    case FirestoreBikeType.gravel:
+      return 'My Gravel Bike';
+    case FirestoreBikeType.mtb:
+      return 'My MTB';
+    case FirestoreBikeType.city:
+      return 'My City Bike';
+    case FirestoreBikeType.ebike:
+      return 'My E-Bike';
+    case FirestoreBikeType.kids:
+      return 'My Kids Bike';
+    case FirestoreBikeType.other:
+      return 'My Bike';
   }
 }
 

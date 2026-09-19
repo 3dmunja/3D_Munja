@@ -52,3 +52,14 @@ agent/
 skills-lock.json
 apply_munja_background.py
 lib/Config/api_keys.dart
+
+# Local Munja development backups / generated diagnostics
+*.backup*
+**/*.backup*
+/ios/build/
+
+# Road Bike local conversion/render working files
+/assets/models/Road_Bike_Master_DRACO_BACKUP.glb
+/assets/models/Road_Bike_Master_NoDraco.glb
+/assets/Images/Customize/Previews/road_bike_before_*.png
+/tools/render_road_preview.py

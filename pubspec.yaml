@@ -4,7 +4,7 @@ description: "Munja smart cycling app"
 
 publish_to: "none"
 
-version: 1.0.3+18
+version: 1.0.3+19
 
 environment:
   sdk: ^3.9.2
@@ -61,12 +61,13 @@ flutter:
     - assets/
     - assets/models/
     - assets/Images/Customize/Skins/
+    - assets/Images/Customize/Previews/
     - assets/brake_light.png
     - assets/munja-logo-icon.png
 
 flutter_native_splash:
   color: "#041610"
-  image: assets/munja-logo-icon.png
+  image: assets/munja-logo-icon_2.png
   android: true
   ios: true
   web: false
@@ -74,15 +75,15 @@ flutter_native_splash:
 
   android_12:
     color: "#041610"
-    image: assets/munja-logo-icon.png
+    image: assets/munja-logo-icon_2.png
     icon_background_color: "#041610"
 
 flutter_launcher_icons:
   android: true
   ios: true
-  image_path: assets/munja-logo-icon.png
+  image_path: assets/munja-logo-icon_2.png
   adaptive_icon_background: "#041610"
-  adaptive_icon_foreground: assets/munja-logo-icon.png
+  adaptive_icon_foreground: assets/munja-logo-icon_2.png
   remove_alpha_ios: true
   min_sdk_android: 21
 dependency_overrides:
