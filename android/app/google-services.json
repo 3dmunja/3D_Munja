@@ -14,6 +14,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "953344223447-9un4nb94potli6drlelmn2mn0bl2m4cv.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.munja.app",
+            "certificate_hash": "f722a30b36ab4583a60176f2fa9f2ea68ecd956d"
+          }
+        },
+        {
           "client_id": "953344223447-o3rr0gu3dh613lfeamt39mhdrdcbihls.apps.googleusercontent.com",
           "client_type": 1,
           "android_info": {
